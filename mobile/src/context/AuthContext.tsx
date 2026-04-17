@@ -11,6 +11,7 @@ interface AuthContextData {
   token: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -49,6 +50,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(loggedUser);
   }
 
+  async function register(name: string, email: string, password: string) {
+    const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
+    const { access_token, user: loggedUser } = response.data;
+    await AsyncStorage.setItem(TOKEN_KEY, access_token);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(loggedUser));
+    setAuthToken(access_token);
+    setToken(access_token);
+    setUser(loggedUser);
+  }
+
   async function logout() {
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
     setAuthToken(null);
@@ -57,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );
