@@ -42,21 +42,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function login(email: string, password: string) {
     const response = await api.post<AuthResponse>('/auth/login', { email, password });
-    const { access_token, user: loggedUser } = response.data;
-    await AsyncStorage.setItem(TOKEN_KEY, access_token);
+    const { accessToken, user: loggedUser } = response.data;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(loggedUser));
-    setAuthToken(access_token);
-    setToken(access_token);
+    setAuthToken(accessToken);
+    setToken(accessToken);
     setUser(loggedUser);
   }
 
   async function register(name: string, email: string, password: string) {
     const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
-    const { access_token, user: loggedUser } = response.data;
-    await AsyncStorage.setItem(TOKEN_KEY, access_token);
+    const { accessToken, user: loggedUser } = response.data;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
     await AsyncStorage.setItem(USER_KEY, JSON.stringify(loggedUser));
-    setAuthToken(access_token);
-    setToken(access_token);
+    setAuthToken(accessToken);
+    setToken(accessToken);
     setUser(loggedUser);
   }
 
