@@ -12,7 +12,7 @@ export class AuthService {
 
   async register(email: string, name: string, password: string) {
     const user = await this.usersService.create(email, name, password);
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(user);
   }
 
   async login(email: string, password: string) {
@@ -22,13 +22,14 @@ export class AuthService {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) throw new UnauthorizedException('Credenciais inválidas');
 
-    return this.generateTokens(user.id, user.email);
+    return this.generateTokens(user);
   }
 
-  private generateTokens(userId: string, email: string) {
-    const payload = { sub: userId, email };
+  private generateTokens(user: { id: string; email: string; name: string }) {
+    const payload = { sub: user.id, email: user.email };
     return {
       accessToken: this.jwtService.sign(payload),
+      user: { id: user.id, name: user.name, email: user.email },
     };
   }
 }
