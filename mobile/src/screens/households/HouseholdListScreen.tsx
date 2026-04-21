@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
@@ -14,7 +14,13 @@ type Props = {
 };
 
 export default function HouseholdListScreen({ navigation }: Props) {
-  const { data: households, isLoading, refetch, isRefetching } = useHouseholds();
+  const { data: households, isLoading, refetch } = useHouseholds();
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  async function handleRefresh() {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  }
 
   if (isLoading) {
     return (
@@ -49,7 +55,7 @@ export default function HouseholdListScreen({ navigation }: Props) {
             <Text style={styles.emptySubtitle}>Crie uma casa ou entre com um código de convite</Text>
           </View>
         }
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.accent} />}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
       />
       <View style={styles.footer}>
         <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CreateHousehold')}>

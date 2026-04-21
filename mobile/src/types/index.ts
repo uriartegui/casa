@@ -18,11 +18,19 @@ export interface HouseholdMember {
   user?: User;
 }
 
+export interface Storage {
+  id: string;
+  householdId: string;
+  name: string;
+  emoji: string;
+}
+
 export interface FridgeItem {
   id: string;
   name: string;
   quantity: number;
   unit: string;
+  storageId?: string | null;
   householdId: string;
   addedBy?: User;
 }

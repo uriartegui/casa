@@ -20,4 +20,9 @@ export class AddFridgeItemDto {
   @IsOptional()
   @IsDateString()
   expirationDate?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  storageId?: string;
 }

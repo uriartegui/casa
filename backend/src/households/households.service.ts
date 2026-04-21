@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,7 +10,9 @@ import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { ShoppingItem } from './shopping-item.entity';
+import { Storage } from './storage.entity';
 import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
+import { CreateStorageDto } from './dto/create-storage.dto';
 
 @Injectable()
 export class HouseholdsService {
@@ -22,6 +25,8 @@ export class HouseholdsService {
     private fridgeRepo: Repository<FridgeItem>,
     @InjectRepository(ShoppingItem)
     private shoppingRepo: Repository<ShoppingItem>,
+    @InjectRepository(Storage)
+    private storageRepo: Repository<Storage>,
   ) {}
 
   async create(name: string, ownerId: string): Promise<Household> {
@@ -34,6 +39,11 @@ export class HouseholdsService {
       role: 'admin',
     });
 
+    await this.storageRepo.save([
+      { householdId: saved.id, name: 'Geladeira', emoji: '🧊' },
+      { householdId: saved.id, name: 'Freezer', emoji: '❄️' },
+    ]);
+
     return saved;
   }
 
@@ -42,7 +52,12 @@ export class HouseholdsService {
       where: { userId },
       relations: ['household'],
     });
-    return memberships.map((m) => m.household);
+    const householdIds = memberships.map((m) => m.householdId);
+    if (householdIds.length === 0) return [];
+    return this.householdsRepo.find({
+      where: householdIds.map((id) => ({ id })),
+      relations: ['members', 'members.user'],
+    });
   }
 
   async getInviteCode(householdId: string, userId: string): Promise<string> {
@@ -69,12 +84,55 @@ export class HouseholdsService {
     return household;
   }
 
+  // Storages
+
+  async getStorages(householdId: string, userId: string): Promise<Storage[]> {
+    await this.assertMember(householdId, userId);
+    return this.storageRepo.find({
+      where: { householdId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async createStorage(
+    householdId: string,
+    userId: string,
+    dto: CreateStorageDto,
+  ): Promise<Storage> {
+    await this.assertMember(householdId, userId);
+    return this.storageRepo.save({
+      householdId,
+      name: dto.name,
+      emoji: dto.emoji ?? '🧊',
+    });
+  }
+
+  async deleteStorage(
+    householdId: string,
+    storageId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertMember(householdId, userId);
+    const count = await this.fridgeRepo.count({ where: { storageId } });
+    if (count > 0) {
+      throw new BadRequestException(
+        'Remova todos os itens antes de excluir este compartimento',
+      );
+    }
+    await this.storageRepo.delete({ id: storageId, householdId });
+  }
+
+  // Fridge
+
   async getFridgeItems(
     householdId: string,
     userId: string,
+    storageId?: string,
   ): Promise<FridgeItem[]> {
     await this.assertMember(householdId, userId);
-    return this.fridgeRepo.find({ where: { householdId } });
+    return this.fridgeRepo.find({
+      where: storageId ? { householdId, storageId } : { householdId },
+    });
   }
 
   async addFridgeItem(
@@ -99,6 +157,8 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     await this.fridgeRepo.delete({ id: itemId, householdId });
   }
+
+  // Shopping list
 
   async getShoppingList(householdId: string, userId: string): Promise<ShoppingItem[]> {
     await this.assertMember(householdId, userId);

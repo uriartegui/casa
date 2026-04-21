@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
+import { useStorages } from '../../hooks/useStorages';
 import { useAddShoppingItem } from '../../hooks/useShoppingList';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
@@ -21,7 +22,18 @@ export default function FridgeScreen({ navigation }: Props) {
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households, isLoading: loadingHouseholds } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
-  const { data: items, isLoading: loadingItems, refetch, isRefetching } = useFridge(effectiveId);
+
+  const { data: storages } = useStorages(effectiveId);
+  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
+  const effectiveStorageId = selectedStorageId ?? storages?.[0]?.id ?? null;
+
+  const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  async function handleRefresh() {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  }
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
   const addToList = useAddShoppingItem(effectiveId ?? '');
 
@@ -30,6 +42,10 @@ export default function FridgeScreen({ navigation }: Props) {
       setSelectedHouseholdId(households[0].id);
     }
   }, [households, selectedHouseholdId, setSelectedHouseholdId]);
+
+  React.useEffect(() => {
+    setSelectedStorageId(null);
+  }, [effectiveId]);
 
   const handleDelete = useCallback((item: FridgeItem) => {
     Alert.alert(
@@ -92,7 +108,7 @@ export default function FridgeScreen({ navigation }: Props) {
     );
   }
 
-  const selectedHousehold = households?.find((h) => h.id === effectiveId);
+  const selectedStorage = storages?.find((s) => s.id === effectiveStorageId);
 
   return (
     <View style={styles.container}>
@@ -112,6 +128,29 @@ export default function FridgeScreen({ navigation }: Props) {
         </View>
       )}
 
+      {storages !== undefined && (
+        <View style={styles.storagePicker}>
+          {storages.map((s) => (
+            <TouchableOpacity
+              key={s.id}
+              style={[styles.storageChip, s.id === effectiveStorageId && styles.storageChipActive]}
+              onPress={() => setSelectedStorageId(s.id)}
+            >
+              <Text style={styles.storageChipEmoji}>{s.emoji}</Text>
+              <Text style={[styles.storageChipText, s.id === effectiveStorageId && styles.storageChipTextActive]}>
+                {s.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={styles.storageAddChip}
+            onPress={() => navigation.navigate('CreateStorage', { householdId: effectiveId })}
+          >
+            <Text style={styles.storageAddChipText}>+</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loadingItems ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.accent} />
@@ -124,23 +163,26 @@ export default function FridgeScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.sectionLabel}>
-              {selectedHousehold?.name ?? 'Geladeira'} · {items?.length ?? 0} {items?.length === 1 ? 'item' : 'itens'}
+              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} · {items?.length ?? 0} {items?.length === 1 ? 'item' : 'itens'}
             </Text>
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyTitle}>Geladeira vazia</Text>
+              <Text style={styles.emptyTitle}>Vazio</Text>
               <Text style={styles.emptySubtitle}>Adicione itens tocando no botão abaixo</Text>
             </View>
           }
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.accent} />}
+          refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         />
       )}
 
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}
-          onPress={() => navigation.navigate('AddFridgeItem', { householdId: effectiveId })}
+          onPress={() => navigation.navigate('AddFridgeItem', {
+            householdId: effectiveId,
+            storageId: effectiveStorageId ?? undefined,
+          })}
         >
           <Text style={styles.buttonText}>+ Adicionar item</Text>
         </TouchableOpacity>
@@ -160,6 +202,26 @@ const styles = StyleSheet.create({
   pickerItemActive: { backgroundColor: Colors.accent },
   pickerItemText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   pickerItemTextActive: { color: '#fff' },
+  storagePicker: {
+    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.separator,
+    flexWrap: 'wrap',
+  },
+  storageChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+    backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
+  },
+  storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  storageChipEmoji: { fontSize: 14 },
+  storageChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  storageChipTextActive: { color: '#fff' },
+  storageAddChip: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  storageAddChipText: { fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
   list: { padding: 16, gap: 2, flexGrow: 1 },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   itemRow: {

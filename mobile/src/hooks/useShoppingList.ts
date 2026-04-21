@@ -10,6 +10,7 @@ export function useShoppingList(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
+    refetchInterval: 30_000,
   });
 }
 

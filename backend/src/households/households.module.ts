@@ -6,9 +6,10 @@ import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { ShoppingItem } from './shopping-item.entity';
+import { Storage } from './storage.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Household, HouseholdMember, FridgeItem, ShoppingItem])],
+  imports: [TypeOrmModule.forFeature([Household, HouseholdMember, FridgeItem, ShoppingItem, Storage])],
   providers: [HouseholdsService],
   controllers: [HouseholdsController],
   exports: [HouseholdsService],

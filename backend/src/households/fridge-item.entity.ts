@@ -17,6 +17,9 @@ export class FridgeItem {
   @Column()
   householdId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  storageId: string | null;
+
   @Column()
   name: string;
 

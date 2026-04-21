@@ -32,6 +32,9 @@ export default function RegisterScreen({ navigation }: Props) {
     setIsLoading(true);
     try {
       await register(name.trim(), email.trim(), password);
+      Alert.alert('Conta criada!', 'Faça login para continuar.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch {
       Alert.alert('Erro', 'Não foi possível criar a conta.');
     } finally {

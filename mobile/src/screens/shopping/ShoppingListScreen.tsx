@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert, SectionList,
@@ -27,7 +27,13 @@ export default function ShoppingListScreen({ navigation }: Props) {
   const { data: households, isLoading: loadingHouseholds } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
-  const { data: items, isLoading, refetch, isRefetching } = useShoppingList(effectiveId);
+  const { data: items, isLoading, refetch } = useShoppingList(effectiveId);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
+  async function handleRefresh() {
+    setManualRefreshing(true);
+    await refetch();
+    setManualRefreshing(false);
+  }
   const toggleItem = useToggleShoppingItem(effectiveId ?? '');
   const removeItem = useRemoveShoppingItem(effectiveId ?? '');
   const clearChecked = useClearCheckedItems(effectiveId ?? '');
@@ -175,7 +181,7 @@ export default function ShoppingListScreen({ navigation }: Props) {
               )}
             </View>
           )}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={Colors.accent} />}
+          refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         />
       )}
 

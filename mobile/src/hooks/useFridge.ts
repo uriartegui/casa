@@ -2,16 +2,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { FridgeItem } from '../types';
 
-export function useFridge(householdId: string | null) {
+export function useFridge(householdId: string | null, storageId?: string | null) {
   return useQuery({
-    queryKey: ['fridge', householdId],
+    queryKey: ['fridge', householdId, storageId],
     queryFn: async () => {
+      const params = storageId ? `?storageId=${storageId}` : '';
       const response = await api.get<FridgeItem[]>(
-        `/households/${householdId}/fridge`
+        `/households/${householdId}/fridge${params}`
       );
       return response.data;
     },
     enabled: !!householdId,
+    refetchInterval: 30_000,
   });
 }
 
@@ -19,6 +21,7 @@ interface AddFridgeItemPayload {
   name: string;
   quantity: number;
   unit: string;
+  storageId?: string;
 }
 
 export function useAddFridgeItem(householdId: string) {

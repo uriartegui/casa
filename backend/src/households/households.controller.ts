@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -16,6 +17,7 @@ import { CreateHouseholdDto } from './dto/create-household.dto';
 import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
 import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { ToggleShoppingItemDto } from './dto/toggle-shopping-item.dto';
+import { CreateStorageDto } from './dto/create-storage.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -38,8 +40,9 @@ export class HouseholdsController {
 
   @Get(':id/invite')
   @ApiOperation({ summary: 'Gerar código de convite' })
-  getInvite(@Param('id') id: string, @Request() req) {
-    return this.householdsService.getInviteCode(id, req.user.id);
+  async getInvite(@Param('id') id: string, @Request() req) {
+    const inviteCode = await this.householdsService.getInviteCode(id, req.user.id);
+    return { inviteCode };
   }
 
   @Post('join/:code')
@@ -48,10 +51,44 @@ export class HouseholdsController {
     return this.householdsService.joinByCode(code, req.user.id);
   }
 
+  // Storages
+
+  @Get(':id/storages')
+  @ApiOperation({ summary: 'Listar compartimentos da casa' })
+  getStorages(@Param('id') id: string, @Request() req) {
+    return this.householdsService.getStorages(id, req.user.id);
+  }
+
+  @Post(':id/storages')
+  @ApiOperation({ summary: 'Criar compartimento (freezer, isopor, etc.)' })
+  createStorage(
+    @Param('id') id: string,
+    @Body() dto: CreateStorageDto,
+    @Request() req,
+  ) {
+    return this.householdsService.createStorage(id, req.user.id, dto);
+  }
+
+  @Delete(':id/storages/:storageId')
+  @ApiOperation({ summary: 'Excluir compartimento' })
+  deleteStorage(
+    @Param('id') id: string,
+    @Param('storageId') storageId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.deleteStorage(id, storageId, req.user.id);
+  }
+
+  // Fridge
+
   @Get(':id/fridge')
   @ApiOperation({ summary: 'Ver itens da geladeira' })
-  getFridge(@Param('id') id: string, @Request() req) {
-    return this.householdsService.getFridgeItems(id, req.user.id);
+  getFridge(
+    @Param('id') id: string,
+    @Query('storageId') storageId: string | undefined,
+    @Request() req,
+  ) {
+    return this.householdsService.getFridgeItems(id, req.user.id, storageId);
   }
 
   @Post(':id/fridge')

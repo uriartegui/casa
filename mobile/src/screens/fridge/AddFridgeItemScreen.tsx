@@ -18,7 +18,7 @@ type Props = {
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
 export default function AddFridgeItemScreen({ navigation, route }: Props) {
-  const { householdId } = route.params;
+  const { householdId, storageId } = route.params;
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<Unit>('un');
@@ -35,7 +35,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit });
+      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível adicionar o item.');
