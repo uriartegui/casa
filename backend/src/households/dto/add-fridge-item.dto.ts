@@ -25,4 +25,9 @@ export class AddFridgeItemDto {
   @IsOptional()
   @IsString()
   storageId?: string;
+
+  @ApiPropertyOptional({ example: 'Laticínios' })
+  @IsOptional()
+  @IsString()
+  category?: string;
 }

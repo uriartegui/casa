@@ -19,8 +19,9 @@ export function useCreateHousehold() {
       const response = await api.post<Household>('/households', { name });
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['storages', data.id] });
     },
   });
 }
@@ -38,6 +39,18 @@ export function useInviteCode(householdId: string) {
   });
 }
 
+export function useDeleteHousehold() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (householdId: string) => {
+      await api.delete(`/households/${householdId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+    },
+  });
+}
+
 export function useJoinHousehold() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -45,8 +58,9 @@ export function useJoinHousehold() {
       const response = await api.post<Household>(`/households/join/${code}`);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['households'] });
+      queryClient.invalidateQueries({ queryKey: ['storages', data.id] });
     },
   });
 }

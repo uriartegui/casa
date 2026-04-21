@@ -161,6 +161,11 @@ export default function HomeScreen() {
             <View key={item.id} style={styles.itemRow}>
               <View style={styles.itemDot} />
               <Text style={styles.itemName}>{item.name}</Text>
+              {item.storage && (
+                <Text style={styles.itemStorage}>
+                  {item.storage.emoji} {item.storage.name}
+                </Text>
+              )}
               <Text style={styles.itemQty}>
                 {item.quantity}{item.unit ? ` ${item.unit}` : ''}
               </Text>
@@ -235,6 +240,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
   },
   itemName: { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  itemStorage: { fontSize: 12, color: Colors.textSecondary, marginRight: 4 },
   itemQty: { fontSize: 13, color: Colors.textSecondary },
 
   emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },

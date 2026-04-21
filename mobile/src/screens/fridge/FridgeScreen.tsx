@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +24,7 @@ export default function FridgeScreen({ navigation }: Props) {
 
   const { data: storages } = useStorages(effectiveId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const effectiveStorageId = selectedStorageId ?? storages?.[0]?.id ?? null;
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
@@ -41,6 +42,7 @@ export default function FridgeScreen({ navigation }: Props) {
 
   React.useEffect(() => {
     setSelectedStorageId(null);
+    setSelectedCategory(null);
   }, [effectiveId]);
 
   React.useEffect(() => {
@@ -48,6 +50,18 @@ export default function FridgeScreen({ navigation }: Props) {
       scheduleExpirationNotifications(items);
     }
   }, [items]);
+
+  const availableCategories = React.useMemo(() => {
+    if (!items) return [];
+    const cats = new Set(items.map((i) => i.category).filter(Boolean) as string[]);
+    return Array.from(cats);
+  }, [items]);
+
+  const filteredItems = React.useMemo(() => {
+    if (!items) return [];
+    if (!selectedCategory) return items;
+    return items.filter((i) => i.category === selectedCategory);
+  }, [items, selectedCategory]);
 
   function renderItem({ item }: { item: FridgeItem }) {
     const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
@@ -58,7 +72,14 @@ export default function FridgeScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={styles.itemInfo}>
-          <Text style={styles.itemName}>{item.name}</Text>
+          <View style={styles.itemNameRow}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            {item.category && (
+              <View style={styles.categoryBadge}>
+                <Text style={styles.categoryBadgeText}>{item.category}</Text>
+              </View>
+            )}
+          </View>
           {exp && (
             <Text style={[styles.itemMeta, exp.urgent && styles.itemMetaUrgent]}>{exp.text}</Text>
           )}
@@ -131,19 +152,44 @@ export default function FridgeScreen({ navigation }: Props) {
         </View>
       )}
 
+      {availableCategories.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.categoryPickerWrapper}
+          contentContainerStyle={styles.categoryPicker}
+        >
+          <TouchableOpacity
+            style={[styles.categoryChip, !selectedCategory && styles.categoryChipActive]}
+            onPress={() => setSelectedCategory(null)}
+          >
+            <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>Todos</Text>
+          </TouchableOpacity>
+          {availableCategories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+            >
+              <Text style={[styles.categoryChipText, selectedCategory === cat && styles.categoryChipTextActive]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
+
       {loadingItems ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.accent} />
         </View>
       ) : (
         <FlatList
-          data={items ?? []}
+          data={filteredItems}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.sectionLabel}>
-              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} · {items?.length ?? 0} {items?.length === 1 ? 'item' : 'itens'}
+              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} · {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
             </Text>
           }
           ListEmptyComponent={
@@ -210,7 +256,29 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.separator, marginBottom: 8,
   },
   itemInfo: { flex: 1, gap: 2 },
+  itemNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
+  categoryBadge: {
+    backgroundColor: Colors.accent + '22',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  categoryBadgeText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
+  categoryPickerWrapper: {
+    backgroundColor: Colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+    maxHeight: 48,
+  },
+  categoryPicker: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  categoryChip: {
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14,
+    backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
+  },
+  categoryChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  categoryChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
+  categoryChipTextActive: { color: '#fff' },
   itemMeta: { fontSize: 12, color: Colors.textSecondary },
   itemMetaUrgent: { color: Colors.destructive, fontWeight: '600' },
   quantityBadge: {

@@ -1,11 +1,11 @@
 import React from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useHouseholds } from '../../hooks/useHouseholds';
+import { useHouseholds, useDeleteHousehold } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
@@ -20,6 +20,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   const { householdId } = route.params;
   const { data: households, isLoading } = useHouseholds();
   const { setSelectedHouseholdId } = useSelectedHousehold();
+  const deleteHousehold = useDeleteHousehold();
 
   const household = households?.find((h) => h.id === householdId);
 
@@ -36,6 +37,29 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
       <View style={styles.center}>
         <Text style={styles.errorText}>Casa não encontrada.</Text>
       </View>
+    );
+  }
+
+  function handleDelete() {
+    Alert.alert(
+      `Excluir "${household.name}"?`,
+      'Isso vai apagar todos os itens, membros e dados da casa. Essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteHousehold.mutateAsync(householdId);
+              setSelectedHouseholdId(null);
+              navigation.getParent()?.navigate('CasaTab' as never);
+            } catch {
+              Alert.alert('Erro', 'Não foi possível excluir a casa. Verifique se você é o admin.');
+            }
+          },
+        },
+      ],
     );
   }
 
@@ -81,6 +105,9 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
         >
           <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Convidar pessoa</Text>
         </TouchableOpacity>
+        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
+          <Text style={styles.deleteButtonText}>Excluir casa</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -106,4 +133,6 @@ const styles = StyleSheet.create({
   buttonSecondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accent },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   buttonTextSecondary: { color: Colors.accent },
+  deleteButton: { borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
+  deleteButtonText: { color: Colors.destructive, fontSize: 16, fontWeight: '600' },
 });

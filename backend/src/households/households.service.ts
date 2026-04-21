@@ -43,6 +43,7 @@ export class HouseholdsService {
     await this.storageRepo.save([
       { householdId: saved.id, name: 'Geladeira', emoji: '🧊' },
       { householdId: saved.id, name: 'Freezer', emoji: '❄️' },
+      { householdId: saved.id, name: 'Despensa', emoji: '🏠' },
     ]);
 
     return saved;
@@ -133,6 +134,7 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     return this.fridgeRepo.find({
       where: storageId ? { householdId, storageId } : { householdId },
+      relations: ['storage'],
     });
   }
 
@@ -224,6 +226,17 @@ export class HouseholdsService {
   async clearCheckedItems(householdId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.shoppingRepo.delete({ householdId, checked: true });
+  }
+
+  async deleteHousehold(householdId: string, userId: string): Promise<void> {
+    const member = await this.membersRepo.findOne({ where: { householdId, userId } });
+    if (!member) throw new ForbiddenException('Sem acesso a esta casa');
+    if (member.role !== 'admin') throw new ForbiddenException('Apenas o admin pode excluir a casa');
+    await this.fridgeRepo.delete({ householdId });
+    await this.shoppingRepo.delete({ householdId });
+    await this.storageRepo.delete({ householdId });
+    await this.membersRepo.delete({ householdId });
+    await this.householdsRepo.delete({ id: householdId });
   }
 
   private async assertMember(

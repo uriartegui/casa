@@ -39,6 +39,12 @@ export class HouseholdsController {
     return this.householdsService.findUserHouseholds(req.user.id);
   }
 
+  @Delete(':id')
+  @ApiOperation({ summary: 'Excluir casa (admin only)' })
+  deleteHousehold(@Param('id') id: string, @Request() req) {
+    return this.householdsService.deleteHousehold(id, req.user.id);
+  }
+
   @Get(':id/invite')
   @ApiOperation({ summary: 'Gerar código de convite' })
   async getInvite(@Param('id') id: string, @Request() req) {

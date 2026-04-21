@@ -8,8 +8,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { Colors } from '../../constants/colors';
+import { getCategoriesForStorage } from '../../constants/categories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
+import { useStorages } from '../../hooks/useStorages';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'AddFridgeItem'>;
@@ -24,7 +26,11 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
   const addItem = useAddFridgeItem(householdId);
+  const { data: storages } = useStorages(householdId);
+  const currentStorage = storages?.find((s) => s.id === storageId);
+  const categories = getCategoriesForStorage(currentStorage?.name);
 
   async function handleAdd() {
     if (!name.trim()) {
@@ -38,7 +44,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
     }
     try {
       const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr });
+      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível adicionar o item.');
@@ -81,6 +87,21 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
               onPress={() => setUnit(u)}
             >
               <Text style={[styles.unitChipText, unit === u && styles.unitChipTextActive]}>{u}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+        <View style={styles.unitRow}>
+          {categories.map((c) => (
+            <TouchableOpacity
+              key={c.label}
+              style={[styles.unitChip, category === c.label && styles.unitChipActive]}
+              onPress={() => setCategory(category === c.label ? null : c.label)}
+            >
+              <Text style={[styles.unitChipText, category === c.label && styles.unitChipTextActive]}>
+                {c.emoji} {c.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

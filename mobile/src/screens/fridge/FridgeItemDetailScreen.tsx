@@ -10,6 +10,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useUpdateFridgeItem, useRemoveFridgeItem } from '../../hooks/useFridge';
 import { useAddShoppingItem } from '../../hooks/useShoppingList';
 import { Colors } from '../../constants/colors';
+import { getCategoriesForStorage } from '../../constants/categories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 
@@ -20,6 +21,7 @@ type Props = {
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
+
 export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const { item, householdId } = route.params;
   const [name, setName] = useState(item.name);
@@ -28,6 +30,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const [expirationDate, setExpirationDate] = useState<Date | null>(
     item.expirationDate ? new Date(item.expirationDate + 'T00:00:00') : null
   );
+  const [category, setCategory] = useState<string | null>(item.category ?? null);
+  const categories = getCategoriesForStorage(item.storage?.name);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
   const addToList = useAddShoppingItem(householdId);
@@ -44,7 +48,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     try {
       const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : null;
-      await updateItem.mutateAsync({ itemId: item.id, name: name.trim(), quantity: qty, unit, expirationDate: expStr });
+      await updateItem.mutateAsync({ itemId: item.id, name: name.trim(), quantity: qty, unit, expirationDate: expStr, category: category ?? undefined });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar as alterações.');
@@ -111,6 +115,21 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
               onPress={() => setUnit(u)}
             >
               <Text style={[styles.unitChipText, unit === u && styles.unitChipTextActive]}>{u}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+        <View style={styles.unitRow}>
+          {categories.map((c) => (
+            <TouchableOpacity
+              key={c.label}
+              style={[styles.unitChip, category === c.label && styles.unitChipActive]}
+              onPress={() => setCategory(category === c.label ? null : c.label)}
+            >
+              <Text style={[styles.unitChipText, category === c.label && styles.unitChipTextActive]}>
+                {c.emoji} {c.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>

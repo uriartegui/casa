@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 import { Household } from './household.entity';
+import { Storage } from './storage.entity';
 import { User } from '../users/user.entity';
 
 @Entity('fridge_items')
@@ -29,11 +30,18 @@ export class FridgeItem {
   @Column({ nullable: true })
   unit: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  category: string | null;
+
   @Column({ type: 'date', nullable: true })
   expirationDate: Date;
 
   @Column()
   createdById: string;
+
+  @ManyToOne(() => Storage, { nullable: true, eager: false })
+  @JoinColumn({ name: 'storageId' })
+  storage: Storage | null;
 
   @ManyToOne(() => Household, (household) => household.fridgeItems)
   @JoinColumn({ name: 'householdId' })

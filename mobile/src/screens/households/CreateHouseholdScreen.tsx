@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCreateHousehold } from '../../hooks/useHouseholds';
+import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 
@@ -15,6 +16,7 @@ type Props = {
 export default function CreateHouseholdScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const createHousehold = useCreateHousehold();
+  const { setSelectedHouseholdId } = useSelectedHousehold();
 
   async function handleCreate() {
     if (!name.trim()) {
@@ -23,6 +25,7 @@ export default function CreateHouseholdScreen({ navigation }: Props) {
     }
     try {
       const household = await createHousehold.mutateAsync(name.trim());
+      setSelectedHouseholdId(household.id);
       navigation.replace('HouseholdDetail', { householdId: household.id, householdName: household.name });
     } catch {
       Alert.alert('Erro', 'Não foi possível criar a casa.');
