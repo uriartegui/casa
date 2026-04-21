@@ -8,6 +8,8 @@ import { Repository } from 'typeorm';
 import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
 import { FridgeItem } from './fridge-item.entity';
+import { ShoppingItem } from './shopping-item.entity';
+import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 
 @Injectable()
 export class HouseholdsService {
@@ -18,6 +20,8 @@ export class HouseholdsService {
     private membersRepo: Repository<HouseholdMember>,
     @InjectRepository(FridgeItem)
     private fridgeRepo: Repository<FridgeItem>,
+    @InjectRepository(ShoppingItem)
+    private shoppingRepo: Repository<ShoppingItem>,
   ) {}
 
   async create(name: string, ownerId: string): Promise<Household> {
@@ -94,6 +98,58 @@ export class HouseholdsService {
   ): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.fridgeRepo.delete({ id: itemId, householdId });
+  }
+
+  async getShoppingList(householdId: string, userId: string): Promise<ShoppingItem[]> {
+    await this.assertMember(householdId, userId);
+    return this.shoppingRepo.find({
+      where: { householdId },
+      relations: ['createdBy'],
+      order: { checked: 'ASC', createdAt: 'ASC' },
+    });
+  }
+
+  async addShoppingItem(
+    householdId: string,
+    userId: string,
+    dto: AddShoppingItemDto,
+  ): Promise<ShoppingItem> {
+    await this.assertMember(householdId, userId);
+    const item = this.shoppingRepo.create({
+      householdId,
+      createdById: userId,
+      name: dto.name,
+      quantity: dto.quantity ?? 1,
+      unit: dto.unit,
+    });
+    return this.shoppingRepo.save(item);
+  }
+
+  async toggleShoppingItem(
+    householdId: string,
+    itemId: string,
+    userId: string,
+    checked: boolean,
+  ): Promise<ShoppingItem> {
+    await this.assertMember(householdId, userId);
+    const item = await this.shoppingRepo.findOne({ where: { id: itemId, householdId } });
+    if (!item) throw new NotFoundException('Item não encontrado');
+    item.checked = checked;
+    return this.shoppingRepo.save(item);
+  }
+
+  async removeShoppingItem(
+    householdId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.shoppingRepo.delete({ id: itemId, householdId });
+  }
+
+  async clearCheckedItems(householdId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.shoppingRepo.delete({ householdId, checked: true });
   }
 
   private async assertMember(
