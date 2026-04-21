@@ -8,6 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
+import { useAddShoppingItem } from '../../hooks/useShoppingList';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
@@ -22,6 +23,7 @@ export default function FridgeScreen({ navigation }: Props) {
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
   const { data: items, isLoading: loadingItems, refetch, isRefetching } = useFridge(effectiveId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
+  const addToList = useAddShoppingItem(effectiveId ?? '');
 
   React.useEffect(() => {
     if (!selectedHouseholdId && households?.[0]) {
@@ -29,22 +31,37 @@ export default function FridgeScreen({ navigation }: Props) {
     }
   }, [households, selectedHouseholdId, setSelectedHouseholdId]);
 
-  const handleDelete = useCallback((itemId: string) => {
-    Alert.alert('Remover item', 'Tem certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Remover', style: 'destructive', onPress: () => removeItem.mutate(itemId) },
-    ]);
-  }, [removeItem]);
+  const handleDelete = useCallback((item: FridgeItem) => {
+    Alert.alert(
+      `Remover "${item.name}"`,
+      'O que deseja fazer?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: '🛒 Remover + adicionar à lista',
+          onPress: () => {
+            removeItem.mutate(item.id);
+            addToList.mutate({ name: item.name, quantity: item.quantity, unit: item.unit });
+          },
+        },
+        {
+          text: 'Só remover',
+          style: 'destructive',
+          onPress: () => removeItem.mutate(item.id),
+        },
+      ],
+    );
+  }, [removeItem, addToList]);
 
-  const renderRightActions = useCallback((itemId: string) => (
-    <TouchableOpacity style={styles.deleteAction} onPress={() => handleDelete(itemId)}>
+  const renderRightActions = useCallback((item: FridgeItem) => (
+    <TouchableOpacity style={styles.deleteAction} onPress={() => handleDelete(item)}>
       <Text style={styles.deleteActionText}>Remover</Text>
     </TouchableOpacity>
   ), [handleDelete]);
 
   function renderItem({ item }: { item: FridgeItem }) {
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item.id)} overshootRight={false}>
+      <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
         <View style={styles.itemRow}>
           <View style={styles.itemInfo}>
             <Text style={styles.itemName}>{item.name}</Text>

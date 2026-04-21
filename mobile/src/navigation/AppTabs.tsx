@@ -11,6 +11,8 @@ import InviteScreen from '../screens/households/InviteScreen';
 import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
+import ShoppingListScreen from '../screens/shopping/ShoppingListScreen';
+import AddShoppingItemScreen from '../screens/shopping/AddShoppingItemScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
 export type HouseholdStackParamList = {
@@ -26,19 +28,30 @@ export type FridgeStackParamList = {
   AddFridgeItem: { householdId: string };
 };
 
+export type ShoppingStackParamList = {
+  ShoppingList: undefined;
+  AddShoppingItem: {
+    householdId: string;
+    prefillName?: string;
+    prefillQuantity?: number;
+    prefillUnit?: string;
+  };
+};
+
 const HouseholdStack = createNativeStackNavigator<HouseholdStackParamList>();
 const FridgeStack = createNativeStackNavigator<FridgeStackParamList>();
+const ShoppingStack = createNativeStackNavigator<ShoppingStackParamList>();
 const Tab = createBottomTabNavigator();
+
+const stackScreenOptions = {
+  headerStyle: { backgroundColor: Colors.card },
+  headerTintColor: Colors.accent,
+  headerTitleStyle: { color: Colors.textPrimary, fontWeight: '700' as const },
+};
 
 function HouseholdNavigator() {
   return (
-    <HouseholdStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.card },
-        headerTintColor: Colors.accent,
-        headerTitleStyle: { color: Colors.textPrimary, fontWeight: '700' },
-      }}
-    >
+    <HouseholdStack.Navigator screenOptions={stackScreenOptions}>
       <HouseholdStack.Screen name="HouseholdList" component={HouseholdListScreen} options={{ title: 'Minhas Casas' }} />
       <HouseholdStack.Screen name="CreateHousehold" component={CreateHouseholdScreen} options={{ title: 'Nova Casa', presentation: 'modal' }} />
       <HouseholdStack.Screen name="HouseholdDetail" component={HouseholdDetailScreen} options={({ route }) => ({ title: route.params.householdName })} />
@@ -50,16 +63,19 @@ function HouseholdNavigator() {
 
 function FridgeNavigator() {
   return (
-    <FridgeStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: Colors.card },
-        headerTintColor: Colors.accent,
-        headerTitleStyle: { color: Colors.textPrimary, fontWeight: '700' },
-      }}
-    >
+    <FridgeStack.Navigator screenOptions={stackScreenOptions}>
       <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={{ title: 'Geladeira' }} />
       <FridgeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
     </FridgeStack.Navigator>
+  );
+}
+
+function ShoppingNavigator() {
+  return (
+    <ShoppingStack.Navigator screenOptions={stackScreenOptions}>
+      <ShoppingStack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: 'Lista de Compras' }} />
+      <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
+    </ShoppingStack.Navigator>
   );
 }
 
@@ -82,6 +98,11 @@ export default function AppTabs() {
         name="GeladeirTab"
         component={FridgeNavigator}
         options={{ title: 'Geladeira', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🧊</Text> }}
+      />
+      <Tab.Screen
+        name="ListaTab"
+        component={ShoppingNavigator}
+        options={{ title: 'Lista', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🛒</Text> }}
       />
       <Tab.Screen
         name="PerfilTab"

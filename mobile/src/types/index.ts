@@ -27,6 +27,17 @@ export interface FridgeItem {
   addedBy?: User;
 }
 
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit?: string;
+  checked: boolean;
+  householdId: string;
+  createdBy?: User;
+  createdAt: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;
