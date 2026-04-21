@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, setAuthToken, setUnauthorizedHandler } from '../services/api';
+import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
 
 const TOKEN_KEY = '@casa:token';
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function login(email: string, password: string) {
+    queryClient.clear();
     const response = await api.post<AuthResponse>('/auth/login', { email, password });
     const { accessToken, user: loggedUser } = response.data;
     await AsyncStorage.setItem(TOKEN_KEY, accessToken);
@@ -51,6 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function register(name: string, email: string, password: string) {
+    queryClient.clear();
     const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
     const { accessToken, user: loggedUser } = response.data;
     await AsyncStorage.setItem(TOKEN_KEY, accessToken);
@@ -61,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
+    queryClient.clear();
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
     setAuthToken(null);
     setToken(null);
