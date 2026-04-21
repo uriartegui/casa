@@ -35,7 +35,11 @@ export default function FridgeScreen({ navigation }: Props) {
     setManualRefreshing(false);
   }
   React.useEffect(() => {
-    if (!selectedHouseholdId && households?.[0]) {
+    if (!households) return;
+    const valid = households.find((h) => h.id === selectedHouseholdId);
+    if (selectedHouseholdId && !valid) {
+      setSelectedHouseholdId(null);
+    } else if (!selectedHouseholdId && households[0]) {
       setSelectedHouseholdId(households[0].id);
     }
   }, [households, selectedHouseholdId, setSelectedHouseholdId]);

@@ -44,10 +44,11 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
     }
     try {
       const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
+await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
       navigation.goBack();
-    } catch {
-      Alert.alert('Erro', 'Não foi possível adicionar o item.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
+      Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     }
   }
 
