@@ -22,6 +22,7 @@ interface AddFridgeItemPayload {
   quantity: number;
   unit: string;
   storageId?: string;
+  expirationDate?: string;
 }
 
 export function useAddFridgeItem(householdId: string) {
@@ -31,6 +32,30 @@ export function useAddFridgeItem(householdId: string) {
       const response = await api.post<FridgeItem>(
         `/households/${householdId}/fridge`,
         payload
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+    },
+  });
+}
+
+interface UpdateFridgeItemPayload {
+  itemId: string;
+  name?: string;
+  quantity?: number;
+  unit?: string;
+  expirationDate?: string | null;
+}
+
+export function useUpdateFridgeItem(householdId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, ...data }: UpdateFridgeItemPayload) => {
+      const response = await api.patch<FridgeItem>(
+        `/households/${householdId}/fridge/${itemId}`,
+        data,
       );
       return response.data;
     },

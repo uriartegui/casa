@@ -18,6 +18,7 @@ import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
 import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { ToggleShoppingItemDto } from './dto/toggle-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
+import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -99,6 +100,17 @@ export class HouseholdsController {
     @Request() req,
   ) {
     return this.householdsService.addFridgeItem(id, req.user.id, dto);
+  }
+
+  @Patch(':id/fridge/:itemId')
+  @ApiOperation({ summary: 'Editar item da geladeira' })
+  updateItem(
+    @Param('id') id: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateFridgeItemDto,
+    @Request() req,
+  ) {
+    return this.householdsService.updateFridgeItem(id, itemId, req.user.id, dto);
   }
 
   @Delete(':id/fridge/:itemId')

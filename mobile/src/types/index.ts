@@ -32,6 +32,7 @@ export interface FridgeItem {
   unit: string;
   storageId?: string | null;
   householdId: string;
+  expirationDate?: string | null;
   addedBy?: User;
 }
 

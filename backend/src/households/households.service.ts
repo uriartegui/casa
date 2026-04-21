@@ -13,6 +13,7 @@ import { ShoppingItem } from './shopping-item.entity';
 import { Storage } from './storage.entity';
 import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
+import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 
 @Injectable()
 export class HouseholdsService {
@@ -146,6 +147,19 @@ export class HouseholdsService {
       householdId,
       createdById: userId,
     });
+    return this.fridgeRepo.save(item);
+  }
+
+  async updateFridgeItem(
+    householdId: string,
+    itemId: string,
+    userId: string,
+    dto: UpdateFridgeItemDto,
+  ): Promise<FridgeItem> {
+    await this.assertMember(householdId, userId);
+    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
+    if (!item) throw new NotFoundException('Item não encontrado');
+    Object.assign(item, dto);
     return this.fridgeRepo.save(item);
   }
 

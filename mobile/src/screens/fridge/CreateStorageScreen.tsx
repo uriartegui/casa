@@ -48,7 +48,6 @@ export default function CreateStorageScreen({ navigation, route }: Props) {
         placeholderTextColor={Colors.textSecondary}
         value={name}
         onChangeText={setName}
-        autoFocus
         returnKeyType="done"
       />
 

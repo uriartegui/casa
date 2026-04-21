@@ -1,18 +1,17 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Alert,
+  StyleSheet, ActivityIndicator, RefreshControl,
 } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
+import { useFridge } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
-import { useAddShoppingItem } from '../../hooks/useShoppingList';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
+import { expirationLabel, scheduleExpirationNotifications } from '../../utils/expiration';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -34,9 +33,6 @@ export default function FridgeScreen({ navigation }: Props) {
     await refetch();
     setManualRefreshing(false);
   }
-  const removeItem = useRemoveFridgeItem(effectiveId ?? '');
-  const addToList = useAddShoppingItem(effectiveId ?? '');
-
   React.useEffect(() => {
     if (!selectedHouseholdId && households?.[0]) {
       setSelectedHouseholdId(households[0].id);
@@ -47,47 +43,31 @@ export default function FridgeScreen({ navigation }: Props) {
     setSelectedStorageId(null);
   }, [effectiveId]);
 
-  const handleDelete = useCallback((item: FridgeItem) => {
-    Alert.alert(
-      `Remover "${item.name}"`,
-      'O que deseja fazer?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: '🛒 Remover + adicionar à lista',
-          onPress: () => {
-            removeItem.mutate(item.id);
-            addToList.mutate({ name: item.name, quantity: item.quantity, unit: item.unit });
-          },
-        },
-        {
-          text: 'Só remover',
-          style: 'destructive',
-          onPress: () => removeItem.mutate(item.id),
-        },
-      ],
-    );
-  }, [removeItem, addToList]);
-
-  const renderRightActions = useCallback((item: FridgeItem) => (
-    <TouchableOpacity style={styles.deleteAction} onPress={() => handleDelete(item)}>
-      <Text style={styles.deleteActionText}>Remover</Text>
-    </TouchableOpacity>
-  ), [handleDelete]);
+  React.useEffect(() => {
+    if (items && items.length > 0) {
+      scheduleExpirationNotifications(items);
+    }
+  }, [items]);
 
   function renderItem({ item }: { item: FridgeItem }) {
+    const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
-        <View style={styles.itemRow}>
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            {item.addedBy && <Text style={styles.itemMeta}>por {item.addedBy.name}</Text>}
-          </View>
-          <View style={styles.quantityBadge}>
-            <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
-          </View>
+      <TouchableOpacity
+        style={styles.itemRow}
+        onPress={() => navigation.navigate('FridgeItemDetail', { item, householdId: effectiveId! })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.name}</Text>
+          {exp && (
+            <Text style={[styles.itemMeta, exp.urgent && styles.itemMetaUrgent]}>{exp.text}</Text>
+          )}
+          {!exp && item.addedBy && <Text style={styles.itemMeta}>por {item.addedBy.name}</Text>}
         </View>
-      </Swipeable>
+        <View style={styles.quantityBadge}>
+          <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
+        </View>
+      </TouchableOpacity>
     );
   }
 
@@ -232,16 +212,12 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1, gap: 2 },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
   itemMeta: { fontSize: 12, color: Colors.textSecondary },
+  itemMetaUrgent: { color: Colors.destructive, fontWeight: '600' },
   quantityBadge: {
     backgroundColor: Colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: Colors.separator,
   },
   quantityText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
-  deleteAction: {
-    backgroundColor: Colors.destructive, justifyContent: 'center', alignItems: 'center',
-    width: 80, borderRadius: 10, marginBottom: 8,
-  },
-  deleteActionText: { color: '#fff', fontSize: 14, fontWeight: '600' },
   emptyContainer: { paddingTop: 60, alignItems: 'center', gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },

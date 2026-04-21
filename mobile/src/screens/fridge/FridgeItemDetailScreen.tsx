@@ -1,30 +1,38 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
+  StyleSheet, ActivityIndicator, ScrollView, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
+import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { useUpdateFridgeItem, useRemoveFridgeItem } from '../../hooks/useFridge';
 import { useAddShoppingItem } from '../../hooks/useShoppingList';
 import { Colors } from '../../constants/colors';
-import { ShoppingStackParamList } from '../../navigation/AppTabs';
+import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 
 type Props = {
-  navigation: NativeStackNavigationProp<ShoppingStackParamList, 'AddShoppingItem'>;
-  route: RouteProp<ShoppingStackParamList, 'AddShoppingItem'>;
+  navigation: NativeStackNavigationProp<FridgeStackParamList, 'FridgeItemDetail'>;
+  route: RouteProp<FridgeStackParamList, 'FridgeItemDetail'>;
 };
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
-export default function AddShoppingItemScreen({ navigation, route }: Props) {
-  const { householdId, prefillName, prefillQuantity, prefillUnit } = route.params;
-  const [name, setName] = useState(prefillName ?? '');
-  const [quantity, setQuantity] = useState(prefillQuantity ? String(prefillQuantity) : '1');
-  const [unit, setUnit] = useState<Unit>((prefillUnit as Unit) ?? 'un');
-  const addItem = useAddShoppingItem(householdId);
+export default function FridgeItemDetailScreen({ navigation, route }: Props) {
+  const { item, householdId } = route.params;
+  const [name, setName] = useState(item.name);
+  const [quantity, setQuantity] = useState(String(item.quantity));
+  const [unit, setUnit] = useState<Unit>((item.unit as Unit) ?? 'un');
+  const [expirationDate, setExpirationDate] = useState<Date | null>(
+    item.expirationDate ? new Date(item.expirationDate + 'T00:00:00') : null
+  );
+  const updateItem = useUpdateFridgeItem(householdId);
+  const removeItem = useRemoveFridgeItem(householdId);
+  const addToList = useAddShoppingItem(householdId);
 
-  async function handleAdd() {
+  async function handleSave() {
     if (!name.trim()) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
@@ -35,11 +43,38 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit });
+      const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : null;
+      await updateItem.mutateAsync({ itemId: item.id, name: name.trim(), quantity: qty, unit, expirationDate: expStr });
       navigation.goBack();
     } catch {
-      Alert.alert('Erro', 'Não foi possível adicionar o item.');
+      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
     }
+  }
+
+  function handleRemove() {
+    Alert.alert(
+      `Remover "${item.name}"`,
+      'O que deseja fazer?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: '🛒 Remover + adicionar à lista',
+          onPress: () => {
+            removeItem.mutate(item.id);
+            addToList.mutate({ name: item.name, quantity: item.quantity, unit: item.unit });
+            navigation.goBack();
+          },
+        },
+        {
+          text: 'Só remover',
+          style: 'destructive',
+          onPress: () => {
+            removeItem.mutate(item.id);
+            navigation.goBack();
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -51,22 +86,20 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
         <Text style={styles.label}>Nome do item</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ex: Leite"
-          placeholderTextColor={Colors.textSecondary}
           value={name}
           onChangeText={setName}
           returnKeyType="next"
+          placeholderTextColor={Colors.textSecondary}
         />
 
         <Text style={styles.label}>Quantidade</Text>
         <TextInput
           style={styles.input}
-          placeholder="1"
-          placeholderTextColor={Colors.textSecondary}
           value={quantity}
           onChangeText={setQuantity}
           keyboardType="decimal-pad"
           returnKeyType="done"
+          placeholderTextColor={Colors.textSecondary}
         />
 
         <Text style={styles.label}>Unidade</Text>
@@ -82,11 +115,17 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleAdd} disabled={addItem.isPending}>
-          {addItem.isPending
+        <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
+        <DateField value={expirationDate} onChange={setExpirationDate} />
+        <TouchableOpacity style={styles.button} onPress={handleSave} disabled={updateItem.isPending}>
+          {updateItem.isPending
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonText}>Adicionar à lista</Text>
+            : <Text style={styles.buttonText}>Salvar</Text>
           }
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
+          <Text style={styles.removeButtonText}>Remover item</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -108,4 +147,7 @@ const styles = StyleSheet.create({
   unitChipTextActive: { color: '#fff' },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  removeButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
+  removeButtonText: { color: Colors.destructive, fontSize: 16, fontWeight: '600' },
+  optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
 });

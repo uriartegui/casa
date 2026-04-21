@@ -44,7 +44,6 @@ export default function JoinHouseholdScreen({ navigation }: Props) {
           onChangeText={setCode}
           autoCapitalize="none"
           autoCorrect={false}
-          autoFocus
           returnKeyType="go"
           onSubmitEditing={handleJoin}
         />

@@ -12,6 +12,7 @@ import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
+import FridgeItemDetailScreen from '../screens/fridge/FridgeItemDetailScreen';
 import ShoppingListScreen from '../screens/shopping/ShoppingListScreen';
 import AddShoppingItemScreen from '../screens/shopping/AddShoppingItemScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -28,6 +29,7 @@ export type HouseholdStackParamList = {
 export type FridgeStackParamList = {
   Fridge: undefined;
   AddFridgeItem: { householdId: string; storageId?: string };
+  FridgeItemDetail: { item: import('../types').FridgeItem; householdId: string };
   CreateStorage: { householdId: string };
 };
 
@@ -91,6 +93,7 @@ function FridgeNavigator() {
     <FridgeStack.Navigator screenOptions={stackScreenOptions}>
       <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={{ title: 'Geladeira' }} />
       <FridgeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
+      <FridgeStack.Screen name="FridgeItemDetail" component={FridgeItemDetailScreen} options={{ title: 'Detalhes', presentation: 'modal' }} />
       <FridgeStack.Screen name="CreateStorage" component={CreateStorageScreen} options={{ title: 'Novo Compartimento', presentation: 'modal' }} />
     </FridgeStack.Navigator>
   );

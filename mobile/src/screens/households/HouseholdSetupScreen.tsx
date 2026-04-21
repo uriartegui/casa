@@ -81,7 +81,6 @@ export default function HouseholdSetupScreen() {
               placeholderTextColor={Colors.textSecondary}
               value={name}
               onChangeText={setName}
-              autoFocus
               returnKeyType="done"
               onSubmitEditing={handleCreate}
             />
@@ -104,7 +103,6 @@ export default function HouseholdSetupScreen() {
               onChangeText={setCode}
               autoCapitalize="none"
               autoCorrect={false}
-              autoFocus
               returnKeyType="go"
               onSubmitEditing={handleJoin}
             />

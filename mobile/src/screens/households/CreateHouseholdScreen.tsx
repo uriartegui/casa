@@ -42,7 +42,6 @@ export default function CreateHouseholdScreen({ navigation }: Props) {
           placeholderTextColor={Colors.textSecondary}
           value={name}
           onChangeText={setName}
-          autoFocus
           returnKeyType="done"
           onSubmitEditing={handleCreate}
         />

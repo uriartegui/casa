@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
 } from 'react-native';
+import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
@@ -22,6 +23,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<Unit>('un');
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const addItem = useAddFridgeItem(householdId);
 
   async function handleAdd() {
@@ -35,7 +37,8 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId });
+      const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
+      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível adicionar o item.');
@@ -55,7 +58,6 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
           placeholderTextColor={Colors.textSecondary}
           value={name}
           onChangeText={setName}
-          autoFocus
           returnKeyType="next"
         />
 
@@ -83,6 +85,9 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
           ))}
         </View>
 
+        <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
+        <DateField value={expirationDate} onChange={setExpirationDate} />
+
         <TouchableOpacity style={styles.button} onPress={handleAdd} disabled={addItem.isPending}>
           {addItem.isPending
             ? <ActivityIndicator color="#fff" />
@@ -107,6 +112,7 @@ const styles = StyleSheet.create({
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   unitChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
+  optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
