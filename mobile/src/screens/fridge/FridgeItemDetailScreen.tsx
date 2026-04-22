@@ -63,18 +63,33 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         { text: 'Cancelar', style: 'cancel' },
         {
           text: '🛒 Remover + adicionar à lista',
-          onPress: () => {
-            removeItem.mutate(item.id);
-            addToList.mutate({ name: item.name, quantity: item.quantity, unit: item.unit });
+          onPress: async () => {
+            try {
+              await removeItem.mutateAsync(item.id);
+            } catch (e: any) {
+              Alert.alert('Erro ao remover', e?.message ?? String(e));
+              return;
+            }
+            try {
+              await addToList.mutateAsync({ name: item.name, quantity: Number(item.quantity), unit: item.unit });
+            } catch (e: any) {
+              Alert.alert('Erro ao adicionar à lista', e?.message ?? String(e));
+              navigation.goBack();
+              return;
+            }
             navigation.goBack();
           },
         },
         {
           text: 'Só remover',
           style: 'destructive',
-          onPress: () => {
-            removeItem.mutate(item.id);
-            navigation.goBack();
+          onPress: async () => {
+            try {
+              await removeItem.mutateAsync(item.id);
+              navigation.goBack();
+            } catch {
+              Alert.alert('Erro', 'Não foi possível remover o item.');
+            }
           },
         },
       ],

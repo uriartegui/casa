@@ -1,6 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity,
+  View, Text, FlatList, TouchableOpacity, Modal,
   StyleSheet, ActivityIndicator, RefreshControl, Alert, SectionList,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -31,6 +31,19 @@ export default function ShoppingListScreen({ navigation }: Props) {
   const { data: items, isLoading, refetch } = useShoppingList(effectiveId);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+  const [logFilter, setLogFilter] = useState<7 | 30 | null>(null);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setShowLog(true)} style={{ paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   async function handleRefresh() {
     setManualRefreshing(true);
     await refetch();
@@ -126,6 +139,66 @@ export default function ShoppingListScreen({ navigation }: Props) {
     );
   }
 
+  function renderLogModal() {
+    const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
+    const sorted = [...(items ?? [])]
+      .filter((it) => !cutoff || new Date(it.createdAt).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return (
+      <Modal visible={showLog} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLog(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Atividades</Text>
+            <TouchableOpacity onPress={() => setShowLog(false)}>
+              <Text style={styles.modalClose}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.filterRow}>
+            {([null, 7, 30] as const).map((f) => (
+              <TouchableOpacity
+                key={String(f)}
+                style={[styles.filterChip, logFilter === f && styles.filterChipActive]}
+                onPress={() => setLogFilter(f)}
+              >
+                <Text style={[styles.filterChipText, logFilter === f && styles.filterChipTextActive]}>
+                  {f === null ? 'Tudo' : f === 7 ? '7 dias' : '30 dias'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {sorted.length === 0 ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyText}>Nenhuma atividade neste período.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={sorted}
+              keyExtractor={(it) => it.id}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+              renderItem={({ item: it }) => (
+                <View style={styles.activityRow}>
+                  <View style={styles.activityDot} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.activityText}>
+                      <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguém'}</Text>
+                      {' adicionou '}
+                      <Text style={styles.activityItem}>{it.name}</Text>
+                    </Text>
+                    <Text style={styles.activityTime}>
+                      {new Date(it.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'America/Sao_Paulo' })}
+                      {' · '}
+                      {new Date(it.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+    );
+  }
+
   const sections = [
     ...(pending.length > 0 ? [{ title: `A COMPRAR (${pending.length})`, data: pending, isPending: true }] : []),
     ...(bought.length > 0 ? [{ title: `COMPRADOS (${boughtCount})`, data: bought, isPending: false }] : []),
@@ -187,6 +260,7 @@ export default function ShoppingListScreen({ navigation }: Props) {
         />
       )}
 
+      {renderLogModal()}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}
@@ -249,4 +323,21 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '600' },
+  filterRow: { flexDirection: 'row', gap: 8, padding: 16 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
+  filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  filterChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff' },
+  modalEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  modalEmptyText: { fontSize: 15, color: Colors.textSecondary },
+  activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 5 },
+  activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  activityName: { fontWeight: '600' },
+  activityItem: { fontStyle: 'italic' },
+  activityTime: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });
