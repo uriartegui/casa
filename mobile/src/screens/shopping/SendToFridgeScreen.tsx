@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAddFridgeItem } from '../../hooks/useFridge';
+import { useAddFridgeItem, useFridgeCategories } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
@@ -20,8 +20,17 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit } = route.params;
 
   const { data: storages } = useStorages(householdId);
-  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
+  const { data: existingCategories } = useFridgeCategories(householdId);
+  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(
+    null,
+  );
   const [category, setCategory] = useState('');
+
+  React.useEffect(() => {
+    if (storages && storages.length > 0 && selectedStorageId === null) {
+      setSelectedStorageId(storages[0].id);
+    }
+  }, [storages, selectedStorageId]);
   const [expirationDate, setExpirationDate] = useState('');
 
   const addToFridge = useAddFridgeItem(householdId);
@@ -67,14 +76,6 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
           <>
             <Text style={styles.label}>Compartimento</Text>
             <View style={styles.chipRow}>
-              <TouchableOpacity
-                style={[styles.chip, selectedStorageId === null && styles.chipActive]}
-                onPress={() => setSelectedStorageId(null)}
-              >
-                <Text style={[styles.chipText, selectedStorageId === null && styles.chipTextActive]}>
-                  Sem compartimento
-                </Text>
-              </TouchableOpacity>
               {storages.map((s) => (
                 <TouchableOpacity
                   key={s.id}
@@ -91,6 +92,19 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         )}
 
         <Text style={styles.label}>Categoria</Text>
+        {existingCategories && existingCategories.length > 0 && (
+          <View style={styles.chipRow}>
+            {existingCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.chip, category === cat && styles.chipActive]}
+                onPress={() => setCategory(cat === category ? '' : cat)}
+              >
+                <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <TextInput
           style={styles.input}
           placeholder="Ex: Carnes, Laticínios"
