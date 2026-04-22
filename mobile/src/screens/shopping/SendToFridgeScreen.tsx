@@ -10,13 +10,36 @@ import { useStorages } from '../../hooks/useStorages';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
 import DateField from '../../components/DateField';
 
-const STORAGE_CATEGORIES: Record<string, string[]> = {
-  geladeira: ['🥛 Laticínios', '🍖 Carnes & Ovos', '🍎 Frutas', '🥬 Verduras/Legumes', '🧃 Bebidas', '🫙 Molhos & Condimentos', '🍽️ Prontos/Restos'],
-  freezer:   ['🧊 Carnes congeladas', '🥬 Vegetais congelados', '🍕 Pratos prontos', '🍦 Sobremesas', '🥖 Pães congelados'],
-  despensa:  ['🌾 Grãos & Cereais', '🥫 Enlatados/Conservas', '🍝 Massas & Farinhas', '🍪 Snacks & Biscoitos', '🫙 Temperos & Condimentos', '🧃 Bebidas'],
+type CategoryChip = { label: string; value: string };
+
+const STORAGE_CATEGORIES: Record<string, CategoryChip[]> = {
+  geladeira: [
+    { label: '🥛 Laticínios', value: 'Laticínios' },
+    { label: '🍖 Carnes & Ovos', value: 'Carnes & Ovos' },
+    { label: '🍎 Frutas', value: 'Frutas' },
+    { label: '🥬 Verduras/Legumes', value: 'Verduras/Legumes' },
+    { label: '🧃 Bebidas', value: 'Bebidas' },
+    { label: '🫙 Molhos & Condimentos', value: 'Molhos & Condimentos' },
+    { label: '🍽️ Prontos/Restos', value: 'Prontos/Restos' },
+  ],
+  freezer: [
+    { label: '🧊 Carnes congeladas', value: 'Carnes congeladas' },
+    { label: '🥬 Vegetais congelados', value: 'Vegetais congelados' },
+    { label: '🍕 Pratos prontos', value: 'Pratos prontos' },
+    { label: '🍦 Sobremesas', value: 'Sobremesas' },
+    { label: '🥖 Pães congelados', value: 'Pães congelados' },
+  ],
+  despensa: [
+    { label: '🌾 Grãos & Cereais', value: 'Grãos & Cereais' },
+    { label: '🥫 Enlatados/Conservas', value: 'Enlatados/Conservas' },
+    { label: '🍝 Massas & Farinhas', value: 'Massas & Farinhas' },
+    { label: '🍪 Snacks & Biscoitos', value: 'Snacks & Biscoitos' },
+    { label: '🫙 Temperos & Condimentos', value: 'Temperos & Condimentos' },
+    { label: '🧃 Bebidas', value: 'Bebidas' },
+  ],
 };
 
-function getCategoriesForStorage(name: string): string[] {
+function getCategoriesForStorage(name: string): CategoryChip[] {
   const key = name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
   for (const [k, cats] of Object.entries(STORAGE_CATEGORIES)) {
     if (key.includes(k)) return cats;
@@ -108,11 +131,11 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
             <View style={styles.chipRow}>
               {categoryChips.map((cat) => (
                 <TouchableOpacity
-                  key={cat}
-                  style={[styles.chip, category === cat && styles.chipActive]}
-                  onPress={() => setCategory(cat === category ? '' : cat)}
+                  key={cat.value}
+                  style={[styles.chip, category === cat.value && styles.chipActive]}
+                  onPress={() => setCategory(cat.value === category ? '' : cat.value)}
                 >
-                  <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>{cat}</Text>
+                  <Text style={[styles.chipText, category === cat.value && styles.chipTextActive]}>{cat.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
