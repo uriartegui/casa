@@ -19,6 +19,8 @@ import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { ToggleShoppingItemDto } from './dto/toggle-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
+import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
+import { AddListItemDto } from './dto/add-list-item.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -104,6 +106,12 @@ export class HouseholdsController {
 
   // Fridge
 
+  @Get(':id/fridge/categories')
+  @ApiOperation({ summary: 'Categorias de itens da geladeira' })
+  getFridgeCategories(@Param('id') id: string, @Request() req) {
+    return this.householdsService.getFridgeCategories(id, req.user.id);
+  }
+
   @Get(':id/fridge')
   @ApiOperation({ summary: 'Ver itens da geladeira' })
   getFridge(
@@ -145,7 +153,65 @@ export class HouseholdsController {
     return this.householdsService.removeFridgeItem(id, itemId, req.user.id);
   }
 
-  // Shopping list
+  // Shopping Lists
+
+  @Get(':id/shopping-lists')
+  @ApiOperation({ summary: 'Listar listas de compras' })
+  getShoppingLists(@Param('id') id: string, @Request() req) {
+    return this.householdsService.getShoppingLists(id, req.user.id);
+  }
+
+  @Post(':id/shopping-lists')
+  @ApiOperation({ summary: 'Criar lista de compras' })
+  createShoppingList(@Param('id') id: string, @Body() dto: CreateShoppingListDto, @Request() req) {
+    return this.householdsService.createShoppingList(id, req.user.id, dto);
+  }
+
+  @Patch(':id/shopping-lists/:listId')
+  @ApiOperation({ summary: 'Editar lista de compras' })
+  updateShoppingList(@Param('id') id: string, @Param('listId') listId: string, @Body() dto: CreateShoppingListDto, @Request() req) {
+    return this.householdsService.updateShoppingList(id, listId, req.user.id, dto);
+  }
+
+  @Delete(':id/shopping-lists/:listId')
+  @ApiOperation({ summary: 'Excluir lista de compras' })
+  deleteShoppingList(@Param('id') id: string, @Param('listId') listId: string, @Request() req) {
+    return this.householdsService.deleteShoppingList(id, listId, req.user.id);
+  }
+
+  // Shopping List Items
+
+  @Get(':id/shopping-lists/:listId/items')
+  @ApiOperation({ summary: 'Listar itens da lista' })
+  getListItems(@Param('id') id: string, @Param('listId') listId: string, @Request() req) {
+    return this.householdsService.getListItems(id, listId, req.user.id);
+  }
+
+  @Post(':id/shopping-lists/:listId/items')
+  @ApiOperation({ summary: 'Adicionar item à lista' })
+  addListItem(@Param('id') id: string, @Param('listId') listId: string, @Body() dto: AddListItemDto, @Request() req) {
+    return this.householdsService.addListItem(id, listId, req.user.id, dto);
+  }
+
+  @Patch(':id/shopping-lists/:listId/items/:itemId')
+  @ApiOperation({ summary: 'Marcar/desmarcar item' })
+  toggleListItem(@Param('id') id: string, @Param('listId') listId: string, @Param('itemId') itemId: string, @Body() dto: ToggleShoppingItemDto, @Request() req) {
+    return this.householdsService.toggleListItem(id, listId, itemId, req.user.id, dto.checked);
+  }
+
+  @Delete(':id/shopping-lists/:listId/items/checked')
+  @ApiOperation({ summary: 'Limpar itens comprados da lista' })
+  clearCheckedListItems(@Param('id') id: string, @Param('listId') listId: string, @Request() req) {
+    return this.householdsService.clearCheckedListItems(id, listId, req.user.id);
+  }
+
+  @Delete(':id/shopping-lists/:listId/items/:itemId')
+  @ApiOperation({ summary: 'Remover item da lista' })
+  removeListItem(@Param('id') id: string, @Param('listId') listId: string, @Param('itemId') itemId: string, @Request() req) {
+    return this.householdsService.removeListItem(id, listId, itemId, req.user.id);
+  }
+
+  // Shopping list (legacy)
 
   @Get(':id/shopping-list')
   @ApiOperation({ summary: 'Listar itens da lista de compras' })
