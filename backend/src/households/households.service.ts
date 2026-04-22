@@ -312,4 +312,110 @@ export class HouseholdsService {
     });
     if (!member) throw new ForbiddenException('Sem acesso a esta casa');
   }
+
+  // Shopping Lists
+
+  async getShoppingLists(householdId: string, userId: string): Promise<(ShoppingList & { itemCount: number })[]> {
+    await this.assertMember(householdId, userId);
+    const lists = await this.shoppingListsRepo.find({
+      where: { householdId },
+      order: { createdAt: 'ASC' },
+    });
+    const counts = await Promise.all(
+      lists.map((l) => this.shoppingRepo.count({ where: { shoppingListId: l.id } })),
+    );
+    return lists.map((l, i) => Object.assign(l, { itemCount: counts[i] }));
+  }
+
+  async createShoppingList(householdId: string, userId: string, dto: CreateShoppingListDto): Promise<ShoppingList> {
+    await this.assertMember(householdId, userId);
+    const list = this.shoppingListsRepo.create({
+      householdId,
+      createdById: userId,
+      name: dto.name,
+      place: dto.place ?? null,
+      category: dto.category ?? null,
+    });
+    const saved = await this.shoppingListsRepo.save(list);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
+  async updateShoppingList(householdId: string, listId: string, userId: string, dto: CreateShoppingListDto): Promise<ShoppingList> {
+    await this.assertMember(householdId, userId);
+    const list = await this.shoppingListsRepo.findOne({ where: { id: listId, householdId } });
+    if (!list) throw new NotFoundException('Lista não encontrada');
+    Object.assign(list, { name: dto.name, place: dto.place ?? null, category: dto.category ?? null });
+    const saved = await this.shoppingListsRepo.save(list);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
+  async deleteShoppingList(householdId: string, listId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    const list = await this.shoppingListsRepo.findOne({ where: { id: listId, householdId } });
+    if (!list) throw new NotFoundException('Lista não encontrada');
+    await this.shoppingRepo.delete({ shoppingListId: listId });
+    await this.shoppingListsRepo.delete(listId);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async getListItems(householdId: string, listId: string, userId: string): Promise<ShoppingItem[]> {
+    await this.assertMember(householdId, userId);
+    return this.shoppingRepo.find({
+      where: { shoppingListId: listId, householdId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async addListItem(householdId: string, listId: string, userId: string, dto: AddListItemDto): Promise<ShoppingItem> {
+    await this.assertMember(householdId, userId);
+    const list = await this.shoppingListsRepo.findOne({ where: { id: listId, householdId } });
+    if (!list) throw new NotFoundException('Lista não encontrada');
+    const item = this.shoppingRepo.create({
+      householdId,
+      shoppingListId: listId,
+      createdById: userId,
+      name: dto.name,
+      quantity: dto.quantity ?? 1,
+      unit: dto.unit ?? null,
+      checked: false,
+    });
+    const saved = await this.shoppingRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
+  async toggleListItem(householdId: string, listId: string, itemId: string, userId: string, checked: boolean): Promise<ShoppingItem> {
+    await this.assertMember(householdId, userId);
+    const item = await this.shoppingRepo.findOne({ where: { id: itemId, shoppingListId: listId, householdId } });
+    if (!item) throw new NotFoundException('Item não encontrado');
+    item.checked = checked;
+    const saved = await this.shoppingRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
+  async removeListItem(householdId: string, listId: string, itemId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.shoppingRepo.delete({ id: itemId, shoppingListId: listId, householdId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async clearCheckedListItems(householdId: string, listId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.shoppingRepo.delete({ shoppingListId: listId, householdId, checked: true });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async getFridgeCategories(householdId: string, userId: string): Promise<string[]> {
+    await this.assertMember(householdId, userId);
+    const result = await this.fridgeRepo
+      .createQueryBuilder('item')
+      .select('DISTINCT item.category', 'category')
+      .where('item.householdId = :householdId', { householdId })
+      .andWhere('item.category IS NOT NULL')
+      .getRawMany<{ category: string }>();
+    return result.map((r) => r.category);
+  }
 }
