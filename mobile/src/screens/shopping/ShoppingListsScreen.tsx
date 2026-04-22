@@ -163,6 +163,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           householdId: effectiveId!,
           listId: item.id,
           listName: item.name,
+          listUrgent: item.urgent,
         })}
         onLongPress={() => handleDelete(item)}
         activeOpacity={0.7}

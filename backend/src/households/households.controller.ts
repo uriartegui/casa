@@ -202,7 +202,7 @@ export class HouseholdsController {
   @Patch(':id/shopping-lists/:listId/items/:itemId')
   @ApiOperation({ summary: 'Marcar/desmarcar item' })
   toggleListItem(@Param('id') id: string, @Param('listId') listId: string, @Param('itemId') itemId: string, @Body() dto: ToggleShoppingItemDto, @Request() req) {
-    return this.householdsService.toggleListItem(id, listId, itemId, req.user.id, dto.checked);
+    return this.householdsService.toggleListItem(id, listId, itemId, req.user.id, dto);
   }
 
   @Delete(':id/shopping-lists/:listId/items/checked')
@@ -243,7 +243,7 @@ export class HouseholdsController {
     @Body() dto: ToggleShoppingItemDto,
     @Request() req,
   ) {
-    return this.householdsService.toggleShoppingItem(id, itemId, req.user.id, dto.checked);
+    return this.householdsService.toggleShoppingItem(id, itemId, req.user.id, dto);
   }
 
   @Delete(':id/shopping-list/checked')

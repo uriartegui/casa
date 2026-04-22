@@ -17,4 +17,5 @@ export class AddShoppingItemDto {
   @IsOptional()
   @IsString()
   unit?: string;
+
 }

@@ -29,7 +29,7 @@ export function useCreateShoppingList(householdId: string) {
 export function useUpdateShoppingList(householdId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ listId, ...data }: { listId: string; name: string; place?: string; category?: string }) => {
+    mutationFn: async ({ listId, ...data }: { listId: string; name: string; place?: string; category?: string; urgent?: boolean }) => {
       const res = await api.patch<ShoppingList>(`/households/${householdId}/shopping-lists/${listId}`, data);
       return res.data;
     },

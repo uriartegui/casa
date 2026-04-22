@@ -10,6 +10,7 @@ export interface ShoppingList {
   name: string;
   place: string | null;
   category: string | null;
+  urgent: boolean;
   itemCount: number;
   createdAt: string;
 }

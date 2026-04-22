@@ -8,7 +8,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import {
   useListItems, useToggleListItem, useRemoveListItem,
-  useClearCheckedListItems, useDeleteShoppingList,
+  useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
 } from '../../hooks/useShoppingLists';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
@@ -22,7 +22,9 @@ type Props = {
 };
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
-  const { householdId, listId, listName } = route.params;
+  const { householdId, listId, listName, listUrgent } = route.params;
+  const [urgent, setUrgent] = useState(listUrgent);
+  const updateList = useUpdateShoppingList(householdId);
   const { data: items, isLoading, refetch } = useListItems(householdId, listId);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -147,9 +149,20 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={handleDeleteList} style={styles.headerButton}>
-          <Text style={styles.headerButtonText}>Excluir</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <TouchableOpacity onPress={() => {
+            const next = !urgent;
+            setUrgent(next);
+            updateList.mutate({ listId, name: listName, urgent: next });
+          }}>
+            <Text style={[styles.headerButtonText, urgent ? styles.headerButtonUrgentActive : styles.headerButtonUrgent]}>
+              {urgent ? '🚨 Urgente' : 'Urgente'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDeleteList}>
+            <Text style={styles.headerButtonText}>Excluir</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
   }, [handleDeleteList]);
@@ -273,4 +286,6 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
+  headerButtonUrgent: { color: '#F0A500' },
+  headerButtonUrgentActive: { color: '#B45309', fontWeight: '700' },
 });

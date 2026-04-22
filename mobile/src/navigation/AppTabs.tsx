@@ -40,7 +40,7 @@ export type FridgeStackParamList = {
 
 export type ShoppingStackParamList = {
   ShoppingLists: undefined;
-  ShoppingListDetail: { householdId: string; listId: string; listName: string };
+  ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean };
   CreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
@@ -63,6 +63,8 @@ export type ShoppingStackParamList = {
 export type HomeStackParamList = {
   Home: undefined;
   AddFridgeItem: { householdId: string };
+  HomeShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean };
+  HomeCreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
     listId?: string;
@@ -91,6 +93,8 @@ function HomeNavigator() {
       <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <HomeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <HomeStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
+      <HomeStack.Screen name="HomeShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
+      <HomeStack.Screen name="HomeCreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
     </HomeStack.Navigator>
   );
 }
@@ -154,16 +158,25 @@ export default function AppTabs() {
         name="GeladeirTab"
         component={FridgeNavigator}
         options={{ title: 'Geladeira', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🧊</Text> }}
+        listeners={({ navigation }) => ({
+          tabPress: () => navigation.navigate('GeladeirTab', { screen: 'Fridge' } as never),
+        })}
       />
       <Tab.Screen
         name="ListaTab"
         component={ShoppingNavigator}
         options={{ title: 'Lista', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🛒</Text> }}
+        listeners={({ navigation }) => ({
+          tabPress: () => navigation.navigate('ListaTab', { screen: 'ShoppingLists' } as never),
+        })}
       />
       <Tab.Screen
         name="CasaTab"
         component={HouseholdNavigator}
         options={{ title: 'Casa', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}
+        listeners={({ navigation }) => ({
+          tabPress: () => navigation.navigate('CasaTab', { screen: 'HouseholdList' } as never),
+        })}
       />
       <Tab.Screen
         name="PerfilTab"

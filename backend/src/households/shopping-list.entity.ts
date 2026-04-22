@@ -26,6 +26,9 @@ export class ShoppingList {
   @Column({ type: 'varchar', nullable: true })
   category: string | null;
 
+  @Column({ default: false })
+  urgent: boolean;
+
   @Column()
   createdById: string;
 

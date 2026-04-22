@@ -239,12 +239,12 @@ export class HouseholdsService {
     householdId: string,
     itemId: string,
     userId: string,
-    checked: boolean,
+    dto: { checked?: boolean },
   ): Promise<ShoppingItem> {
     await this.assertMember(householdId, userId);
     const item = await this.shoppingRepo.findOne({ where: { id: itemId, householdId } });
     if (!item) throw new NotFoundException('Item não encontrado');
-    item.checked = checked;
+    if (dto.checked !== undefined) item.checked = dto.checked;
     const saved = await this.shoppingRepo.save(item);
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
@@ -345,7 +345,7 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     const list = await this.shoppingListsRepo.findOne({ where: { id: listId, householdId } });
     if (!list) throw new NotFoundException('Lista não encontrada');
-    Object.assign(list, { name: dto.name, place: dto.place ?? null, category: dto.category ?? null });
+    Object.assign(list, { name: dto.name, place: dto.place ?? null, category: dto.category ?? null, ...(dto.urgent !== undefined && { urgent: dto.urgent }) });
     const saved = await this.shoppingListsRepo.save(list);
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
@@ -386,11 +386,11 @@ export class HouseholdsService {
     return saved;
   }
 
-  async toggleListItem(householdId: string, listId: string, itemId: string, userId: string, checked: boolean): Promise<ShoppingItem> {
+  async toggleListItem(householdId: string, listId: string, itemId: string, userId: string, dto: { checked?: boolean }): Promise<ShoppingItem> {
     await this.assertMember(householdId, userId);
     const item = await this.shoppingRepo.findOne({ where: { id: itemId, shoppingListId: listId, householdId } });
     if (!item) throw new NotFoundException('Item não encontrado');
-    item.checked = checked;
+    if (dto.checked !== undefined) item.checked = dto.checked;
     const saved = await this.shoppingRepo.save(item);
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
