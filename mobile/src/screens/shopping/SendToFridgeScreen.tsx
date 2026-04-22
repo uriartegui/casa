@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,6 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
+import DateField from '../../components/DateField';
 
 const STORAGE_CATEGORIES: Record<string, string[]> = {
   geladeira: ['🥛 Laticínios', '🍖 Carnes & Ovos', '🍎 Frutas', '🥬 Verduras/Legumes', '🧃 Bebidas', '🫙 Molhos & Condimentos', '🍽️ Prontos/Restos'],
@@ -45,17 +46,13 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
       setSelectedStorageId(storages[0].id);
     }
   }, [storages, selectedStorageId]);
-  const [expirationDate, setExpirationDate] = useState('');
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
   const addToFridge = useAddFridgeItem(householdId);
   const removeFromList = useRemoveListItem(householdId, listId);
 
   async function handleSend() {
-    const expStr = expirationDate.trim() || undefined;
-    if (expStr && !/^\d{4}-\d{2}-\d{2}$/.test(expStr)) {
-      Alert.alert('Erro', 'Data no formato AAAA-MM-DD.');
-      return;
-    }
+    const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
     try {
       await addToFridge.mutateAsync({
         name: prefillName,
@@ -122,17 +119,8 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
           </>
         )}
 
-        <Text style={styles.label}>Validade (opcional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="AAAA-MM-DD"
-          placeholderTextColor={Colors.textSecondary}
-          value={expirationDate}
-          onChangeText={setExpirationDate}
-          keyboardType="numbers-and-punctuation"
-          returnKeyType="done"
-          onSubmitEditing={handleSend}
-        />
+        <Text style={styles.label}>Validade <Text style={styles.optional}>(opcional)</Text></Text>
+        <DateField value={expirationDate} onChange={setExpirationDate} />
 
         <TouchableOpacity style={styles.button} onPress={handleSend} disabled={isPending}>
           {isPending
@@ -161,10 +149,7 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   chipTextActive: { color: '#fff' },
-  input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
-  },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  optional: { fontWeight: '400', textTransform: 'none', letterSpacing: 0 },
 });
