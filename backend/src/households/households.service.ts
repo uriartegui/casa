@@ -378,10 +378,10 @@ export class HouseholdsService {
       createdById: userId,
       name: dto.name,
       quantity: dto.quantity ?? 1,
-      unit: dto.unit ?? null,
+      unit: dto.unit ?? 'un',
       checked: false,
     });
-    const saved = await this.shoppingRepo.save(item);
+    const saved = await this.shoppingRepo.save(item) as ShoppingItem;
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
   }
