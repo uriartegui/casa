@@ -19,6 +19,6 @@ export class HouseholdInvite {
   @JoinColumn({ name: 'householdId' })
   household: Household;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

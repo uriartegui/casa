@@ -48,6 +48,6 @@ export class ShoppingItem {
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

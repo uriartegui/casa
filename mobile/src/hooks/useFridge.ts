@@ -24,6 +24,7 @@ interface AddFridgeItemPayload {
   storageId?: string;
   category?: string;
   expirationDate?: string;
+  fromShoppingListName?: string;
 }
 
 export function useAddFridgeItem(householdId: string) {
@@ -36,8 +37,11 @@ export function useAddFridgeItem(householdId: string) {
       );
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      if (variables.fromShoppingListName) {
+        queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
+      }
     },
   });
 }

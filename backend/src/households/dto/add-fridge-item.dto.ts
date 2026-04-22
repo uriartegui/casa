@@ -30,4 +30,9 @@ export class AddFridgeItemDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ example: 'Feira da semana' })
+  @IsOptional()
+  @IsString()
+  fromShoppingListName?: string;
 }

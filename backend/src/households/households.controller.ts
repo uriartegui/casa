@@ -155,6 +155,12 @@ export class HouseholdsController {
 
   // Shopping Lists
 
+  @Get(':id/shopping-activity')
+  @ApiOperation({ summary: 'Atividade de compras da casa' })
+  getShoppingActivity(@Param('id') id: string, @Request() req) {
+    return this.householdsService.getShoppingActivity(id, req.user.id);
+  }
+
   @Get(':id/shopping-lists')
   @ApiOperation({ summary: 'Listar listas de compras' })
   getShoppingLists(@Param('id') id: string, @Request() req) {

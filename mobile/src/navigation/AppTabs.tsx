@@ -56,6 +56,7 @@ export type ShoppingStackParamList = {
     prefillName: string;
     prefillQuantity: number;
     prefillUnit: string | null;
+    listName: string;
   };
 };
 

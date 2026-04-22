@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
   View, Text, SectionList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
@@ -6,7 +6,11 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useListItems, useToggleListItem, useRemoveListItem, useClearCheckedListItems } from '../../hooks/useShoppingLists';
+import {
+  useListItems, useToggleListItem, useRemoveListItem,
+  useClearCheckedListItems, useDeleteShoppingList,
+} from '../../hooks/useShoppingLists';
+import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -26,6 +30,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const toggleItem = useToggleListItem(householdId, listId);
   const removeItem = useRemoveListItem(householdId, listId);
   const clearChecked = useClearCheckedListItems(householdId, listId);
+  const deleteList = useDeleteShoppingList(householdId);
+  const addFridgeItem = useAddFridgeItem(householdId);
+  const prevItemCount = useRef<number | undefined>(undefined);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -52,6 +59,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               prefillName: item.name,
               prefillQuantity: Number(item.quantity),
               prefillUnit: item.unit ?? null,
+              listName,
             }),
           },
         ],
@@ -83,6 +91,68 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const pending = items?.filter((i) => !i.checked) ?? [];
   const bought = items?.filter((i) => i.checked) ?? [];
   const total = items?.length ?? 0;
+
+  const handleDeleteList = useCallback(() => {
+    const doDelete = () => deleteList.mutate(listId, { onSuccess: () => navigation.goBack() });
+
+    if (pending.length > 0) {
+      Alert.alert(
+        'Excluir lista',
+        `Há ${pending.length} ${pending.length === 1 ? 'item não comprado' : 'itens não comprados'}.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          {
+            text: 'Mandar tudo para geladeira',
+            onPress: () => {
+              Promise.all(
+                pending.map((item) =>
+                  addFridgeItem.mutateAsync({
+                    name: item.name,
+                    quantity: Number(item.quantity),
+                    unit: item.unit ?? undefined,
+                    fromShoppingListName: listName,
+                  }),
+                ),
+              ).then(doDelete);
+            },
+          },
+          { text: 'Excluir lista', style: 'destructive', onPress: doDelete },
+        ],
+      );
+    } else {
+      Alert.alert('Excluir lista', 'Deseja excluir esta lista?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Excluir', style: 'destructive', onPress: doDelete },
+      ]);
+    }
+  }, [pending, deleteList, addFridgeItem, listId, navigation]);
+
+  // Detect transition to empty list
+  useEffect(() => {
+    if (items === undefined) return;
+    const prev = prevItemCount.current;
+    prevItemCount.current = items.length;
+    if (prev !== undefined && prev > 0 && items.length === 0) {
+      Alert.alert('Lista vazia', 'Todos os itens foram removidos. Deseja excluir esta lista?', [
+        { text: 'Manter', style: 'cancel' },
+        {
+          text: 'Excluir lista',
+          style: 'destructive',
+          onPress: () => deleteList.mutate(listId, { onSuccess: () => navigation.goBack() }),
+        },
+      ]);
+    }
+  }, [items]);
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={handleDeleteList} style={styles.headerButton}>
+          <Text style={styles.headerButtonText}>Excluir</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [handleDeleteList]);
 
   function renderItem({ item }: { item: ShoppingItem }) {
     return (
@@ -201,4 +271,6 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  headerButton: { paddingHorizontal: 4 },
+  headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
 });

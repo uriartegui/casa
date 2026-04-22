@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { ShoppingList, ShoppingItem } from '../types';
+import { ShoppingList, ShoppingItem, ShoppingActivityEvent } from '../types';
 
 export function useShoppingLists(householdId: string | null) {
   return useQuery({
@@ -77,6 +77,7 @@ export function useAddListItem(householdId: string, listId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -106,6 +107,7 @@ export function useRemoveListItem(householdId: string, listId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -119,5 +121,16 @@ export function useClearCheckedListItems(householdId: string, listId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
     },
+  });
+}
+
+export function useShoppingActivity(householdId: string | null) {
+  return useQuery<ShoppingActivityEvent[]>({
+    queryKey: ["shopping-activity", householdId],
+    queryFn: async () => {
+      const res = await api.get<ShoppingActivityEvent[]>(`/households/${householdId}/shopping-activity`);
+      return res.data;
+    },
+    enabled: !!householdId,
   });
 }

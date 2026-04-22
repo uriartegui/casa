@@ -32,6 +32,6 @@ export class Household {
   @OneToMany(() => FridgeItem, (item) => item.household)
   fridgeItems: FridgeItem[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

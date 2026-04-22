@@ -55,7 +55,7 @@ type Props = {
 };
 
 export default function SendToFridgeScreen({ navigation, route }: Props) {
-  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit } = route.params;
+  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit, listName } = route.params;
 
   const { data: storages } = useStorages(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
@@ -84,6 +84,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         storageId: selectedStorageId ?? undefined,
         category: category.trim() || undefined,
         expirationDate: expStr,
+        fromShoppingListName: listName,
       });
       await removeFromList.mutateAsync(itemId);
       navigation.goBack();

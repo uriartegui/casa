@@ -33,6 +33,6 @@ export class HouseholdMember {
   @JoinColumn({ name: 'householdId' })
   household: Household;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   joinedAt: Date;
 }

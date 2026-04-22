@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Alert,
+  StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useShoppingLists, useDeleteShoppingList } from '../../hooks/useShoppingLists';
+import { useShoppingLists, useDeleteShoppingList, useShoppingActivity } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
-import { ShoppingList } from '../../types';
+import { ShoppingList, ShoppingActivityEvent } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
 };
+
+type FilterPeriod = 'all' | '7d' | '30d';
 
 export default function ShoppingListsScreen({ navigation }: Props) {
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
@@ -22,8 +24,25 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
   const { data: lists, isLoading, refetch } = useShoppingLists(effectiveId);
+  const { data: activity, refetch: refetchActivity } = useShoppingActivity(effectiveId);
+
+  React.useEffect(() => {
+    if (showActivity) refetchActivity();
+  }, [showActivity]);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [showActivity, setShowActivity] = useState(false);
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
+
+  React.useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setShowActivity(true)} style={{ paddingRight: 4 }}>
+          <Text style={{ color: Colors.accent, fontSize: 15, fontWeight: '500' }}>Atividade</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
   const deleteList = useDeleteShoppingList(effectiveId ?? '');
 
   React.useEffect(() => {
@@ -47,6 +66,78 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         onPress: () => deleteList.mutate(list.id),
       },
     ]);
+  }
+
+  function getCutoff(): number | null {
+    if (filterPeriod === '7d') return Date.now() - 7 * 24 * 60 * 60 * 1000;
+    if (filterPeriod === '30d') return Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return null;
+  }
+
+  function renderActivityModal() {
+    const cutoff = getCutoff();
+    const sorted = (activity ?? [])
+      .filter((e) => !cutoff || new Date(e.createdAt).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    return (
+      <Modal visible={showActivity} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowActivity(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Atividade</Text>
+            <TouchableOpacity onPress={() => setShowActivity(false)}>
+              <Text style={styles.modalClose}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterRow}>
+            {(['all', '7d', '30d'] as FilterPeriod[]).map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[styles.filterChip, filterPeriod === p && styles.filterChipActive]}
+                onPress={() => setFilterPeriod(p)}
+              >
+                <Text style={[styles.filterChipText, filterPeriod === p && styles.filterChipTextActive]}>
+                  {p === 'all' ? 'Tudo' : p === '7d' ? '7 dias' : '30 dias'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {sorted.length === 0 ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyText}>Nenhuma atividade neste período.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={sorted}
+              keyExtractor={(e) => e.id}
+              contentContainerStyle={styles.modalList}
+              renderItem={({ item: e }) => (
+                <View style={styles.activityRow}>
+                  <View style={[styles.activityDot, e.type === 'sent_to_fridge' && styles.activityDotFridge]} />
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityText}>
+                      <Text style={styles.activityName}>{e.createdBy?.name ?? 'Alguém'}</Text>
+                      {e.type === 'sent_to_fridge'
+                        ? <>{' mandou para geladeira da lista '}<Text style={styles.activityListName}>{e.listName}</Text>{': '}</>
+                        : <>{' adicionou na lista '}<Text style={styles.activityListName}>{e.listName}</Text>{': '}</>
+                      }
+                      <Text style={styles.activityItem}>{e.name}</Text>
+                    </Text>
+                    <Text style={styles.activityTime}>
+                      {new Date(e.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {' · '}
+                      {new Date(e.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+    );
   }
 
   if (loadingHouseholds) {
@@ -99,6 +190,8 @@ export default function ShoppingListsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
+      {renderActivityModal()}
+
       {households && households.length > 1 && (
         <View style={styles.householdPicker}>
           {households.map((h) => (
@@ -177,4 +270,29 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  // Modal
+  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 16, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
+  filterRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
+  filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  filterChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff' },
+  modalEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  modalEmptyText: { fontSize: 15, color: Colors.textSecondary },
+  modalList: { padding: 16, gap: 4 },
+  activityRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  activityDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent, marginTop: 5, flexShrink: 0 },
+  activityDotFridge: { backgroundColor: Colors.success },
+  activityContent: { flex: 1, gap: 2 },
+  activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  activityName: { fontWeight: '600' },
+  activityListName: { fontWeight: '600', color: Colors.accent },
+  activityItem: { fontStyle: 'italic' },
+  activityTime: { fontSize: 12, color: Colors.textSecondary },
 });

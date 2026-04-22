@@ -51,6 +51,9 @@ export class FridgeItem {
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
-  @CreateDateColumn()
+  @Column({ type: 'varchar', nullable: true })
+  fromShoppingListName: string | null;
+
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 }

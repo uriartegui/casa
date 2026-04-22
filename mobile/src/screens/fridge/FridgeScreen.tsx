@@ -166,7 +166,9 @@ export default function FridgeScreen({ navigation }: Props) {
                   <View style={styles.activityContent}>
                     <Text style={styles.activityText}>
                       <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguém'}</Text>
-                      {' adicionou '}
+                      {it.fromShoppingListName
+                        ? <>{' mandou da Lista '}<Text style={styles.activityListName}>{it.fromShoppingListName}</Text>{': '}</>
+                        : ' adicionou '}
                       <Text style={styles.activityItem}>{it.name}</Text>
                     </Text>
                     <Text style={styles.activityTime}>
@@ -447,6 +449,7 @@ const styles = StyleSheet.create({
   activityContent: { flex: 1 },
   activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   activityName: { fontWeight: '600' },
+  activityListName: { fontWeight: '600', color: Colors.accent },
   activityItem: { fontStyle: 'italic' },
   activityTime: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });

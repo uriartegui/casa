@@ -49,6 +49,7 @@ export interface FridgeItem {
   expirationDate?: string | null;
   createdBy?: User;
   createdAt: string;
+  fromShoppingListName?: string | null;
 }
 
 export interface ShoppingItem {
@@ -69,3 +70,12 @@ export interface AuthResponse {
 }
 
 export type Unit = 'un' | 'kg' | 'g' | 'L' | 'ml';
+
+export interface ShoppingActivityEvent {
+  id: string;
+  type: 'added' | 'sent_to_fridge';
+  name: string;
+  listName: string;
+  createdBy?: User;
+  createdAt: string;
+}

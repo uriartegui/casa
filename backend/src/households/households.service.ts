@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan } from 'typeorm';
+import { Repository, MoreThan, Not, IsNull } from 'typeorm';
 import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
@@ -406,6 +406,46 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     await this.shoppingRepo.delete({ shoppingListId: listId, householdId, checked: true });
     this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async getShoppingActivity(householdId: string, userId: string) {
+    await this.assertMember(householdId, userId);
+
+    const [shoppingItems, fridgeItems] = await Promise.all([
+      this.shoppingRepo.find({
+        where: { householdId },
+        relations: ['createdBy', 'shoppingList'],
+        order: { createdAt: 'DESC' },
+        take: 40,
+      }),
+      this.fridgeRepo.find({
+        where: { householdId, fromShoppingListName: Not(IsNull()) },
+        relations: ['createdBy'],
+        order: { createdAt: 'DESC' },
+        take: 40,
+      }),
+    ]);
+
+    return [
+      ...shoppingItems.map((i) => ({
+        id: `shop_${i.id}`,
+        type: 'added' as const,
+        name: i.name,
+        listName: i.shoppingList?.name ?? 'lista',
+        createdBy: i.createdBy,
+        createdAt: i.createdAt,
+      })),
+      ...fridgeItems.map((i) => ({
+        id: `fridge_${i.id}`,
+        type: 'sent_to_fridge' as const,
+        name: i.name,
+        listName: i.fromShoppingListName!,
+        createdBy: i.createdBy,
+        createdAt: i.createdAt,
+      })),
+    ]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 50);
   }
 
   async getFridgeCategories(householdId: string, userId: string, storageId?: string): Promise<string[]> {
