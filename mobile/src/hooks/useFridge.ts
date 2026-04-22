@@ -76,3 +76,14 @@ export function useRemoveFridgeItem(householdId: string) {
     },
   });
 }
+
+export function useFridgeCategories(householdId: string | null) {
+  return useQuery({
+    queryKey: ['fridge-categories', householdId],
+    queryFn: async () => {
+      const res = await api.get<string[]>(`/households/${householdId}/fridge/categories`);
+      return res.data;
+    },
+    enabled: !!householdId,
+  });
+}

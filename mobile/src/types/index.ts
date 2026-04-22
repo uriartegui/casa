@@ -4,6 +4,16 @@ export interface User {
   email: string;
 }
 
+export interface ShoppingList {
+  id: string;
+  householdId: string;
+  name: string;
+  place: string | null;
+  category: string | null;
+  itemCount: number;
+  createdAt: string;
+}
+
 export interface Household {
   id: string;
   name: string;
@@ -48,6 +58,7 @@ export interface ShoppingItem {
   unit?: string;
   checked: boolean;
   householdId: string;
+  shoppingListId: string | null;
   createdBy?: User;
   createdAt: string;
 }
