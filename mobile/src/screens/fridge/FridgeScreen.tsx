@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
@@ -19,9 +20,13 @@ type Props = {
 };
 
 export default function FridgeScreen({ navigation }: Props) {
+  const HOUSEHOLD_DROPDOWN_WIDTH = 180;
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households, isLoading: loadingHouseholds } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
+  const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
+  const [pickerAnchor, setPickerAnchor] = useState({ x: 0, y: 0 });
+  const triggerRef = useRef<View>(null);
 
   const { data: storages } = useStorages(effectiveId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
@@ -33,6 +38,7 @@ export default function FridgeScreen({ navigation }: Props) {
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [logFilter, setLogFilter] = useState<7 | 30 | null>(null);
+
   async function handleRefresh() {
     setManualRefreshing(true);
     await refetch();
@@ -41,14 +47,43 @@ export default function FridgeScreen({ navigation }: Props) {
 
   useEffect(() => {
     navigation.setOptions({
+      headerLeft: () => null,
+      headerTitle: () =>
+        households && households.length > 1 ? (
+          <TouchableOpacity
+            ref={triggerRef}
+            activeOpacity={0.7}
+            style={styles.headerHouseholdTrigger}
+            onPress={() => {
+              triggerRef.current?.measureInWindow((x, y, w, h) => {
+                setPickerAnchor({ x: x + w / 2, y: y + h + 4 });
+                setShowHouseholdPicker(true);
+              });
+            }}
+          >
+            <Text style={styles.headerHouseholdTriggerText} numberOfLines={1}>
+              {households.find((h) => h.id === effectiveId)?.name}
+            </Text>
+            <Ionicons name="chevron-down" size={13} color={Colors.accent} />
+          </TouchableOpacity>
+        ) : null,
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowLog(true)} style={{ paddingHorizontal: 8 }}>
+        <TouchableOpacity onPress={() => setShowLog(true)} style={styles.headerRightButton}>
           <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
         </TouchableOpacity>
       ),
+      headerTitleContainerStyle: {
+        left: 0,
+        right: 0,
+        alignItems: 'center',
+      },
+      headerRightContainerStyle: {
+        paddingRight: 16,
+      },
     });
-  }, [navigation]);
-  React.useEffect(() => {
+  }, [navigation, households, effectiveId]);
+
+  useEffect(() => {
     if (!households) return;
     const valid = households.find((h) => h.id === selectedHouseholdId);
     if (selectedHouseholdId && !valid) {
@@ -58,12 +93,12 @@ export default function FridgeScreen({ navigation }: Props) {
     }
   }, [households, selectedHouseholdId, setSelectedHouseholdId]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setSelectedStorageId(null);
     setSelectedCategory(null);
   }, [effectiveId]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (items && items.length > 0) {
       scheduleExpirationNotifications(items);
     }
@@ -114,16 +149,6 @@ export default function FridgeScreen({ navigation }: Props) {
     return rows;
   }, [sections]);
 
-  function timeAgo(dateStr: string): string {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'agora';
-    if (mins < 60) return `${mins} min atrás`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h atrás`;
-    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-  }
-
   function renderLogModal() {
     const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
     const sorted = [...(items ?? [])]
@@ -153,7 +178,7 @@ export default function FridgeScreen({ navigation }: Props) {
           </View>
           {sorted.length === 0 ? (
             <View style={styles.modalEmpty}>
-              <Text style={styles.modalEmptyText}>Nenhuma atividade neste período.</Text>
+              <Text style={styles.modalEmptyText}>Nenhuma atividade neste periodo.</Text>
             </View>
           ) : (
             <FlatList
@@ -165,7 +190,7 @@ export default function FridgeScreen({ navigation }: Props) {
                   <View style={styles.activityDot} />
                   <View style={styles.activityContent}>
                     <Text style={styles.activityText}>
-                      <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguém'}</Text>
+                      <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguem'}</Text>
                       {it.fromShoppingListName
                         ? <>{' mandou da Lista '}<Text style={styles.activityListName}>{it.fromShoppingListName}</Text>{': '}</>
                         : ' adicionou '}
@@ -191,8 +216,8 @@ export default function FridgeScreen({ navigation }: Props) {
     const expStyle = exp?.status === 'expired'
       ? styles.itemMetaExpired
       : exp?.status === 'warning'
-      ? styles.itemMetaWarning
-      : styles.itemMetaOk;
+        ? styles.itemMetaWarning
+        : styles.itemMetaOk;
     return (
       <TouchableOpacity
         style={styles.itemRow}
@@ -233,19 +258,48 @@ export default function FridgeScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       {households && households.length > 1 && (
-        <View style={styles.householdPicker}>
-          {households.map((h) => (
-            <TouchableOpacity
-              key={h.id}
-              style={[styles.pickerItem, h.id === effectiveId && styles.pickerItemActive]}
-              onPress={() => setSelectedHouseholdId(h.id)}
+        <Modal
+          visible={showHouseholdPicker}
+          transparent
+          animationType="none"
+          onRequestClose={() => setShowHouseholdPicker(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setShowHouseholdPicker(false)}
+          >
+            <View
+              style={[
+                styles.householdDropdown,
+                {
+                  top: pickerAnchor.y,
+                  left: Math.max(12, pickerAnchor.x - HOUSEHOLD_DROPDOWN_WIDTH / 2),
+                },
+              ]}
             >
-              <Text style={[styles.pickerItemText, h.id === effectiveId && styles.pickerItemTextActive]}>
-                {h.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+              {households.map((h) => (
+                <TouchableOpacity
+                  key={h.id}
+                  style={[styles.householdOption, h.id === effectiveId && styles.householdOptionActive]}
+                  onPress={() => {
+                    setSelectedHouseholdId(h.id);
+                    setShowHouseholdPicker(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.householdOptionText,
+                      h.id === effectiveId && styles.householdOptionTextActive,
+                    ]}
+                  >
+                    {h.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       )}
 
       {storages !== undefined && (
@@ -323,7 +377,7 @@ export default function FridgeScreen({ navigation }: Props) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Vazio</Text>
-              <Text style={styles.emptySubtitle}>Adicione itens tocando no botão abaixo</Text>
+              <Text style={styles.emptySubtitle}>Adicione itens tocando no botao abaixo</Text>
             </View>
           }
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
@@ -349,14 +403,38 @@ export default function FridgeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 8 },
-  householdPicker: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
-    backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.separator,
+  headerRightButton: { width: 88, alignItems: 'flex-end' },
+  headerHouseholdTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 180,
   },
-  pickerItem: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.background },
-  pickerItemActive: { backgroundColor: Colors.accent },
-  pickerItemText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
-  pickerItemTextActive: { color: '#fff' },
+  headerHouseholdTriggerText: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  modalBackdrop: { flex: 1 },
+  householdDropdown: {
+    position: 'absolute',
+    width: 180,
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 8,
+  },
+  householdOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+  },
+  householdOptionActive: { backgroundColor: Colors.accent + '18' },
+  householdOptionText: { fontSize: 14, color: Colors.textPrimary },
+  householdOptionTextActive: { color: Colors.accent, fontWeight: '600' },
   storagePicker: {
     flexDirection: 'row', alignItems: 'center',
     paddingRight: 16, height: 52,
@@ -371,7 +449,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
   },
   storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  storageChipEmoji: { fontSize: 14 },
   storageChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   storageChipTextActive: { color: '#fff' },
   storageAddChip: {
@@ -389,15 +466,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.separator, marginBottom: 8,
   },
   itemInfo: { flex: 1, gap: 2 },
-  itemNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
-  categoryBadge: {
-    backgroundColor: Colors.accent + '22',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  categoryBadgeText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
   categoryPickerWrapper: {
     height: 48,
     backgroundColor: Colors.card,
@@ -442,8 +511,6 @@ const styles = StyleSheet.create({
   modalList: { paddingHorizontal: 20, paddingBottom: 32 },
   modalEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   modalEmptyText: { fontSize: 15, color: Colors.textSecondary },
-  activitySection: { marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: Colors.separator },
-  activityHeader: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, marginBottom: 12 },
   activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
   activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 5 },
   activityContent: { flex: 1 },

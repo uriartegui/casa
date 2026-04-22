@@ -37,7 +37,6 @@ export default function HomeScreen() {
   const [showPicker, setShowPicker] = useState(false);
   const [pickerAnchor, setPickerAnchor] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<View>(null);
-
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
   useEffect(() => {
@@ -66,7 +65,6 @@ export default function HomeScreen() {
 
   function storagePreposition(name?: string | null) {
     if (!name) return 'na geladeira';
-
     const normalized = name.trim().toLowerCase();
     if (normalized.startsWith('freezer')) return `no ${name}`;
     if (normalized.startsWith('frigobar')) return `no ${name}`;

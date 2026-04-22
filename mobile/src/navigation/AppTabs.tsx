@@ -115,7 +115,7 @@ function HouseholdNavigator() {
 function FridgeNavigator() {
   return (
     <FridgeStack.Navigator screenOptions={stackScreenOptions}>
-      <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={{ title: 'Geladeira' }} />
+      <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={{ title: '' }} />
       <FridgeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <FridgeStack.Screen name="FridgeItemDetail" component={FridgeItemDetailScreen} options={{ title: 'Detalhes', presentation: 'modal' }} />
       <FridgeStack.Screen name="CreateStorage" component={CreateStorageScreen} options={{ title: 'Novo Compartimento', presentation: 'modal' }} />
