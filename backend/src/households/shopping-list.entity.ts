@@ -8,30 +8,23 @@ import {
 } from 'typeorm';
 import { Household } from './household.entity';
 import { User } from '../users/user.entity';
-import { ShoppingList } from './shopping-list.entity';
 
-@Entity('shopping_items')
-export class ShoppingItem {
+@Entity('shopping_lists')
+export class ShoppingList {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   householdId: string;
 
-  @Column({ type: 'uuid', nullable: true })
-  shoppingListId: string | null;
-
   @Column()
   name: string;
 
-  @Column({ type: 'decimal', default: 1 })
-  quantity: number;
+  @Column({ nullable: true })
+  place: string | null;
 
   @Column({ nullable: true })
-  unit: string;
-
-  @Column({ default: false })
-  checked: boolean;
+  category: string | null;
 
   @Column()
   createdById: string;
@@ -39,10 +32,6 @@ export class ShoppingItem {
   @ManyToOne(() => Household)
   @JoinColumn({ name: 'householdId' })
   household: Household;
-
-  @ManyToOne(() => ShoppingList, { nullable: true })
-  @JoinColumn({ name: 'shoppingListId' })
-  shoppingList: ShoppingList | null;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'createdById' })

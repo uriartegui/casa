@@ -12,10 +12,13 @@ import { HouseholdMember } from './household-member.entity';
 import { HouseholdInvite } from './household-invite.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { ShoppingItem } from './shopping-item.entity';
+import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
 import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
+import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
+import { AddListItemDto } from './dto/add-list-item.dto';
 
 @Injectable()
 export class HouseholdsService {
@@ -28,6 +31,8 @@ export class HouseholdsService {
     private fridgeRepo: Repository<FridgeItem>,
     @InjectRepository(ShoppingItem)
     private shoppingRepo: Repository<ShoppingItem>,
+    @InjectRepository(ShoppingList)
+    private shoppingListsRepo: Repository<ShoppingList>,
     @InjectRepository(Storage)
     private storageRepo: Repository<Storage>,
     @InjectRepository(HouseholdInvite)
