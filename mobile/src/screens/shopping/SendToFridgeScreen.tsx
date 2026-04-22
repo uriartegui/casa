@@ -5,9 +5,23 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAddFridgeItem, useFridgeCategories } from '../../hooks/useFridge';
+import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
+
+const STORAGE_CATEGORIES: Record<string, string[]> = {
+  geladeira: ['🥛 Laticínios', '🍖 Carnes & Ovos', '🍎 Frutas', '🥬 Verduras/Legumes', '🧃 Bebidas', '🫙 Molhos & Condimentos', '🍽️ Prontos/Restos'],
+  freezer:   ['🧊 Carnes congeladas', '🥬 Vegetais congelados', '🍕 Pratos prontos', '🍦 Sobremesas', '🥖 Pães congelados'],
+  despensa:  ['🌾 Grãos & Cereais', '🥫 Enlatados/Conservas', '🍝 Massas & Farinhas', '🍪 Snacks & Biscoitos', '🫙 Temperos & Condimentos', '🧃 Bebidas'],
+};
+
+function getCategoriesForStorage(name: string): string[] {
+  const key = name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  for (const [k, cats] of Object.entries(STORAGE_CATEGORIES)) {
+    if (key.includes(k)) return cats;
+  }
+  return [];
+}
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 
@@ -21,8 +35,10 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
 
   const { data: storages } = useStorages(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
-  const { data: existingCategories } = useFridgeCategories(householdId, selectedStorageId);
   const [category, setCategory] = useState('');
+
+  const selectedStorage = storages?.find((s) => s.id === selectedStorageId);
+  const categoryChips = selectedStorage ? getCategoriesForStorage(selectedStorage.name) : [];
 
   React.useEffect(() => {
     if (storages && storages.length > 0 && selectedStorageId === null) {
@@ -89,10 +105,10 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
           </>
         )}
 
-        <Text style={styles.label}>Categoria</Text>
-        {selectedStorageId && existingCategories && existingCategories.length > 0 && (
+        <Text style={styles.label}>Categoria (opcional)</Text>
+        {selectedStorageId && categoryChips.length > 0 && (
           <View style={styles.chipRow}>
-            {existingCategories.map((cat) => (
+            {categoryChips.map((cat) => (
               <TouchableOpacity
                 key={cat}
                 style={[styles.chip, category === cat && styles.chipActive]}
