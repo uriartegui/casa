@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
 
 Notifications.setNotificationHandler({
@@ -22,6 +22,10 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 
 export default function App() {
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
