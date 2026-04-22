@@ -22,6 +22,7 @@ interface AddFridgeItemPayload {
   quantity: number;
   unit: string;
   storageId?: string;
+  category?: string;
   expirationDate?: string;
 }
 
@@ -46,6 +47,7 @@ interface UpdateFridgeItemPayload {
   name?: string;
   quantity?: number;
   unit?: string;
+  category?: string;
   expirationDate?: string | null;
 }
 

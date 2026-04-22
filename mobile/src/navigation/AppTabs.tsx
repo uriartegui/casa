@@ -14,8 +14,10 @@ import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
 import FridgeItemDetailScreen from '../screens/fridge/FridgeItemDetailScreen';
-import ShoppingListScreen from '../screens/shopping/ShoppingListScreen';
+import ShoppingListsScreen from '../screens/shopping/ShoppingListsScreen';
+import ShoppingListDetailScreen from '../screens/shopping/ShoppingListDetailScreen';
 import AddShoppingItemScreen from '../screens/shopping/AddShoppingItemScreen';
+import CreateShoppingListScreen from '../screens/shopping/CreateShoppingListScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import HomeScreen from '../screens/home/HomeScreen';
 
@@ -36,9 +38,12 @@ export type FridgeStackParamList = {
 };
 
 export type ShoppingStackParamList = {
-  ShoppingList: undefined;
+  ShoppingLists: undefined;
+  ShoppingListDetail: { householdId: string; listId: string; listName: string };
+  CreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
+    listId: string;
     prefillName?: string;
     prefillQuantity?: number;
     prefillUnit?: string;
@@ -50,6 +55,7 @@ export type HomeStackParamList = {
   AddFridgeItem: { householdId: string };
   AddShoppingItem: {
     householdId: string;
+    listId?: string;
     prefillName?: string;
     prefillQuantity?: number;
     prefillUnit?: string;
@@ -106,7 +112,9 @@ function FridgeNavigator() {
 function ShoppingNavigator() {
   return (
     <ShoppingStack.Navigator screenOptions={stackScreenOptions}>
-      <ShoppingStack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: 'Lista de Compras' }} />
+      <ShoppingStack.Screen name="ShoppingLists" component={ShoppingListsScreen} options={{ title: 'Listas de Compras' }} />
+      <ShoppingStack.Screen name="ShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
+      <ShoppingStack.Screen name="CreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
       <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
     </ShoppingStack.Navigator>
   );

@@ -5,24 +5,32 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAddShoppingItem } from '../../hooks/useShoppingList';
+import { useAddListItem } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 
+type Params = {
+  householdId: string;
+  listId?: string;
+  prefillName?: string;
+  prefillQuantity?: number;
+  prefillUnit?: string;
+};
+
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'AddShoppingItem'>;
-  route: RouteProp<ShoppingStackParamList, 'AddShoppingItem'>;
+  route: RouteProp<{ AddShoppingItem: Params }, 'AddShoppingItem'>;
 };
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
 export default function AddShoppingItemScreen({ navigation, route }: Props) {
-  const { householdId, prefillName, prefillQuantity, prefillUnit } = route.params;
+  const { householdId, listId, prefillName, prefillQuantity, prefillUnit } = route.params;
   const [name, setName] = useState(prefillName ?? '');
   const [quantity, setQuantity] = useState(prefillQuantity ? String(prefillQuantity) : '1');
   const [unit, setUnit] = useState<Unit>((prefillUnit as Unit) ?? 'un');
-  const addItem = useAddShoppingItem(householdId);
+  const addItem = useAddListItem(householdId, listId ?? '');
 
   async function handleAdd() {
     if (!name.trim()) {
