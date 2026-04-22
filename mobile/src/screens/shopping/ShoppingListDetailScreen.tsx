@@ -47,11 +47,17 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           { text: 'Não', style: 'cancel' },
           {
             text: 'Sim',
-            onPress: () => addToFridge.mutate({
-              name: item.name,
-              quantity: item.quantity,
-              unit: item.unit ?? 'un',
-            }),
+            onPress: async () => {
+              try {
+                await addToFridge.mutateAsync({
+                  name: item.name,
+                  quantity: item.quantity,
+                  unit: item.unit ?? 'un',
+                });
+              } catch {
+                Alert.alert('Erro', 'Não foi possível adicionar à geladeira.');
+              }
+            },
           },
         ],
       );
