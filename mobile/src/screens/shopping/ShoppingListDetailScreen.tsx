@@ -51,7 +51,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               try {
                 await addToFridge.mutateAsync({
                   name: item.name,
-                  quantity: item.quantity,
+                  quantity: Number(item.quantity),
                   unit: item.unit ?? 'un',
                 });
               } catch {
