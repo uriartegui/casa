@@ -20,10 +20,8 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit } = route.params;
 
   const { data: storages } = useStorages(householdId);
-  const { data: existingCategories } = useFridgeCategories(householdId);
-  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(
-    null,
-  );
+  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
+  const { data: existingCategories } = useFridgeCategories(householdId, selectedStorageId);
   const [category, setCategory] = useState('');
 
   React.useEffect(() => {
@@ -92,7 +90,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         )}
 
         <Text style={styles.label}>Categoria</Text>
-        {existingCategories && existingCategories.length > 0 && (
+        {selectedStorageId && existingCategories && existingCategories.length > 0 && (
           <View style={styles.chipRow}>
             {existingCategories.map((cat) => (
               <TouchableOpacity

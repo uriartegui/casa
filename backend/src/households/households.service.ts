@@ -408,14 +408,17 @@ export class HouseholdsService {
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
-  async getFridgeCategories(householdId: string, userId: string): Promise<string[]> {
+  async getFridgeCategories(householdId: string, userId: string, storageId?: string): Promise<string[]> {
     await this.assertMember(householdId, userId);
-    const result = await this.fridgeRepo
+    const qb = this.fridgeRepo
       .createQueryBuilder('item')
       .select('DISTINCT item.category', 'category')
       .where('item.householdId = :householdId', { householdId })
-      .andWhere('item.category IS NOT NULL')
-      .getRawMany<{ category: string }>();
+      .andWhere('item.category IS NOT NULL');
+    if (storageId) {
+      qb.andWhere('item.storageId = :storageId', { storageId });
+    }
+    const result = await qb.getRawMany<{ category: string }>();
     return result.map((r) => r.category);
   }
 }

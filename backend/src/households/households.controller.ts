@@ -108,8 +108,8 @@ export class HouseholdsController {
 
   @Get(':id/fridge/categories')
   @ApiOperation({ summary: 'Categorias de itens da geladeira' })
-  getFridgeCategories(@Param('id') id: string, @Request() req) {
-    return this.householdsService.getFridgeCategories(id, req.user.id);
+  getFridgeCategories(@Param('id') id: string, @Query('storageId') storageId: string | undefined, @Request() req) {
+    return this.householdsService.getFridgeCategories(id, req.user.id, storageId);
   }
 
   @Get(':id/fridge')
