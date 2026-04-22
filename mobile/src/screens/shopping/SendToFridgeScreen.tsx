@@ -105,28 +105,22 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
           </>
         )}
 
-        <Text style={styles.label}>Categoria (opcional)</Text>
         {selectedStorageId && categoryChips.length > 0 && (
-          <View style={styles.chipRow}>
-            {categoryChips.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[styles.chip, category === cat && styles.chipActive]}
-                onPress={() => setCategory(cat === category ? '' : cat)}
-              >
-                <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>{cat}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <>
+            <Text style={styles.label}>Categoria (opcional)</Text>
+            <View style={styles.chipRow}>
+              {categoryChips.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.chip, category === cat && styles.chipActive]}
+                  onPress={() => setCategory(cat === category ? '' : cat)}
+                >
+                  <Text style={[styles.chipText, category === cat && styles.chipTextActive]}>{cat}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
         )}
-        <TextInput
-          style={styles.input}
-          placeholder="Ex: Carnes, Laticínios"
-          placeholderTextColor={Colors.textSecondary}
-          value={category}
-          onChangeText={setCategory}
-          returnKeyType="next"
-        />
 
         <Text style={styles.label}>Validade (opcional)</Text>
         <TextInput
