@@ -7,7 +7,6 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useListItems, useToggleListItem, useRemoveListItem, useClearCheckedListItems } from '../../hooks/useShoppingLists';
-import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -27,7 +26,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const toggleItem = useToggleListItem(householdId, listId);
   const removeItem = useRemoveListItem(householdId, listId);
   const clearChecked = useClearCheckedListItems(householdId, listId);
-  const addToFridge = useAddFridgeItem(householdId);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -47,17 +45,14 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           { text: 'Não', style: 'cancel' },
           {
             text: 'Sim',
-            onPress: async () => {
-              try {
-                await addToFridge.mutateAsync({
-                  name: item.name,
-                  quantity: Number(item.quantity),
-                  unit: item.unit ?? 'un',
-                });
-              } catch {
-                Alert.alert('Erro', 'Não foi possível adicionar à geladeira.');
-              }
-            },
+            onPress: () => navigation.navigate('SendToFridge', {
+              householdId,
+              listId,
+              itemId: item.id,
+              prefillName: item.name,
+              prefillQuantity: Number(item.quantity),
+              prefillUnit: item.unit ?? null,
+            }),
           },
         ],
       );

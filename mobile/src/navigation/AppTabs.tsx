@@ -18,6 +18,7 @@ import ShoppingListsScreen from '../screens/shopping/ShoppingListsScreen';
 import ShoppingListDetailScreen from '../screens/shopping/ShoppingListDetailScreen';
 import AddShoppingItemScreen from '../screens/shopping/AddShoppingItemScreen';
 import CreateShoppingListScreen from '../screens/shopping/CreateShoppingListScreen';
+import SendToFridgeScreen from '../screens/shopping/SendToFridgeScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import HomeScreen from '../screens/home/HomeScreen';
 
@@ -47,6 +48,14 @@ export type ShoppingStackParamList = {
     prefillName?: string;
     prefillQuantity?: number;
     prefillUnit?: string;
+  };
+  SendToFridge: {
+    householdId: string;
+    listId: string;
+    itemId: string;
+    prefillName: string;
+    prefillQuantity: number;
+    prefillUnit: string | null;
   };
 };
 
@@ -116,6 +125,7 @@ function ShoppingNavigator() {
       <ShoppingStack.Screen name="ShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
       <ShoppingStack.Screen name="CreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
       <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
+      <ShoppingStack.Screen name="SendToFridge" component={SendToFridgeScreen} options={{ title: 'Adicionar à Geladeira', presentation: 'modal' }} />
     </ShoppingStack.Navigator>
   );
 }
