@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Android emulator: use '10.0.2.2:3000'
-// iOS simulator ou Expo Go na mesma rede: use o IP da máquina
-const BASE_URL = 'http://10.0.2.2:3000';
+// Android emulator: use 'http://10.0.2.2:3000'
+// Expo Go (dispositivo físico): use o IP LAN da máquina
+const BASE_URL = 'http://192.168.0.225:3000';
 
 export const api = axios.create({
   baseURL: BASE_URL,

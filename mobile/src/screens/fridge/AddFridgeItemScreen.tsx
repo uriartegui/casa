@@ -66,6 +66,8 @@ await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, e
           value={name}
           onChangeText={setName}
           returnKeyType="next"
+          autoCorrect={false}
+          spellCheck={false}
         />
 
         <Text style={styles.label}>Quantidade</Text>

@@ -21,7 +21,7 @@ function applyMask(raw: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-function parseInput(text: string): Date | null {
+function parseInput(text: string): { date: Date; expired: boolean } | null {
   const digits = text.replace(/\D/g, '');
   if (digits.length !== 8) return null;
   const day = parseInt(digits.slice(0, 2), 10);
@@ -30,16 +30,16 @@ function parseInput(text: string): Date | null {
   const date = new Date(year, month, day);
   if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
-  if (date < today) return null;
-  return date;
+  return { date, expired: date < today };
 }
 
 export default function DateField({ value, onChange }: Props) {
   const [text, setText] = useState(value ? toDisplayString(value) : '');
   const [error, setError] = useState(false);
+  const [expired, setExpired] = useState(false);
 
   useEffect(() => {
-    if (!value) { setText(''); setError(false); }
+    if (!value) { setText(''); setError(false); setExpired(false); }
   }, [value]);
 
   function handleChange(raw: string) {
@@ -47,14 +47,15 @@ export default function DateField({ value, onChange }: Props) {
     setText(masked);
     const digits = masked.replace(/\D/g, '');
     if (digits.length === 0) {
-      setError(false);
+      setError(false); setExpired(false);
       onChange(null);
     } else if (digits.length === 8) {
       const parsed = parseInput(masked);
       setError(!parsed);
-      onChange(parsed);
+      setExpired(parsed?.expired ?? false);
+      onChange(parsed?.date ?? null);
     } else {
-      setError(false);
+      setError(false); setExpired(false);
       onChange(null);
     }
   }
@@ -84,7 +85,8 @@ export default function DateField({ value, onChange }: Props) {
           </TouchableOpacity>
         )}
       </View>
-      {error && <Text style={styles.errorText}>Data inválida ou já vencida</Text>}
+      {error && <Text style={styles.errorText}>Data inválida</Text>}
+      {!error && expired && <Text style={styles.warnText}>Item já vencido — será marcado como vencido</Text>}
     </View>
   );
 }
@@ -99,4 +101,5 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: Colors.textPrimary, paddingVertical: 12 },
   clear: { fontSize: 16, color: Colors.textSecondary, paddingLeft: 8 },
   errorText: { fontSize: 12, color: Colors.destructive, marginTop: 4, marginLeft: 4 },
+  warnText: { fontSize: 12, color: '#F59E0B', marginTop: 4, marginLeft: 4 },
 });

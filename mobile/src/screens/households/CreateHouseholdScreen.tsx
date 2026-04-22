@@ -47,6 +47,8 @@ export default function CreateHouseholdScreen({ navigation }: Props) {
           onChangeText={setName}
           returnKeyType="done"
           onSubmitEditing={handleCreate}
+          autoCorrect={false}
+          spellCheck={false}
         />
         <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={createHousehold.isPending}>
           {createHousehold.isPending

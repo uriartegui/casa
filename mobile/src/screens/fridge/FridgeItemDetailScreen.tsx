@@ -94,6 +94,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
           onChangeText={setName}
           returnKeyType="next"
           placeholderTextColor={Colors.textSecondary}
+          autoCorrect={false}
+          spellCheck={false}
         />
 
         <Text style={styles.label}>Quantidade</Text>

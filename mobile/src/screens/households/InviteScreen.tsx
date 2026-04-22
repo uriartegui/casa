@@ -55,7 +55,10 @@ export default function InviteScreen({ route }: Props) {
     <View style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.label}>CÓDIGO DE CONVITE</Text>
-        <Text style={styles.code}>{inviteCode}</Text>
+        <Text style={styles.code}>
+          {inviteCode.slice(0, 3)} {inviteCode.slice(3)}
+        </Text>
+        <Text style={styles.expiry}>Válido por 2 horas</Text>
       </View>
 
       <View style={styles.qrContainer}>
@@ -86,9 +89,10 @@ const styles = StyleSheet.create({
   },
   label: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   code: {
-    fontSize: 28, fontWeight: '700', color: Colors.textPrimary, letterSpacing: 4,
+    fontSize: 42, fontWeight: '700', color: Colors.textPrimary, letterSpacing: 8,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
+  expiry: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
   qrContainer: { alignItems: 'center', backgroundColor: Colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: Colors.separator },
   actions: { gap: 10 },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },

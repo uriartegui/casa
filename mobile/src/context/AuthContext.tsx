@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api, setAuthToken, setUnauthorizedHandler } from '../services/api';
+import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
 
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
+    socket.disconnect();
     queryClient.clear();
     await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
     setAuthToken(null);

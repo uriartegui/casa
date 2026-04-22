@@ -15,6 +15,8 @@ export interface HouseholdMember {
   id: string;
   userId: string;
   householdId: string;
+  role: 'admin' | 'member';
+  joinedAt: string;
   user?: User;
 }
 
@@ -35,7 +37,8 @@ export interface FridgeItem {
   category?: string | null;
   householdId: string;
   expirationDate?: string | null;
-  addedBy?: User;
+  createdBy?: User;
+  createdAt: string;
 }
 
 export interface ShoppingItem {

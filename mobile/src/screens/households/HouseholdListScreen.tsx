@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHouseholds } from '../../hooks/useHouseholds';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Household } from '../../types';
@@ -15,6 +16,7 @@ type Props = {
 
 export default function HouseholdListScreen({ navigation }: Props) {
   const { data: households, isLoading, refetch } = useHouseholds();
+  useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   async function handleRefresh() {
     setManualRefreshing(true);

@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl, Modal,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
@@ -28,12 +29,25 @@ export default function FridgeScreen({ navigation }: Props) {
   const effectiveStorageId = selectedStorageId ?? storages?.[0]?.id ?? null;
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
+  useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [showLog, setShowLog] = useState(false);
+  const [logFilter, setLogFilter] = useState<7 | 30 | null>(null);
   async function handleRefresh() {
     setManualRefreshing(true);
     await refetch();
     setManualRefreshing(false);
   }
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity onPress={() => setShowLog(true)} style={{ paddingHorizontal: 8 }}>
+          <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
   React.useEffect(() => {
     if (!households) return;
     const valid = households.find((h) => h.id === selectedHouseholdId);
@@ -58,17 +72,125 @@ export default function FridgeScreen({ navigation }: Props) {
   const availableCategories = React.useMemo(() => {
     if (!items) return [];
     const cats = new Set(items.map((i) => i.category).filter(Boolean) as string[]);
-    return Array.from(cats);
+    return Array.from(cats).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [items]);
 
   const filteredItems = React.useMemo(() => {
     if (!items) return [];
-    if (!selectedCategory) return items;
-    return items.filter((i) => i.category === selectedCategory);
+    const base = selectedCategory ? items.filter((i) => i.category === selectedCategory) : items;
+    return [...base].sort((a, b) => {
+      const aD = a.expirationDate ? new Date(a.expirationDate).getTime() : Infinity;
+      const bD = b.expirationDate ? new Date(b.expirationDate).getTime() : Infinity;
+      return aD - bD;
+    });
   }, [items, selectedCategory]);
+
+  const sections = React.useMemo(() => {
+    if (selectedCategory) {
+      return [{ category: selectedCategory, data: filteredItems }];
+    }
+    const groups: Record<string, FridgeItem[]> = {};
+    const uncategorized: FridgeItem[] = [];
+    filteredItems.forEach((item) => {
+      if (item.category) {
+        if (!groups[item.category]) groups[item.category] = [];
+        groups[item.category].push(item);
+      } else {
+        uncategorized.push(item);
+      }
+    });
+    const result = Object.entries(groups).map(([cat, data]) => ({ category: cat, data }));
+    if (uncategorized.length > 0) result.push({ category: 'Outros', data: uncategorized });
+    return result;
+  }, [filteredItems, selectedCategory]);
+
+  type FlatRow = { _header: true; category: string; id: string } | FridgeItem;
+  const flatData = React.useMemo((): FlatRow[] => {
+    const rows: FlatRow[] = [];
+    for (const section of sections) {
+      rows.push({ _header: true, category: section.category, id: `__header__${section.category}` });
+      for (const item of section.data) rows.push(item);
+    }
+    return rows;
+  }, [sections]);
+
+  function timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'agora';
+    if (mins < 60) return `${mins} min atrás`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h atrás`;
+    return new Date(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  }
+
+  function renderLogModal() {
+    const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
+    const sorted = [...(items ?? [])]
+      .filter((it) => !cutoff || new Date(it.createdAt).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    return (
+      <Modal visible={showLog} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLog(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Atividade</Text>
+            <TouchableOpacity onPress={() => setShowLog(false)} style={styles.modalClose}>
+              <Text style={styles.modalCloseText}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.filterRow}>
+            {([null, 7, 30] as const).map((f) => (
+              <TouchableOpacity
+                key={String(f)}
+                style={[styles.filterChip, logFilter === f && styles.filterChipActive]}
+                onPress={() => setLogFilter(f)}
+              >
+                <Text style={[styles.filterChipText, logFilter === f && styles.filterChipTextActive]}>
+                  {f === null ? 'Tudo' : f === 7 ? '7 dias' : '30 dias'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {sorted.length === 0 ? (
+            <View style={styles.modalEmpty}>
+              <Text style={styles.modalEmptyText}>Nenhuma atividade neste período.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={sorted}
+              keyExtractor={(it) => it.id}
+              contentContainerStyle={styles.modalList}
+              renderItem={({ item: it }) => (
+                <View style={styles.activityRow}>
+                  <View style={styles.activityDot} />
+                  <View style={styles.activityContent}>
+                    <Text style={styles.activityText}>
+                      <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguém'}</Text>
+                      {' adicionou '}
+                      <Text style={styles.activityItem}>{it.name}</Text>
+                    </Text>
+                    <Text style={styles.activityTime}>
+                      {new Date(it.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {' · '}
+                      {new Date(it.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+    );
+  }
 
   function renderItem({ item }: { item: FridgeItem }) {
     const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
+    const expStyle = exp?.status === 'expired'
+      ? styles.itemMetaExpired
+      : exp?.status === 'warning'
+      ? styles.itemMetaWarning
+      : styles.itemMetaOk;
     return (
       <TouchableOpacity
         style={styles.itemRow}
@@ -76,18 +198,9 @@ export default function FridgeScreen({ navigation }: Props) {
         activeOpacity={0.7}
       >
         <View style={styles.itemInfo}>
-          <View style={styles.itemNameRow}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            {item.category && (
-              <View style={styles.categoryBadge}>
-                <Text style={styles.categoryBadgeText}>{item.category}</Text>
-              </View>
-            )}
-          </View>
-          {exp && (
-            <Text style={[styles.itemMeta, exp.urgent && styles.itemMetaUrgent]}>{exp.text}</Text>
-          )}
-          {!exp && item.addedBy && <Text style={styles.itemMeta}>por {item.addedBy.name}</Text>}
+          <Text style={styles.itemName}>{item.name}</Text>
+          {exp && <Text style={[styles.itemMeta, expStyle]}>{exp.text}</Text>}
+          {!exp && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
         </View>
         <View style={styles.quantityBadge}>
           <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
@@ -135,18 +248,19 @@ export default function FridgeScreen({ navigation }: Props) {
 
       {storages !== undefined && (
         <View style={styles.storagePicker}>
-          {storages.map((s) => (
-            <TouchableOpacity
-              key={s.id}
-              style={[styles.storageChip, s.id === effectiveStorageId && styles.storageChipActive]}
-              onPress={() => setSelectedStorageId(s.id)}
-            >
-              <Text style={styles.storageChipEmoji}>{s.emoji}</Text>
-              <Text style={[styles.storageChipText, s.id === effectiveStorageId && styles.storageChipTextActive]}>
-                {s.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.storagePickerContent}>
+            {storages.map((s) => (
+              <TouchableOpacity
+                key={s.id}
+                style={[styles.storageChip, s.id === effectiveStorageId && styles.storageChipActive]}
+                onPress={() => setSelectedStorageId(s.id)}
+              >
+                <Text style={[styles.storageChipText, s.id === effectiveStorageId && styles.storageChipTextActive]}>
+                  {s.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
           <TouchableOpacity
             style={styles.storageAddChip}
             onPress={() => navigation.navigate('CreateStorage', { householdId: effectiveId })}
@@ -157,28 +271,30 @@ export default function FridgeScreen({ navigation }: Props) {
       )}
 
       {availableCategories.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryPickerWrapper}
-          contentContainerStyle={styles.categoryPicker}
-        >
-          <TouchableOpacity
-            style={[styles.categoryChip, !selectedCategory && styles.categoryChipActive]}
-            onPress={() => setSelectedCategory(null)}
+        <View style={styles.categoryPickerWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.categoryPicker}
           >
-            <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>Todos</Text>
-          </TouchableOpacity>
-          {availableCategories.map((cat) => (
             <TouchableOpacity
-              key={cat}
-              style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
-              onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              style={[styles.categoryChip, !selectedCategory && styles.categoryChipActive]}
+              onPress={() => setSelectedCategory(null)}
             >
-              <Text style={[styles.categoryChipText, selectedCategory === cat && styles.categoryChipTextActive]}>{cat}</Text>
+              <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>Todos</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+            {availableCategories.map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[styles.categoryChip, selectedCategory === cat && styles.categoryChipActive]}
+                onPress={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+              >
+                <Text style={[styles.categoryChipText, selectedCategory === cat && styles.categoryChipTextActive]}>{cat}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
       {loadingItems ? (
@@ -187,9 +303,15 @@ export default function FridgeScreen({ navigation }: Props) {
         </View>
       ) : (
         <FlatList
-          data={filteredItems}
+          style={{ flex: 1 }}
+          data={flatData}
           keyExtractor={(item) => item.id}
-          renderItem={renderItem}
+          renderItem={({ item }) => {
+            if ('_header' in item && item._header) {
+              return <Text style={styles.sectionGroupHeader}>{item.category}</Text>;
+            }
+            return renderItem({ item: item as FridgeItem });
+          }}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.sectionLabel}>
@@ -206,6 +328,7 @@ export default function FridgeScreen({ navigation }: Props) {
         />
       )}
 
+      {renderLogModal()}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}
@@ -233,9 +356,12 @@ const styles = StyleSheet.create({
   pickerItemText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   pickerItemTextActive: { color: '#fff' },
   storagePicker: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 10, gap: 8,
+    flexDirection: 'row', alignItems: 'center',
+    paddingRight: 16, height: 52,
     backgroundColor: Colors.card, borderBottomWidth: 1, borderBottomColor: Colors.separator,
-    flexWrap: 'wrap',
+  },
+  storagePickerContent: {
+    alignItems: 'center', paddingHorizontal: 16, gap: 8,
   },
   storageChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -252,8 +378,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   storageAddChipText: { fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
-  list: { padding: 16, gap: 2, flexGrow: 1 },
+  list: { padding: 16, gap: 2, flexGrow: 1, paddingBottom: 24 },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  sectionGroupHeader: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 16, marginBottom: 4 },
   itemRow: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -270,12 +397,14 @@ const styles = StyleSheet.create({
   },
   categoryBadgeText: { fontSize: 11, color: Colors.accent, fontWeight: '600' },
   categoryPickerWrapper: {
+    height: 48,
     backgroundColor: Colors.card,
     borderBottomWidth: 1,
     borderBottomColor: Colors.separator,
-    maxHeight: 48,
   },
-  categoryPicker: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 8 },
+  categoryPicker: {
+    alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, gap: 8,
+  },
   categoryChip: {
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14,
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
@@ -284,7 +413,9 @@ const styles = StyleSheet.create({
   categoryChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
   categoryChipTextActive: { color: '#fff' },
   itemMeta: { fontSize: 12, color: Colors.textSecondary },
-  itemMetaUrgent: { color: Colors.destructive, fontWeight: '600' },
+  itemMetaExpired: { color: Colors.destructive, fontWeight: '700' },
+  itemMetaWarning: { color: '#F59E0B', fontWeight: '600' },
+  itemMetaOk: { color: '#34C759', fontWeight: '500' },
   quantityBadge: {
     backgroundColor: Colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: Colors.separator,
@@ -296,4 +427,26 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalClose: { padding: 4 },
+  modalCloseText: { fontSize: 16, color: Colors.accent, fontWeight: '600' },
+  filterRow: { flexDirection: 'row', gap: 8, padding: 16 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
+  filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  filterChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff' },
+  modalList: { paddingHorizontal: 20, paddingBottom: 32 },
+  modalEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  modalEmptyText: { fontSize: 15, color: Colors.textSecondary },
+  activitySection: { marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: Colors.separator },
+  activityHeader: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, marginBottom: 12 },
+  activityRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  activityDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 5 },
+  activityContent: { flex: 1 },
+  activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  activityName: { fontWeight: '600' },
+  activityItem: { fontStyle: 'italic' },
+  activityTime: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });

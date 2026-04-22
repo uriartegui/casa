@@ -9,6 +9,7 @@ import CreateHouseholdScreen from '../screens/households/CreateHouseholdScreen';
 import HouseholdDetailScreen from '../screens/households/HouseholdDetailScreen';
 import InviteScreen from '../screens/households/InviteScreen';
 import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
+import MemberDetailScreen from '../screens/households/MemberDetailScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
@@ -24,6 +25,7 @@ export type HouseholdStackParamList = {
   HouseholdDetail: { householdId: string; householdName: string };
   Invite: { householdId: string };
   JoinHousehold: undefined;
+  MemberDetail: { householdId: string; memberId: string };
 };
 
 export type FridgeStackParamList = {
@@ -64,6 +66,7 @@ const stackScreenOptions = {
   headerStyle: { backgroundColor: Colors.card },
   headerTintColor: Colors.accent,
   headerTitleStyle: { color: Colors.textPrimary, fontWeight: '700' as const },
+  headerButtonStyle: { backgroundColor: 'transparent' },
 };
 
 function HomeNavigator() {
@@ -84,6 +87,7 @@ function HouseholdNavigator() {
       <HouseholdStack.Screen name="HouseholdDetail" component={HouseholdDetailScreen} options={({ route }) => ({ title: route.params.householdName })} />
       <HouseholdStack.Screen name="Invite" component={InviteScreen} options={{ title: 'Convidar' }} />
       <HouseholdStack.Screen name="JoinHousehold" component={JoinHouseholdScreen} options={{ title: 'Entrar com Código' }} />
+      <HouseholdStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Membro' }} />
     </HouseholdStack.Navigator>
   );
 }

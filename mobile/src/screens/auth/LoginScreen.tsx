@@ -27,8 +27,9 @@ export default function LoginScreen({ navigation }: Props) {
     setIsLoading(true);
     try {
       await login(email.trim(), password);
-    } catch {
-      Alert.alert('Erro', 'Email ou senha incorretos.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
+      Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     } finally {
       setIsLoading(false);
     }

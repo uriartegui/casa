@@ -2,6 +2,7 @@ import React from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useHouseholds } from '../hooks/useHouseholds';
+import { useHouseholdSync } from '../hooks/useHouseholdSync';
 import AuthStack from './AuthStack';
 import AppTabs from './AppTabs';
 import HouseholdSetupScreen from '../screens/households/HouseholdSetupScreen';
@@ -9,6 +10,7 @@ import { Colors } from '../constants/colors';
 
 function AppGate() {
   const { data: households, isLoading } = useHouseholds();
+  useHouseholdSync(households);
 
   if (isLoading) {
     return (

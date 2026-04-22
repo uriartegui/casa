@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, ScrollView, Alert,
+  View, Text, TouchableOpacity,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useCreateStorage } from '../../hooks/useStorages';
+import { useCreateStorage, useStorages } from '../../hooks/useStorages';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 
@@ -14,82 +14,71 @@ type Props = {
   route: RouteProp<FridgeStackParamList, 'CreateStorage'>;
 };
 
-const EMOJI_OPTIONS = ['🧊', '❄️', '🧺', '📦', '🥶', '🫙', '🍱', '🌡️'];
+const PREDEFINED = [
+  { name: 'Geladeira 2', emoji: '🧊' },
+  { name: 'Freezer 2', emoji: '❄️' },
+  { name: 'Despensa 2', emoji: '🏠' },
+];
 
 export default function CreateStorageScreen({ navigation, route }: Props) {
   const { householdId } = route.params;
-  const [name, setName] = useState('');
-  const [emoji, setEmoji] = useState('🧊');
+  const { data: storages } = useStorages(householdId);
   const createStorage = useCreateStorage(householdId);
 
-  async function handleCreate() {
-    if (!name.trim()) {
-      Alert.alert('Erro', 'Digite o nome do compartimento.');
-      return;
-    }
+  const existingNames = new Set((storages ?? []).map((s) => s.name));
+  const available = PREDEFINED.filter((p) => !existingNames.has(p.name));
+
+  async function handleCreate(name: string, emoji: string) {
     try {
-      await createStorage.mutateAsync({ name: name.trim(), emoji });
+      await createStorage.mutateAsync({ name, emoji });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível criar o compartimento.');
     }
   }
 
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
-      <Text style={styles.label}>Nome</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ex: Freezer, Isopor, Despensa…"
-        placeholderTextColor={Colors.textSecondary}
-        value={name}
-        onChangeText={setName}
-        returnKeyType="done"
-      />
+  if (available.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyText}>Todos os compartimentos já foram criados.</Text>
+      </View>
+    );
+  }
 
-      <Text style={styles.label}>Ícone</Text>
-      <View style={styles.emojiRow}>
-        {EMOJI_OPTIONS.map((e) => (
+  return (
+    <View style={styles.container}>
+      <Text style={styles.subtitle}>Escolha o compartimento a adicionar:</Text>
+      <View style={styles.options}>
+        {available.map((opt) => (
           <TouchableOpacity
-            key={e}
-            style={[styles.emojiChip, emoji === e && styles.emojiChipActive]}
-            onPress={() => setEmoji(e)}
+            key={opt.name}
+            style={styles.card}
+            onPress={() => handleCreate(opt.name, opt.emoji)}
+            disabled={createStorage.isPending}
           >
-            <Text style={styles.emojiText}>{e}</Text>
+            <Text style={styles.cardEmoji}>{opt.emoji}</Text>
+            <Text style={styles.cardName}>{opt.name}</Text>
+            {createStorage.isPending && (
+              <ActivityIndicator size="small" color={Colors.accent} style={{ marginTop: 8 }} />
+            )}
           </TouchableOpacity>
         ))}
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={createStorage.isPending}>
-        {createStorage.isPending
-          ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.buttonText}>Criar compartimento</Text>
-        }
-      </TouchableOpacity>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
-  input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+  container: { flex: 1, backgroundColor: Colors.background, padding: 24 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, padding: 24 },
+  emptyText: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center' },
+  subtitle: { fontSize: 14, color: Colors.textSecondary, marginBottom: 20, fontWeight: '500' },
+  options: { gap: 12 },
+  card: {
+    backgroundColor: Colors.card, borderRadius: 14, padding: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    borderWidth: 1, borderColor: Colors.separator,
   },
-  emojiRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  emojiChip: {
-    width: 52, height: 52, borderRadius: 12,
-    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  emojiChipActive: { borderColor: Colors.accent, borderWidth: 2, backgroundColor: '#e8f0fe' },
-  emojiText: { fontSize: 26 },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  cardEmoji: { fontSize: 36 },
+  cardName: { fontSize: 18, fontWeight: '600', color: Colors.textPrimary },
 });

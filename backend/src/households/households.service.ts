@@ -5,9 +5,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan } from 'typeorm';
+import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
+import { HouseholdInvite } from './household-invite.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { Storage } from './storage.entity';
@@ -28,6 +30,9 @@ export class HouseholdsService {
     private shoppingRepo: Repository<ShoppingItem>,
     @InjectRepository(Storage)
     private storageRepo: Repository<Storage>,
+    @InjectRepository(HouseholdInvite)
+    private inviteRepo: Repository<HouseholdInvite>,
+    private eventsGateway: EventsGateway,
   ) {}
 
   async create(name: string, ownerId: string): Promise<Household> {
@@ -64,23 +69,39 @@ export class HouseholdsService {
 
   async getInviteCode(householdId: string, userId: string): Promise<string> {
     await this.assertMember(householdId, userId);
-    return Buffer.from(`${householdId}:${Date.now()}`).toString('base64');
+
+    let code: string;
+    let collision: HouseholdInvite | null;
+    do {
+      code = Math.floor(10000 + Math.random() * 90000).toString();
+      collision = await this.inviteRepo.findOne({
+        where: { code, expiresAt: MoreThan(new Date()) },
+      });
+    } while (collision);
+
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    await this.inviteRepo.save({ householdId, code, expiresAt });
+
+    return code;
   }
 
   async joinByCode(code: string, userId: string): Promise<Household> {
-    const decoded = Buffer.from(code, 'base64').toString('utf-8');
-    const householdId = decoded.split(':')[0];
+    const invite = await this.inviteRepo.findOne({
+      where: { code, expiresAt: MoreThan(new Date()) },
+    });
+    if (!invite) throw new NotFoundException('Código inválido ou expirado');
 
     const household = await this.householdsRepo.findOne({
-      where: { id: householdId },
+      where: { id: invite.householdId },
     });
-    if (!household) throw new NotFoundException('Convite inválido');
+    if (!household) throw new NotFoundException('Casa não encontrada');
 
     const exists = await this.membersRepo.findOne({
-      where: { userId, householdId },
+      where: { userId, householdId: invite.householdId },
     });
     if (!exists) {
-      await this.membersRepo.save({ userId, householdId, role: 'member' });
+      await this.membersRepo.save({ userId, householdId: invite.householdId, role: 'member' });
+      this.eventsGateway.emitHouseholdUpdate(invite.householdId);
     }
 
     return household;
@@ -134,7 +155,8 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     return this.fridgeRepo.find({
       where: storageId ? { householdId, storageId } : { householdId },
-      relations: ['storage'],
+      relations: ['storage', 'createdBy'],
+      order: { createdAt: 'DESC' },
     });
   }
 
@@ -149,7 +171,9 @@ export class HouseholdsService {
       householdId,
       createdById: userId,
     });
-    return this.fridgeRepo.save(item);
+    const saved = await this.fridgeRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
   }
 
   async updateFridgeItem(
@@ -162,7 +186,9 @@ export class HouseholdsService {
     const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
     if (!item) throw new NotFoundException('Item não encontrado');
     Object.assign(item, dto);
-    return this.fridgeRepo.save(item);
+    const saved = await this.fridgeRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
   }
 
   async removeFridgeItem(
@@ -172,6 +198,7 @@ export class HouseholdsService {
   ): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.fridgeRepo.delete({ id: itemId, householdId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   // Shopping list
@@ -198,7 +225,9 @@ export class HouseholdsService {
       quantity: dto.quantity ?? 1,
       unit: dto.unit,
     });
-    return this.shoppingRepo.save(item);
+    const saved = await this.shoppingRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
   }
 
   async toggleShoppingItem(
@@ -211,7 +240,9 @@ export class HouseholdsService {
     const item = await this.shoppingRepo.findOne({ where: { id: itemId, householdId } });
     if (!item) throw new NotFoundException('Item não encontrado');
     item.checked = checked;
-    return this.shoppingRepo.save(item);
+    const saved = await this.shoppingRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
   }
 
   async removeShoppingItem(
@@ -221,11 +252,39 @@ export class HouseholdsService {
   ): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.shoppingRepo.delete({ id: itemId, householdId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   async clearCheckedItems(householdId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.shoppingRepo.delete({ householdId, checked: true });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async leaveHousehold(householdId: string, userId: string): Promise<void> {
+    const member = await this.membersRepo.findOne({ where: { householdId, userId } });
+    if (!member) throw new ForbiddenException('Você não é membro desta casa');
+
+    if (member.role === 'admin') {
+      const adminCount = await this.membersRepo.count({ where: { householdId, role: 'admin' } });
+      if (adminCount <= 1) throw new BadRequestException('A casa precisa ter pelo menos um admin');
+    }
+
+    await this.membersRepo.delete({ householdId, userId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
+  async promoteToAdmin(householdId: string, targetMemberId: string, requestingUserId: string): Promise<HouseholdMember> {
+    const requester = await this.membersRepo.findOne({ where: { householdId, userId: requestingUserId } });
+    if (!requester || requester.role !== 'admin') throw new ForbiddenException('Apenas admins podem promover membros');
+
+    const target = await this.membersRepo.findOne({ where: { id: targetMemberId, householdId }, relations: ['user'] });
+    if (!target) throw new NotFoundException('Membro não encontrado');
+
+    target.role = 'admin';
+    const saved = await this.membersRepo.save(target);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
   }
 
   async deleteHousehold(householdId: string, userId: string): Promise<void> {

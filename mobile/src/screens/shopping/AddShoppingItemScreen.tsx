@@ -56,6 +56,8 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
           value={name}
           onChangeText={setName}
           returnKeyType="next"
+          autoCorrect={false}
+          spellCheck={false}
         />
 
         <Text style={styles.label}>Quantidade</Text>

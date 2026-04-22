@@ -45,6 +45,22 @@ export class HouseholdsController {
     return this.householdsService.deleteHousehold(id, req.user.id);
   }
 
+  @Delete(':id/members/me')
+  @ApiOperation({ summary: 'Sair da casa' })
+  leaveHousehold(@Param('id') id: string, @Request() req) {
+    return this.householdsService.leaveHousehold(id, req.user.id);
+  }
+
+  @Patch(':id/members/:memberId/promote')
+  @ApiOperation({ summary: 'Tornar membro admin (admin only)' })
+  promoteToAdmin(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.promoteToAdmin(id, memberId, req.user.id);
+  }
+
   @Get(':id/invite')
   @ApiOperation({ summary: 'Gerar código de convite' })
   async getInvite(@Param('id') id: string, @Request() req) {

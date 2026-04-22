@@ -17,17 +17,21 @@ export function daysUntilExpiration(expirationDate: string): number {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export function expirationLabel(expirationDate: string): { text: string; urgent: boolean } {
+export type ExpirationStatus = 'expired' | 'warning' | 'ok';
+
+export function expirationLabel(expirationDate: string): { text: string; status: ExpirationStatus } {
   const days = daysUntilExpiration(expirationDate);
-  if (days < 0) return { text: `Venceu há ${Math.abs(days)} dia${Math.abs(days) !== 1 ? 's' : ''}`, urgent: true };
-  if (days === 0) return { text: 'Vence hoje', urgent: true };
-  if (days === 1) return { text: 'Vence amanhã', urgent: true };
-  return { text: `Vence em ${days} dias`, urgent: days <= 5 };
+  if (days < 0) return { text: `⚠️ Vencido há ${Math.abs(days)} dia${Math.abs(days) !== 1 ? 's' : ''}`, status: 'expired' };
+  if (days === 0) return { text: '⚠️ Vence hoje', status: 'expired' };
+  if (days === 1) return { text: 'Vence amanhã', status: 'warning' };
+  if (days <= 5) return { text: `Vence em ${days} dias`, status: 'warning' };
+  return { text: `Vence em ${days} dias`, status: 'ok' };
 }
 
 const ALERT_DAYS = [10, 5, 2, 1];
 
 export async function scheduleExpirationNotifications(items: FridgeItem[]) {
+  try {
   const { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') {
     const { status: newStatus } = await Notifications.requestPermissionsAsync();
@@ -65,5 +69,8 @@ export async function scheduleExpirationNotifications(items: FridgeItem[]) {
         trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
       });
     }
+  }
+  } catch {
+    // expo-notifications not available in Expo Go SDK 53+ on Android
   }
 }

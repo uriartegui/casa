@@ -29,14 +29,15 @@ export default function HouseholdSetupScreen() {
   }
 
   async function handleJoin() {
-    if (!code.trim()) {
-      Alert.alert('Erro', 'Digite o código de convite.');
+    if (code.length < 5) {
+      Alert.alert('Erro', 'Digite o código de convite de 5 dígitos.');
       return;
     }
     try {
-      await joinHousehold.mutateAsync(code.trim());
-    } catch {
-      Alert.alert('Erro', 'Código inválido ou expirado.');
+      await joinHousehold.mutateAsync(code);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
+      Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     }
   }
 
@@ -97,12 +98,14 @@ export default function HouseholdSetupScreen() {
             <Text style={styles.label}>Código de convite</Text>
             <TextInput
               style={[styles.input, styles.codeInput]}
-              placeholder="Cole o código aqui"
+              placeholder="00000"
               placeholderTextColor={Colors.textSecondary}
               value={code}
-              onChangeText={setCode}
-              autoCapitalize="none"
+              onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 5))}
+              keyboardType="number-pad"
+              maxLength={5}
               autoCorrect={false}
+              spellCheck={false}
               returnKeyType="go"
               onSubmitEditing={handleJoin}
             />
@@ -130,7 +133,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
     fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator, marginBottom: 16,
   },
-  codeInput: { fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace' },
+  codeInput: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontSize: 32, textAlign: 'center', letterSpacing: 8,
+  },
   actions: { gap: 12 },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
   buttonSecondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accent },

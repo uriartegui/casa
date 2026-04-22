@@ -19,8 +19,8 @@ export function useCreateHousehold() {
       const response = await api.post<Household>('/households', { name });
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['households'] });
+    onSuccess: async (data) => {
+      await queryClient.refetchQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['storages', data.id] });
     },
   });
@@ -51,6 +51,30 @@ export function useDeleteHousehold() {
   });
 }
 
+export function useLeaveHousehold() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (householdId: string) => {
+      await api.delete(`/households/${householdId}/members/me`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+    },
+  });
+}
+
+export function usePromoteToAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ householdId, memberId }: { householdId: string; memberId: string }) => {
+      await api.patch(`/households/${householdId}/members/${memberId}/promote`);
+    },
+    onSuccess: (_data, { householdId }) => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+    },
+  });
+}
+
 export function useJoinHousehold() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -58,8 +82,8 @@ export function useJoinHousehold() {
       const response = await api.post<Household>(`/households/join/${code}`);
       return response.data;
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['households'] });
+    onSuccess: async (data) => {
+      await queryClient.refetchQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['storages', data.id] });
     },
   });

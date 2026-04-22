@@ -24,8 +24,9 @@ export default function JoinHouseholdScreen({ navigation }: Props) {
     try {
       const household = await joinHousehold.mutateAsync(code.trim());
       navigation.replace('HouseholdDetail', { householdId: household.id, householdName: household.name });
-    } catch {
-      Alert.alert('Erro', 'Código inválido ou expirado.');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
+      Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     }
   }
 
@@ -38,12 +39,12 @@ export default function JoinHouseholdScreen({ navigation }: Props) {
         <Text style={styles.label}>Código de convite</Text>
         <TextInput
           style={styles.input}
-          placeholder="Cole o código aqui"
+          placeholder="00000"
           placeholderTextColor={Colors.textSecondary}
           value={code}
-          onChangeText={setCode}
-          autoCapitalize="none"
-          autoCorrect={false}
+          onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 5))}
+          keyboardType="number-pad"
+          maxLength={5}
           returnKeyType="go"
           onSubmitEditing={handleJoin}
         />
@@ -64,8 +65,9 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    fontSize: 32, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    textAlign: 'center', letterSpacing: 8,
   },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

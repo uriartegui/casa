@@ -7,6 +7,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
+import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import {
   useShoppingList,
@@ -28,6 +29,7 @@ export default function ShoppingListScreen({ navigation }: Props) {
   const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
   const { data: items, isLoading, refetch } = useShoppingList(effectiveId);
+  useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   async function handleRefresh() {
     setManualRefreshing(true);
