@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const BASE_URL = __DEV__
   ? 'http://192.168.0.225:3000'
-  : 'https://SEU-APP.railway.app'; // trocar pela URL de prod
+  : 'https://casa-api-4fq0.onrender.com';
 
 export const api = axios.create({
   baseURL: BASE_URL,
