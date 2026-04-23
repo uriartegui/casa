@@ -13,19 +13,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge } from '../../hooks/useFridge';
-import { useShoppingActivity, useShoppingLists } from '../../hooks/useShoppingLists';
+import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
-
-type RecentActivityEntry = {
-  id: string;
-  actor: string;
-  text: string;
-  time: string;
-  color: string;
-};
 
 const CARD_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA'];
 
@@ -46,7 +38,6 @@ const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
   const household = households?.find((h) => h.id === effectiveId);
   const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);
   const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
-  const { data: activity } = useShoppingActivity(effectiveId);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -62,38 +53,6 @@ const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
     })
     .sort((a, b) => new Date(a.expirationDate!).getTime() - new Date(b.expirationDate!).getTime())
     .slice(0, 5);
-
-  function storagePreposition(name?: string | null) {
-    if (!name) return 'na geladeira';
-    const normalized = name.trim().toLowerCase();
-    if (normalized.startsWith('freezer')) return `no ${name}`;
-    if (normalized.startsWith('frigobar')) return `no ${name}`;
-    return `na ${name}`;
-  }
-
-  const recentActivity: RecentActivityEntry[] = [
-    ...(activity ?? []).map((event) => ({
-      id: `shopping-${event.id}`,
-      actor: event.createdBy?.name?.split(' ')[0] ?? 'Alguem',
-      text:
-        event.type === 'sent_to_fridge'
-          ? `mandou ${event.name} para geladeira: ${event.listName}`
-          : `adicionou ${event.name} na lista: ${event.listName}`,
-      time: event.createdAt,
-      color: event.type === 'sent_to_fridge' ? '#22C55E' : '#F0A500',
-    })),
-    ...(fridgeItems ?? []).map((item) => ({
-      id: `fridge-${item.id}`,
-      actor: item.createdBy?.name?.split(' ')[0] ?? 'Alguem',
-      text: item.storage?.name
-        ? `adicionou ${item.name} ${storagePreposition(item.storage.name)}`
-        : `adicionou ${item.name} na geladeira`,
-      time: item.createdAt,
-      color: '#2D7FF9',
-    })),
-  ]
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 4);
 
   function goToListaTab() {
     navigation.getParent()?.navigate('ListaTab' as never);
@@ -270,30 +229,6 @@ const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
         )}
       </View>
 
-      {recentActivity.length > 0 && (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Atividade recente</Text>
-            <View />
-          </View>
-          {recentActivity.map((entry) => (
-            <View key={entry.id} style={styles.activityRow}>
-              <View style={[styles.activityDot, { backgroundColor: entry.color }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.activityText} numberOfLines={1}>
-                  <Text style={styles.activityActor}>{entry.actor} </Text>
-                  <Text style={styles.activityItem}>{entry.text}</Text>
-                </Text>
-                <Text style={styles.activityTime}>
-                  {new Date(entry.time).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                  {' · '}
-                  {new Date(entry.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
     </ScrollView>
     </View>
   );
@@ -400,18 +335,4 @@ const styles = StyleSheet.create({
   itemQty: { fontSize: 13, color: Colors.textSecondary },
 
   emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
-
-  activityRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 7,
-    borderTopWidth: 1,
-    borderTopColor: Colors.separator,
-    gap: 10,
-  },
-  activityDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.accent, marginTop: 5 },
-  activityText: { fontSize: 13, color: Colors.textPrimary, lineHeight: 18 },
-  activityActor: { fontWeight: '600' },
-  activityItem: { color: Colors.textPrimary },
-  activityTime: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
 });

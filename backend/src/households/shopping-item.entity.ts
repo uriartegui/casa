@@ -5,6 +5,7 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Household } from './household.entity';
 import { User } from '../users/user.entity';
@@ -50,4 +51,7 @@ export class ShoppingItem {
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
+
+  @DeleteDateColumn({ type: 'timestamptz', nullable: true })
+  deletedAt: Date | null;
 }

@@ -14,6 +14,7 @@ import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
 import { expirationLabel, scheduleExpirationNotifications } from '../../utils/expiration';
+import { formatBrDate, formatBrTime } from '../../utils/dateUtils';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -172,9 +173,9 @@ export default function FridgeScreen({ navigation }: Props) {
                       <Text style={styles.activityItem}>{it.name}</Text>
                     </Text>
                     <Text style={styles.activityTime}>
-                      {new Date(it.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {formatBrDate(it.createdAt)}
                       {' · '}
-                      {new Date(it.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {formatBrTime(it.createdAt)}
                     </Text>
                   </View>
                 </View>

@@ -256,13 +256,13 @@ export class HouseholdsService {
     userId: string,
   ): Promise<void> {
     await this.assertMember(householdId, userId);
-    await this.shoppingRepo.delete({ id: itemId, householdId });
+    await this.shoppingRepo.softDelete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   async clearCheckedItems(householdId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
-    await this.shoppingRepo.delete({ householdId, checked: true });
+    await this.shoppingRepo.softDelete({ householdId, checked: true });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
@@ -398,13 +398,13 @@ export class HouseholdsService {
 
   async removeListItem(householdId: string, listId: string, itemId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
-    await this.shoppingRepo.delete({ id: itemId, shoppingListId: listId, householdId });
+    await this.shoppingRepo.softDelete({ id: itemId, shoppingListId: listId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   async clearCheckedListItems(householdId: string, listId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
-    await this.shoppingRepo.delete({ shoppingListId: listId, householdId, checked: true });
+    await this.shoppingRepo.softDelete({ shoppingListId: listId, householdId, checked: true });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
@@ -415,6 +415,7 @@ export class HouseholdsService {
       this.shoppingRepo.find({
         where: { householdId },
         relations: ['createdBy', 'shoppingList'],
+        withDeleted: true,
         order: { createdAt: 'DESC' },
         take: 40,
       }),

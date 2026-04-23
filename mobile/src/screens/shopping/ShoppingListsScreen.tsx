@@ -8,6 +8,7 @@ import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useShoppingLists, useDeleteShoppingList, useShoppingActivity, useUpdateShoppingList } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import { formatBrDate, formatBrTime, formatBrShortDate } from '../../utils/dateUtils';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList, ShoppingActivityEvent } from '../../types';
@@ -130,9 +131,9 @@ export default function ShoppingListsScreen({ navigation }: Props) {
                       <Text style={styles.activityItem}>{e.name}</Text>
                     </Text>
                     <Text style={styles.activityTime}>
-                      {new Date(e.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {formatBrDate(e.createdAt)}
                       {' · '}
-                      {new Date(e.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {formatBrTime(e.createdAt)}
                     </Text>
                   </View>
                 </View>
@@ -193,7 +194,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         <View style={styles.cardMeta}>
           {item.place ? <Text style={styles.metaChip}>📍 {item.place}</Text> : null}
           {item.category ? <Text style={styles.metaChip}>🏷 {item.category}</Text> : null}
-          <Text style={[styles.metaChip, { marginLeft: 'auto' }]}>{new Date(item.createdAt).toLocaleDateString('pt-BR')}</Text>
+          <Text style={[styles.metaChip, { marginLeft: 'auto' }]}>{formatBrShortDate(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
     );
