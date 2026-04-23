@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
+import { useIsFocused } from '@react-navigation/native';
 import {
   View, Text, SectionList, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
@@ -22,7 +23,7 @@ type Props = {
 };
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
-  const { householdId, listId, listName, listUrgent } = route.params;
+  const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
   const [urgent, setUrgent] = useState(listUrgent);
   const updateList = useUpdateShoppingList(householdId);
   const { data: items, isLoading, refetch } = useListItems(householdId, listId);
@@ -35,6 +36,27 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const deleteList = useDeleteShoppingList(householdId);
   const addFridgeItem = useAddFridgeItem(householdId);
   const prevItemCount = useRef<number | undefined>(undefined);
+  const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (!isFocused || sendQueue.length === 0) return;
+    const next = sendQueue[0];
+    setSendQueue((q) => q.slice(1));
+    navigation.navigate('SendToFridge', {
+      householdId,
+      listId,
+      itemId: next.id,
+      prefillName: next.name,
+      prefillQuantity: Number(next.quantity),
+      prefillUnit: next.unit ?? null,
+      listName,
+    });
+  }, [isFocused, sendQueue]);
+
+  function handleSendAllToFridge() {
+    setSendQueue([...bought]);
+  }
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -43,30 +65,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }
 
   function handleToggle(item: ShoppingItem) {
-    const newChecked = !item.checked;
-    toggleItem.mutate({ itemId: item.id, checked: newChecked });
-
-    if (newChecked) {
-      Alert.alert(
-        `✓ ${item.name} comprado!`,
-        'Adicionar na geladeira?',
-        [
-          { text: 'Não', style: 'cancel' },
-          {
-            text: 'Sim',
-            onPress: () => navigation.navigate('SendToFridge', {
-              householdId,
-              listId,
-              itemId: item.id,
-              prefillName: item.name,
-              prefillQuantity: Number(item.quantity),
-              prefillUnit: item.unit ?? null,
-              listName,
-            }),
-          },
-        ],
-      );
-    }
+    toggleItem.mutate({ itemId: item.id, checked: !item.checked });
   }
 
   function handleClearChecked() {
@@ -149,20 +148,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <View style={{ flexDirection: 'row', gap: 16 }}>
-          <TouchableOpacity onPress={() => {
-            const next = !urgent;
-            setUrgent(next);
-            updateList.mutate({ listId, name: listName, urgent: next });
-          }}>
-            <Text style={[styles.headerButtonText, urgent ? styles.headerButtonUrgentActive : styles.headerButtonUrgent]}>
-              {urgent ? '🚨 Urgente' : 'Urgente'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleDeleteList}>
-            <Text style={styles.headerButtonText}>Excluir</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity onPress={handleDeleteList} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
+          <Text style={styles.headerButtonText}>Excluir</Text>
+        </TouchableOpacity>
       ),
     });
   }, [handleDeleteList]);
@@ -231,6 +219,13 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       )}
 
       <View style={styles.footer}>
+        {bought.length > 0 && (
+          <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
+            <Text style={styles.buttonSecondaryText}>
+              🧊 Mandar {bought.length} {bought.length === 1 ? 'comprado' : 'comprados'} para geladeira
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={styles.button}
           onPress={() => navigation.navigate('AddShoppingItem', { householdId, listId })}
@@ -245,6 +240,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
+  metaRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
+  metaChip: { fontSize: 13, color: Colors.textSecondary },
   progressContainer: { padding: 16, paddingBottom: 8, gap: 6 },
   progressLabel: { fontSize: 13, fontWeight: '600', color: Colors.success },
   progressBar: { height: 6, backgroundColor: Colors.separator, borderRadius: 3, overflow: 'hidden' },
@@ -281,11 +278,18 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
+  footer: { padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonSecondary: { backgroundColor: Colors.card, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: Colors.accent },
+  buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
-  headerButtonUrgent: { color: '#F0A500' },
-  headerButtonUrgentActive: { color: '#B45309', fontWeight: '700' },
+  urgentChip: {
+    alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1, borderColor: '#F0A500', backgroundColor: 'transparent',
+  },
+  urgentChipActive: { backgroundColor: '#F0A500' },
+  urgentChipText: { fontSize: 13, fontWeight: '600', color: '#F0A500' },
+  urgentChipTextActive: { color: '#fff' },
 });

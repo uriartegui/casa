@@ -66,7 +66,6 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
     fontSize: 32, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     textAlign: 'center', letterSpacing: 8,
   },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },

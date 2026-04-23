@@ -6,7 +6,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useShoppingLists, useDeleteShoppingList, useShoppingActivity } from '../../hooks/useShoppingLists';
+import { useShoppingLists, useDeleteShoppingList, useShoppingActivity, useUpdateShoppingList } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -34,16 +34,20 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const [showActivity, setShowActivity] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
 
+  const household = households?.find((h) => h.id === effectiveId);
+
   React.useEffect(() => {
     navigation.setOptions({
+      title: household?.name ?? 'Listas de Compras',
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowActivity(true)} style={{ paddingRight: 4 }}>
-          <Text style={{ color: Colors.accent, fontSize: 15, fontWeight: '500' }}>Atividade</Text>
+        <TouchableOpacity onPress={() => setShowActivity(true)} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
+          <Text style={{ color: Colors.accent, fontSize: 15, fontWeight: '500' }}>Atividades</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, household]);
   const deleteList = useDeleteShoppingList(effectiveId ?? '');
+  const updateList = useUpdateShoppingList(effectiveId ?? '');
 
   React.useEffect(() => {
     if (!selectedHouseholdId && households?.[0]) {
@@ -164,26 +168,32 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           listId: item.id,
           listName: item.name,
           listUrgent: item.urgent,
+          listPlace: item.place,
+          listCategory: item.category,
         })}
         onLongPress={() => handleDelete(item)}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
           <Text style={styles.cardName}>{item.name}</Text>
+          <TouchableOpacity
+            style={[styles.urgentChip, item.urgent && styles.urgentChipActive]}
+            onPress={() => updateList.mutate({ listId: item.id, name: item.name, place: item.place ?? undefined, category: item.category ?? undefined, urgent: !item.urgent })}
+          >
+            <Text style={[styles.urgentChipText, item.urgent && styles.urgentChipTextActive]}>
+              🚨 Urgente
+            </Text>
+          </TouchableOpacity>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
               {total === 0 ? 'Vazia' : `${total} ${total === 1 ? 'item' : 'itens'}`}
             </Text>
           </View>
         </View>
-
         <View style={styles.cardMeta}>
-          {item.place ? (
-            <Text style={styles.metaChip}>📍 {item.place}</Text>
-          ) : null}
-          {item.category ? (
-            <Text style={styles.metaChip}>🏷 {item.category}</Text>
-          ) : null}
+          {item.place ? <Text style={styles.metaChip}>📍 {item.place}</Text> : null}
+          {item.category ? <Text style={styles.metaChip}>🏷 {item.category}</Text> : null}
+          <Text style={[styles.metaChip, { marginLeft: 'auto' }]}>{new Date(item.createdAt).toLocaleDateString('pt-BR')}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -193,21 +203,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     <View style={styles.container}>
       {renderActivityModal()}
 
-      {households && households.length > 1 && (
-        <View style={styles.householdPicker}>
-          {households.map((h) => (
-            <TouchableOpacity
-              key={h.id}
-              style={[styles.pickerItem, h.id === effectiveId && styles.pickerItemActive]}
-              onPress={() => setSelectedHouseholdId(h.id)}
-            >
-              <Text style={[styles.pickerItemText, h.id === effectiveId && styles.pickerItemTextActive]}>
-                {h.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
 
       {isLoading ? (
         <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>
@@ -265,6 +260,13 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
   cardMeta: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   metaChip: { fontSize: 13, color: Colors.textSecondary },
+  urgentChip: {
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12,
+    borderWidth: 1, borderColor: '#F0A500',
+  },
+  urgentChipActive: { backgroundColor: '#F0A500' },
+  urgentChipText: { fontSize: 12, fontWeight: '600', color: '#F0A500' },
+  urgentChipTextActive: { color: '#fff' },
   emptyContainer: { alignItems: 'center', gap: 8, paddingTop: 40 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },

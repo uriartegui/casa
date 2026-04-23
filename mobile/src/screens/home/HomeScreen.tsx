@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Modal,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
@@ -29,15 +27,14 @@ type RecentActivityEntry = {
   color: string;
 };
 
+const CARD_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA'];
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const { user } = useAuth();
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households } = useHouseholds();
-  const [showPicker, setShowPicker] = useState(false);
-  const [pickerAnchor, setPickerAnchor] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<View>(null);
-  const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
+const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
   useEffect(() => {
     if (!selectedHouseholdId && households && households.length > 0) {
@@ -45,10 +42,13 @@ export default function HomeScreen() {
     }
   }, [households, selectedHouseholdId, setSelectedHouseholdId]);
 
+
   const household = households?.find((h) => h.id === effectiveId);
   const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);
   const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
   const { data: activity } = useShoppingActivity(effectiveId);
+
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'voce';
   const urgentLists = (shoppingLists ?? []).filter((l) => l.urgent);
@@ -104,73 +104,66 @@ export default function HomeScreen() {
   }
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
+      onScrollBeginDrag={() => setDropdownOpen(false)}
     >
+      {dropdownOpen && (
+        <TouchableOpacity
+          style={styles.dropdownBackdrop}
+          activeOpacity={1}
+          onPress={() => setDropdownOpen(false)}
+        />
+      )}
       <View style={styles.header}>
         <Text style={styles.greeting}>Ola, {firstName}! 👋</Text>
+
         {household && (
-          <View style={styles.householdBlock}>
+          <View style={styles.householdWrapper}>
             <TouchableOpacity
-              ref={triggerRef}
-              onPress={() => {
-                triggerRef.current?.measureInWindow((x, y, _w, h) => {
-                  setPickerAnchor({ x, y: y + h + 4 });
-                  setShowPicker(true);
-                });
-              }}
-              activeOpacity={0.7}
               style={styles.householdRow}
+              activeOpacity={(households?.length ?? 0) > 1 ? 0.6 : 1}
+              onPress={() => {
+                if ((households?.length ?? 0) <= 1) return;
+                setDropdownOpen((o) => !o);
+              }}
             >
               <Text style={styles.householdName}>🏠 {household.name}</Text>
-              {households && households.length > 1 && (
-                <Ionicons name="chevron-down" size={13} color={Colors.accent} />
+              {(households?.length ?? 0) > 1 && (
+                <Text style={styles.householdChevron}>{dropdownOpen ? '▴' : '▾'}</Text>
               )}
             </TouchableOpacity>
-            <Text style={styles.householdMeta}>
-              {fridgeItems?.length ?? 0} itens na geladeira • {shoppingLists?.length ?? 0}{' '}
-              {(shoppingLists?.length ?? 0) === 1 ? 'lista aberta' : 'listas abertas'}
-            </Text>
-          </View>
-        )}
 
-        {households && households.length > 1 && (
-          <Modal
-            visible={showPicker}
-            transparent
-            animationType="none"
-            onRequestClose={() => setShowPicker(false)}
-          >
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              activeOpacity={1}
-              onPress={() => setShowPicker(false)}
-            >
-              <View style={[styles.householdDropdown, { top: pickerAnchor.y, left: pickerAnchor.x }]}>
-                {households.map((h) => (
+            {dropdownOpen && (
+              <View style={styles.householdDropdown}>
+                {(households ?? []).map((h, i) => {
+                  const color = CARD_COLORS[i % CARD_COLORS.length];
+                  return (
                   <TouchableOpacity
                     key={h.id}
-                    style={[styles.householdOption, h.id === effectiveId && styles.householdOptionActive]}
-                    onPress={() => {
-                      setSelectedHouseholdId(h.id);
-                      setShowPicker(false);
-                    }}
+                    style={[styles.householdOption, { borderLeftColor: color, borderLeftWidth: 3 }, h.id === effectiveId && styles.householdOptionActive]}
+                    onPress={() => { setSelectedHouseholdId(h.id); setDropdownOpen(false); }}
                   >
-                    <Text
-                      style={[
-                        styles.householdOptionText,
-                        h.id === effectiveId && styles.householdOptionTextActive,
-                      ]}
-                    >
+                    <Text style={[styles.householdOptionText, h.id === effectiveId && styles.householdOptionTextActive]}>
                       {h.name}
                     </Text>
                   </TouchableOpacity>
-                ))}
+                  );
+                })}
               </View>
-            </TouchableOpacity>
-          </Modal>
+            )}
+          </View>
+        )}
+
+        {household && (
+          <Text style={styles.householdMeta}>
+            {fridgeItems?.length ?? 0} itens na geladeira
+            {'  ·  '}
+            {shoppingLists?.length ?? 0} {shoppingLists?.length === 1 ? 'lista' : 'listas'} pendente{shoppingLists?.length !== 1 ? 's' : ''}
+          </Text>
         )}
       </View>
 
@@ -302,6 +295,7 @@ export default function HomeScreen() {
         </View>
       )}
     </ScrollView>
+    </View>
   );
 }
 
@@ -311,35 +305,47 @@ const styles = StyleSheet.create({
 
   header: { marginBottom: 24 },
   greeting: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary },
-  householdBlock: { marginTop: 4 },
-  householdRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, alignSelf: 'flex-start' },
-  householdName: { fontSize: 14, color: Colors.textSecondary },
-  householdMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 4 },
-  modalBackdrop: { flex: 1 },
+  householdRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    alignSelf: 'flex-start',
+    marginBottom: 2,
+    marginTop: 6,
+    backgroundColor: Colors.accent + '15',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  householdName: { fontSize: 14, fontWeight: '600', color: Colors.accent },
+  householdChevron: { fontSize: 12, color: Colors.accent, marginTop: 1 },
+  householdMeta: { fontSize: 12, color: Colors.textSecondary, marginTop: 0 },
+  dropdownBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 },
+  householdWrapper: { alignSelf: 'flex-start', zIndex: 999 },
   householdDropdown: {
     position: 'absolute',
-    minWidth: 150,
+    top: '100%',
+    left: 0,
+    right: 0,
     backgroundColor: Colors.card,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.separator,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 8,
+    zIndex: 999,
   },
   householdOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 7,
     borderBottomWidth: 1,
     borderBottomColor: Colors.separator,
   },
-  householdOptionActive: { backgroundColor: Colors.accent + '18' },
+  householdOptionActive: { backgroundColor: Colors.accent + '15' },
   householdOptionText: { fontSize: 14, color: Colors.textPrimary },
   householdOptionTextActive: { color: Colors.accent, fontWeight: '600' },
 

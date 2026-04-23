@@ -90,7 +90,6 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
   code: {
     fontSize: 42, fontWeight: '700', color: Colors.textPrimary, letterSpacing: 8,
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
   expiry: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
   qrContainer: { alignItems: 'center', backgroundColor: Colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: Colors.separator },

@@ -134,7 +134,6 @@ const styles = StyleSheet.create({
     fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator, marginBottom: 16,
   },
   codeInput: {
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     fontSize: 32, textAlign: 'center', letterSpacing: 8,
   },
   actions: { gap: 12 },

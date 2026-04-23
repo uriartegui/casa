@@ -58,6 +58,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
             try {
               await deleteHousehold.mutateAsync(householdId);
               setSelectedHouseholdId(null);
+              navigation.popToTop();
               navigation.getParent()?.navigate('CasaTab' as never);
             } catch (err: any) {
               const msg = err?.response?.data?.message ?? 'Não foi possível excluir a casa.';

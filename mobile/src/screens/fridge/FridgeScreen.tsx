@@ -46,40 +46,15 @@ export default function FridgeScreen({ navigation }: Props) {
   }
 
   useEffect(() => {
+    const householdName = households?.find((h) => h.id === effectiveId)?.name ?? 'Geladeira';
     navigation.setOptions({
+      title: householdName,
       headerLeft: () => null,
-      headerTitle: () =>
-        households && households.length > 1 ? (
-          <TouchableOpacity
-            ref={triggerRef}
-            activeOpacity={0.7}
-            style={styles.headerHouseholdTrigger}
-            onPress={() => {
-              triggerRef.current?.measureInWindow((x, y, w, h) => {
-                setPickerAnchor({ x: x + w / 2, y: y + h + 4 });
-                setShowHouseholdPicker(true);
-              });
-            }}
-          >
-            <Text style={styles.headerHouseholdTriggerText} numberOfLines={1}>
-              {households.find((h) => h.id === effectiveId)?.name}
-            </Text>
-            <Ionicons name="chevron-down" size={13} color={Colors.accent} />
-          </TouchableOpacity>
-        ) : null,
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowLog(true)} style={styles.headerRightButton}>
+        <TouchableOpacity onPress={() => setShowLog(true)} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
           <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
         </TouchableOpacity>
       ),
-      headerTitleContainerStyle: {
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-      },
-      headerRightContainerStyle: {
-        paddingRight: 16,
-      },
     });
   }, [navigation, households, effectiveId]);
 
@@ -403,14 +378,13 @@ export default function FridgeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 8 },
-  headerRightButton: { width: 88, alignItems: 'flex-end' },
   headerHouseholdTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     maxWidth: 180,
   },
-  headerHouseholdTriggerText: { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  headerHouseholdTriggerText: { fontSize: 17, color: Colors.textPrimary, fontWeight: '700' },
   modalBackdrop: { flex: 1 },
   householdDropdown: {
     position: 'absolute',

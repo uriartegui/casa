@@ -40,7 +40,7 @@ export type FridgeStackParamList = {
 
 export type ShoppingStackParamList = {
   ShoppingLists: undefined;
-  ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean };
+  ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; listPlace?: string | null; listCategory?: string | null };
   CreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
@@ -78,6 +78,7 @@ const HouseholdStack = createNativeStackNavigator<HouseholdStackParamList>();
 const FridgeStack = createNativeStackNavigator<FridgeStackParamList>();
 const ShoppingStack = createNativeStackNavigator<ShoppingStackParamList>();
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+const ProfileStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 const stackScreenOptions = {
@@ -109,6 +110,14 @@ function HouseholdNavigator() {
       <HouseholdStack.Screen name="JoinHousehold" component={JoinHouseholdScreen} options={{ title: 'Entrar com Código' }} />
       <HouseholdStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Membro' }} />
     </HouseholdStack.Navigator>
+  );
+}
+
+function ProfileNavigator() {
+  return (
+    <ProfileStack.Navigator screenOptions={stackScreenOptions}>
+      <ProfileStack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Perfil' }} />
+    </ProfileStack.Navigator>
   );
 }
 
@@ -180,14 +189,8 @@ export default function AppTabs() {
       />
       <Tab.Screen
         name="PerfilTab"
-        component={ProfileScreen}
-        options={{
-          title: 'Perfil',
-          headerShown: true,
-          headerStyle: { backgroundColor: Colors.card },
-          headerTitleStyle: { color: Colors.textPrimary, fontWeight: '700' },
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text>,
-        }}
+        component={ProfileNavigator}
+        options={{ title: 'Perfil', tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text> }}
       />
     </Tab.Navigator>
   );

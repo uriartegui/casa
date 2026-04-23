@@ -32,14 +32,26 @@ export default function HouseholdListScreen({ navigation }: Props) {
     );
   }
 
-  function renderItem({ item }: { item: Household }) {
+  const CARD_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA'];
+
+  function renderItem({ item, index }: { item: Household; index: number }) {
+    const memberCount = item.members?.length ?? 0;
+    const accentColor = CARD_COLORS[index % CARD_COLORS.length];
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { borderLeftColor: accentColor, borderLeftWidth: 4 }]}
         onPress={() => navigation.navigate('HouseholdDetail', { householdId: item.id, householdName: item.name })}
+        activeOpacity={0.7}
       >
-        <Text style={styles.cardTitle}>{item.name}</Text>
-        <Text style={styles.cardChevron}>›</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardIcon}>🏠</Text>
+          <Text style={styles.cardTitle}>{item.name}</Text>
+        </View>
+        {memberCount > 0 && (
+          <Text style={styles.cardMeta}>
+            {memberCount} {memberCount === 1 ? 'membro' : 'membros'}
+          </Text>
+        )}
       </TouchableOpacity>
     );
   }
@@ -50,6 +62,8 @@ export default function HouseholdListScreen({ navigation }: Props) {
         data={households ?? []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
+        numColumns={2}
+        columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -74,14 +88,18 @@ export default function HouseholdListScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  list: { padding: 16, gap: 10, flexGrow: 1 },
+  list: { padding: 16, gap: 12, flexGrow: 1 },
+  row: { gap: 12 },
   card: {
-    backgroundColor: Colors.card, borderRadius: 12, padding: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: Colors.separator,
+    flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 18,
+    aspectRatio: 1,
+    justifyContent: 'flex-start', gap: 4,
+    borderWidth: 1, borderColor: Colors.separator, borderLeftWidth: 4,
   },
-  cardTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  cardChevron: { fontSize: 22, color: Colors.textSecondary },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  cardIcon: { fontSize: 16 },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  cardMeta: { fontSize: 13, color: Colors.textSecondary, paddingLeft: 22 },
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingTop: 80 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
