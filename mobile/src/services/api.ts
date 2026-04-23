@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Android emulator: use 'http://10.0.2.2:3000'
-// Expo Go (dispositivo físico): use o IP LAN da máquina
-const BASE_URL = 'http://192.168.0.225:3000';
+const BASE_URL = __DEV__
+  ? 'http://192.168.0.225:3000'
+  : 'https://SEU-APP.railway.app'; // trocar pela URL de prod
 
 export const api = axios.create({
   baseURL: BASE_URL,
