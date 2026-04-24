@@ -19,6 +19,7 @@ import { CreateStorageDto } from './dto/create-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class HouseholdsService {
@@ -38,6 +39,7 @@ export class HouseholdsService {
     @InjectRepository(HouseholdInvite)
     private inviteRepo: Repository<HouseholdInvite>,
     private eventsGateway: EventsGateway,
+    private notificationsService: NotificationsService,
   ) {}
 
   async create(name: string, ownerId: string): Promise<Household> {
@@ -178,6 +180,16 @@ export class HouseholdsService {
     });
     const saved = await this.fridgeRepo.save(item);
     this.eventsGateway.emitHouseholdUpdate(householdId);
+
+    const member = await this.membersRepo.findOne({
+      where: { userId, householdId },
+      relations: ['user'],
+    });
+    const userName = member?.user?.name ?? 'Alguém';
+    this.notificationsService
+      .notifyHouseholdMembers(householdId, userId, '🧊 Item adicionado na geladeira', `${userName} adicionou ${saved.name}`)
+      .catch(() => {});
+
     return saved;
   }
 
@@ -383,6 +395,16 @@ export class HouseholdsService {
     });
     const saved = await this.shoppingRepo.save(item) as ShoppingItem;
     this.eventsGateway.emitHouseholdUpdate(householdId);
+
+    const member = await this.membersRepo.findOne({
+      where: { userId, householdId },
+      relations: ['user'],
+    });
+    const userName = member?.user?.name ?? 'Alguém';
+    this.notificationsService
+      .notifyHouseholdMembers(householdId, userId, '🛒 Item adicionado na lista', `${userName} adicionou ${saved.name} em "${list.name}"`)
+      .catch(() => {});
+
     return saved;
   }
 

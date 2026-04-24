@@ -27,4 +27,8 @@ export class UsersService {
   async findById(id: string): Promise<User | null> {
     return this.usersRepo.findOne({ where: { id } });
   }
+
+  async updatePushToken(userId: string, pushToken: string): Promise<void> {
+    await this.usersRepo.update(userId, { pushToken });
+  }
 }

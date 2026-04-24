@@ -20,8 +20,11 @@ import { AuthProvider } from './src/context/AuthContext';
 import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
+import { useKeepAlive } from './src/hooks/useKeepAlive';
 
 export default function App() {
+  useKeepAlive();
+
   useEffect(() => {
     Notifications.requestPermissionsAsync();
   }, []);

@@ -4,6 +4,7 @@ import { api, setAuthToken, setUnauthorizedHandler } from '../services/api';
 import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
+import { registerPushToken } from '../utils/pushToken';
 
 const TOKEN_KEY = '@casa:token';
 const USER_KEY = '@casa:user';
@@ -51,10 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(accessToken);
     setToken(accessToken);
     setUser(loggedUser);
+    registerPushToken().catch(() => {});
   }
 
   async function register(name: string, email: string, password: string) {
-    await api.post('/auth/register', { name, email, password });
+    const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
+    const { accessToken, user: registeredUser } = response.data;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(registeredUser));
+    setAuthToken(accessToken);
+    setToken(accessToken);
+    setUser(registeredUser);
+    registerPushToken().catch(() => {});
   }
 
   async function logout() {

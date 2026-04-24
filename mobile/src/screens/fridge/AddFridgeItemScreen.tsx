@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
+  TouchableWithoutFeedback, Keyboard,
 } from 'react-native';
 import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -53,9 +54,10 @@ await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, e
   }
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Nome do item</Text>
@@ -120,12 +122,13 @@ await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, e
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10 },
+  content: { padding: 24, gap: 10, paddingBottom: 120 },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,

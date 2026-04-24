@@ -21,6 +21,9 @@ export class User {
   @Column()
   password: string;
 
+  @Column({ nullable: true, type: 'text' })
+  pushToken: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
