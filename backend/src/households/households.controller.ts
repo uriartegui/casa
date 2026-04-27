@@ -15,7 +15,7 @@ import { HouseholdsService } from './households.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
-import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
+
 import { ToggleShoppingItemDto } from './dto/toggle-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
@@ -227,48 +227,4 @@ export class HouseholdsController {
     return this.householdsService.removeListItem(id, listId, itemId, req.user.id);
   }
 
-  // Shopping list (legacy)
-
-  @Get(':id/shopping-list')
-  @ApiOperation({ summary: 'Listar itens da lista de compras' })
-  getShoppingList(@Param('id') id: string, @Request() req) {
-    return this.householdsService.getShoppingList(id, req.user.id);
-  }
-
-  @Post(':id/shopping-list')
-  @ApiOperation({ summary: 'Adicionar item na lista de compras' })
-  addShoppingItem(
-    @Param('id') id: string,
-    @Body() dto: AddShoppingItemDto,
-    @Request() req,
-  ) {
-    return this.householdsService.addShoppingItem(id, req.user.id, dto);
-  }
-
-  @Patch(':id/shopping-list/:itemId')
-  @ApiOperation({ summary: 'Marcar/desmarcar item como comprado' })
-  toggleShoppingItem(
-    @Param('id') id: string,
-    @Param('itemId') itemId: string,
-    @Body() dto: ToggleShoppingItemDto,
-    @Request() req,
-  ) {
-    return this.householdsService.toggleShoppingItem(id, itemId, req.user.id, dto);
-  }
-
-  @Delete(':id/shopping-list/checked')
-  @ApiOperation({ summary: 'Limpar itens comprados' })
-  clearChecked(@Param('id') id: string, @Request() req) {
-    return this.householdsService.clearCheckedItems(id, req.user.id);
-  }
-
-  @Delete(':id/shopping-list/:itemId')
-  @ApiOperation({ summary: 'Remover item da lista de compras' })
-  removeShoppingItem(
-    @Param('id') id: string,
-    @Param('itemId') itemId: string,
-    @Request() req,
-  ) {
-    return this.householdsService.removeShoppingItem(id, itemId, req.user.id);
-  }
 }

@@ -14,7 +14,6 @@ import { FridgeItem } from './fridge-item.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
-import { AddShoppingItemDto } from './dto/add-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
@@ -215,66 +214,6 @@ export class HouseholdsService {
   ): Promise<void> {
     await this.assertMember(householdId, userId);
     await this.fridgeRepo.delete({ id: itemId, householdId });
-    this.eventsGateway.emitHouseholdUpdate(householdId);
-  }
-
-  // Shopping list
-
-  async getShoppingList(householdId: string, userId: string): Promise<ShoppingItem[]> {
-    await this.assertMember(householdId, userId);
-    return this.shoppingRepo.find({
-      where: { householdId },
-      relations: ['createdBy'],
-      order: { checked: 'ASC', createdAt: 'ASC' },
-    });
-  }
-
-  async addShoppingItem(
-    householdId: string,
-    userId: string,
-    dto: AddShoppingItemDto,
-  ): Promise<ShoppingItem> {
-    await this.assertMember(householdId, userId);
-    const item = this.shoppingRepo.create({
-      householdId,
-      createdById: userId,
-      name: dto.name,
-      quantity: dto.quantity ?? 1,
-      unit: dto.unit,
-    });
-    const saved = await this.shoppingRepo.save(item);
-    this.eventsGateway.emitHouseholdUpdate(householdId);
-    return saved;
-  }
-
-  async toggleShoppingItem(
-    householdId: string,
-    itemId: string,
-    userId: string,
-    dto: { checked?: boolean },
-  ): Promise<ShoppingItem> {
-    await this.assertMember(householdId, userId);
-    const item = await this.shoppingRepo.findOne({ where: { id: itemId, householdId } });
-    if (!item) throw new NotFoundException('Item não encontrado');
-    if (dto.checked !== undefined) item.checked = dto.checked;
-    const saved = await this.shoppingRepo.save(item);
-    this.eventsGateway.emitHouseholdUpdate(householdId);
-    return saved;
-  }
-
-  async removeShoppingItem(
-    householdId: string,
-    itemId: string,
-    userId: string,
-  ): Promise<void> {
-    await this.assertMember(householdId, userId);
-    await this.shoppingRepo.softDelete({ id: itemId, householdId });
-    this.eventsGateway.emitHouseholdUpdate(householdId);
-  }
-
-  async clearCheckedItems(householdId: string, userId: string): Promise<void> {
-    await this.assertMember(householdId, userId);
-    await this.shoppingRepo.softDelete({ householdId, checked: true });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
