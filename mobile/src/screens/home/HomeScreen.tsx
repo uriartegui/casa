@@ -19,7 +19,6 @@ import { HomeStackParamList } from '../../navigation/AppTabs';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
-const CARD_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA'];
 
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
@@ -98,12 +97,11 @@ const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
 
             {dropdownOpen && (
               <View style={styles.householdDropdown}>
-                {(households ?? []).map((h, i) => {
-                  const color = CARD_COLORS[i % CARD_COLORS.length];
+                {(households ?? []).map((h) => {
                   return (
                   <TouchableOpacity
                     key={h.id}
-                    style={[styles.householdOption, { borderLeftColor: color, borderLeftWidth: 3 }, h.id === effectiveId && styles.householdOptionActive]}
+                    style={[styles.householdOption, h.id === effectiveId && styles.householdOptionActive]}
                     onPress={() => { setSelectedHouseholdId(h.id); setDropdownOpen(false); }}
                   >
                     <Text style={[styles.householdOptionText, h.id === effectiveId && styles.householdOptionTextActive]}>

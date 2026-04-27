@@ -32,14 +32,11 @@ export default function HouseholdListScreen({ navigation }: Props) {
     );
   }
 
-  const CARD_COLORS = ['#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55', '#5AC8FA'];
-
-  function renderItem({ item, index }: { item: Household; index: number }) {
+  function renderItem({ item }: { item: Household }) {
     const memberCount = item.members?.length ?? 0;
-    const accentColor = CARD_COLORS[index % CARD_COLORS.length];
     return (
       <TouchableOpacity
-        style={[styles.card, { borderLeftColor: accentColor, borderLeftWidth: 4 }]}
+        style={styles.card}
         onPress={() => navigation.navigate('HouseholdDetail', { householdId: item.id, householdName: item.name })}
         activeOpacity={0.7}
       >
@@ -94,7 +91,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: Colors.card, borderRadius: 16, padding: 18,
     aspectRatio: 1,
     justifyContent: 'flex-start', gap: 4,
-    borderWidth: 1, borderColor: Colors.separator, borderLeftWidth: 4,
+    borderWidth: 1, borderColor: Colors.separator,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cardIcon: { fontSize: 16 },
