@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "65900292766",
+    "project_id": "casa-ac939",
+    "storage_bucket": "casa-ac939.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:65900292766:android:1deafe0ef6bb664d3c698f",
+        "android_client_info": {
+          "package_name": "com.guiuriarte.casa"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRcLIFDjBkr--UKx27tr4QhT2wT03ZvxY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
