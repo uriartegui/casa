@@ -25,6 +25,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.guiuriarte.casa",
+      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

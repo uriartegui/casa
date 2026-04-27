@@ -52,7 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(accessToken);
     setToken(accessToken);
     setUser(loggedUser);
-    registerPushToken().catch(() => {});
+    registerPushToken().then((result) => {
+      if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
+    });
   }
 
   async function register(name: string, email: string, password: string) {
@@ -63,7 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(accessToken);
     setToken(accessToken);
     setUser(registeredUser);
-    registerPushToken().catch(() => {});
+    registerPushToken().then((result) => {
+      if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
+    });
   }
 
   async function logout() {
