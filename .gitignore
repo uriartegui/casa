@@ -3,4 +3,3 @@ node_modules/
 .expo/
 dist/
 .superpowers/
-mobile/google-services.json
