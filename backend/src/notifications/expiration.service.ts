@@ -31,10 +31,12 @@ export class ExpirationService {
 
     const expiringToday = await this.fridgeRepo.find({
       where: { expirationDate: Between(today, in1Day) as any },
+      take: 200,
     });
 
     const expiringSoon = await this.fridgeRepo.find({
       where: { expirationDate: Between(in1Day, in3Days) as any },
+      take: 200,
     });
 
     await this.notifyGroup(expiringToday, (names) =>

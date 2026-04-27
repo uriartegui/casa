@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.225:3000';
-const SOCKET_URL = API_URL.replace(/^http/, 'ws') + '/ws';
+const SOCKET_BASE_URL = API_URL.replace(/^http/, 'ws') + '/ws';
+const TOKEN_KEY = '@colmeia:token';
 
 type Listener = (data: any) => void;
 
@@ -8,9 +11,13 @@ class NativeSocket {
   private listeners = new Map<string, Set<Listener>>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-  connect() {
+  async connect() {
     if (this.ws?.readyState === WebSocket.OPEN) return;
-    this.ws = new WebSocket(SOCKET_URL);
+
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    const url = token ? `${SOCKET_BASE_URL}?token=${encodeURIComponent(token)}` : SOCKET_BASE_URL;
+
+    this.ws = new WebSocket(url);
 
     this.ws.onopen = () => {
       if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }

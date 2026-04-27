@@ -8,7 +8,10 @@ import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useUpdateFridgeItem, useRemoveFridgeItem } from '../../hooks/useFridge';
-import { useAddShoppingItem } from '../../hooks/useShoppingList';
+import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { useToast } from '../../context/ToastContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
 import { getCategoriesForStorage } from '../../constants/categories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
@@ -34,7 +37,9 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const categories = getCategoriesForStorage(item.storage?.name);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
-  const addToList = useAddShoppingItem(householdId);
+  const { data: shoppingLists } = useShoppingLists(householdId);
+  const { showToast } = useToast();
+  const queryClient = useQueryClient();
 
   async function handleSave() {
     if (!name.trim()) {
@@ -55,37 +60,56 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
   }
 
+  async function doRemoveAndAdd(listId: string, listName: string) {
+    try {
+      await removeItem.mutateAsync({ itemId: item.id, toShoppingListName: listName });
+    } catch {
+      Alert.alert('Erro', 'Não foi possível remover o item.');
+      return;
+    }
+    try {
+      await api.post(`/households/${householdId}/shopping-lists/${listId}/items`, {
+        name: item.name,
+        quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+        unit: item.unit ?? 'un',
+      });
+      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+    } catch {
+      showToast('Item removido, mas erro ao adicionar à lista', 'error');
+    }
+    navigation.goBack();
+  }
+
+  function handlePickList() {
+    const lists = shoppingLists ?? [];
+    if (lists.length === 0) {
+      Alert.alert('Sem listas', 'Crie uma lista de compras primeiro.');
+      return;
+    }
+    Alert.alert(
+      'Escolher lista',
+      'Adicionar à qual lista?',
+      [
+        ...lists.map((l) => ({ text: l.name, onPress: () => doRemoveAndAdd(l.id, l.name) })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ],
+    );
+  }
+
   function handleRemove() {
     Alert.alert(
       `Remover "${item.name}"`,
       'O que deseja fazer?',
       [
         { text: 'Cancelar', style: 'cancel' },
-        {
-          text: '🛒 Remover + adicionar à lista',
-          onPress: async () => {
-            try {
-              await removeItem.mutateAsync(item.id);
-            } catch (e: any) {
-              Alert.alert('Erro ao remover', e?.message ?? String(e));
-              return;
-            }
-            try {
-              await addToList.mutateAsync({ name: item.name, quantity: Number(item.quantity), unit: item.unit });
-            } catch (e: any) {
-              Alert.alert('Erro ao adicionar à lista', e?.message ?? String(e));
-              navigation.goBack();
-              return;
-            }
-            navigation.goBack();
-          },
-        },
+        { text: 'Remover + Lista', onPress: handlePickList },
         {
           text: 'Só remover',
-          style: 'destructive',
+          style: 'destructive' as const,
           onPress: async () => {
             try {
-              await removeItem.mutateAsync(item.id);
+              await removeItem.mutateAsync({ itemId: item.id });
               navigation.goBack();
             } catch {
               Alert.alert('Erro', 'Não foi possível remover o item.');

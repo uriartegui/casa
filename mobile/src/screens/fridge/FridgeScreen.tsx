@@ -1,14 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Modal,
+  StyleSheet, ActivityIndicator, RefreshControl, Modal, Alert,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge } from '../../hooks/useFridge';
+import { useFridge, useRemoveFridgeItem, useFridgeActivity, FridgeActivityEntry } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
+import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { api } from '../../services/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../../context/ToastContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
@@ -36,6 +41,11 @@ export default function FridgeScreen({ navigation }: Props) {
   const effectiveStorageId = selectedStorageId ?? storages?.[0]?.id ?? null;
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
+  const removeItem = useRemoveFridgeItem(effectiveId ?? '');
+  const { data: shoppingLists } = useShoppingLists(effectiveId);
+  const { data: activityLog, refetch: refetchActivity } = useFridgeActivity(effectiveId);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showLog, setShowLog] = useState(false);
@@ -53,7 +63,7 @@ export default function FridgeScreen({ navigation }: Props) {
       title: householdName,
       headerLeft: () => null,
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowLog(true)} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
+        <TouchableOpacity onPress={() => { refetchActivity(); setShowLog(true); }} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
           <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
         </TouchableOpacity>
       ),
@@ -123,9 +133,8 @@ export default function FridgeScreen({ navigation }: Props) {
 
   function renderLogModal() {
     const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
-    const sorted = [...(items ?? [])]
-      .filter((it) => !cutoff || new Date(it.createdAt).getTime() >= cutoff)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const filtered = (activityLog ?? [])
+      .filter((it) => !cutoff || new Date(it.createdAt).getTime() >= cutoff);
     return (
       <Modal visible={showLog} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLog(false)}>
         <View style={styles.modalContainer}>
@@ -148,25 +157,34 @@ export default function FridgeScreen({ navigation }: Props) {
               </TouchableOpacity>
             ))}
           </View>
-          {sorted.length === 0 ? (
+          {filtered.length === 0 ? (
             <View style={styles.modalEmpty}>
               <Text style={styles.modalEmptyText}>Nenhuma atividade neste periodo.</Text>
             </View>
           ) : (
             <FlatList
-              data={sorted}
+              data={filtered}
               keyExtractor={(it) => it.id}
               contentContainerStyle={styles.modalList}
-              renderItem={({ item: it }) => (
+              renderItem={({ item: it }: { item: FridgeActivityEntry }) => (
                 <View style={styles.activityRow}>
-                  <View style={styles.activityDot} />
+                  <View style={[styles.activityDot, {
+                    backgroundColor:
+                      it.action === 'removed' && !it.toShoppingListName ? Colors.destructive :
+                      it.action === 'removed' && it.toShoppingListName  ? Colors.accent :
+                      Colors.success,
+                  }]} />
                   <View style={styles.activityContent}>
                     <Text style={styles.activityText}>
-                      <Text style={styles.activityName}>{it.createdBy?.name ?? 'Alguem'}</Text>
-                      {it.fromShoppingListName
-                        ? <>{' mandou da Lista '}<Text style={styles.activityListName}>{it.fromShoppingListName}</Text>{': '}</>
-                        : ' adicionou '}
-                      <Text style={styles.activityItem}>{it.name}</Text>
+                      <Text style={styles.activityName}>{it.userName ?? 'Alguém'}</Text>
+                      {it.action === 'removed'
+                        ? it.toShoppingListName
+                          ? <> removeu <Text style={styles.activityItem}>{it.itemName}</Text>{' e mandou para lista de compras '}<Text style={styles.activityListName}>{it.toShoppingListName}</Text></>
+                          : <> removeu <Text style={styles.activityItem}>{it.itemName}</Text></>
+                        : it.fromShoppingListName
+                          ? <> mandou <Text style={styles.activityItem}>{it.itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{it.fromShoppingListName}</Text></>
+                          : <> adicionou <Text style={styles.activityItem}>{it.itemName}</Text></>
+                      }
                     </Text>
                     <Text style={styles.activityTime}>
                       {formatBrDate(it.createdAt)}
@@ -183,28 +201,112 @@ export default function FridgeScreen({ navigation }: Props) {
     );
   }
 
-  function renderItem({ item }: { item: FridgeItem }) {
-    const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
-    const expStyle = exp?.status === 'expired'
-      ? styles.itemMetaExpired
-      : exp?.status === 'warning'
-        ? styles.itemMetaWarning
-        : styles.itemMetaOk;
+  async function doRemove(item: FridgeItem, toShoppingListName?: string) {
+    try {
+      await removeItem.mutateAsync({ itemId: item.id, toShoppingListName });
+    } catch {
+      Alert.alert('Erro', 'Não foi possível remover o item.');
+    }
+  }
+
+  function handlePickListAndRemove(item: FridgeItem) {
+    const lists = shoppingLists ?? [];
+    if (lists.length === 0) {
+      Alert.alert('Sem listas', 'Crie uma lista de compras primeiro.');
+      return;
+    }
+    Alert.alert(
+      'Escolher lista',
+      'Adicionar à qual lista?',
+      [
+        ...lists.map((l) => ({
+          text: l.name,
+          onPress: async () => {
+            await doRemove(item, l.name);
+            try {
+              await api.post(`/households/${effectiveId}/shopping-lists/${l.id}/items`, {
+                name: item.name,
+                quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
+                unit: item.unit ?? 'un',
+              });
+              queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
+              queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
+            } catch {
+              showToast('Item removido, mas erro ao adicionar à lista', 'error');
+            }
+          },
+        })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ],
+    );
+  }
+
+  function renderRightActions(item: FridgeItem) {
     return (
       <TouchableOpacity
-        style={styles.itemRow}
-        onPress={() => navigation.navigate('FridgeItemDetail', { item, householdId: effectiveId! })}
-        activeOpacity={0.7}
+        style={styles.deleteAction}
+        onPress={() =>
+          Alert.alert(`Remover "${item.name}"`, 'O que deseja fazer?', [
+            { text: 'Cancelar', style: 'cancel' },
+            { text: 'Remover + Lista', onPress: () => handlePickListAndRemove(item) },
+            { text: 'Só remover', style: 'destructive', onPress: () => doRemove(item) },
+          ])
+        }
       >
-        <View style={styles.itemInfo}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          {exp && <Text style={[styles.itemMeta, expStyle]}>{exp.text}</Text>}
-          {!exp && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
-        </View>
-        <View style={styles.quantityBadge}>
-          <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
-        </View>
+        <Text style={styles.deleteActionText}>🗑️</Text>
+        <Text style={styles.deleteActionLabel}>Remover</Text>
       </TouchableOpacity>
+    );
+  }
+
+  function renderItem({ item }: { item: FridgeItem }) {
+    const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
+    const borderColor = exp?.status === 'expired'
+      ? Colors.destructive
+      : exp?.status === 'warning'
+        ? '#F59E0B'
+        : exp?.status === 'ok'
+          ? Colors.success
+          : 'transparent';
+    const badgeBg = exp?.status === 'expired'
+      ? Colors.destructive + '18'
+      : exp?.status === 'warning'
+        ? '#F59E0B18'
+        : exp?.status === 'ok'
+          ? Colors.success + '18'
+          : null;
+    const badgeText = exp?.status === 'expired'
+      ? Colors.destructive
+      : exp?.status === 'warning'
+        ? '#F59E0B'
+        : Colors.success;
+
+    return (
+      <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
+        <TouchableOpacity
+          style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }]}
+          onPress={() => navigation.navigate('FridgeItemDetail', { item, householdId: effectiveId! })}
+          activeOpacity={0.7}
+        >
+          <View style={styles.itemInfo}>
+            <Text style={styles.itemName}>{item.name}</Text>
+            {item.expirationDate && (
+              <Text style={styles.itemDate}>Validade: {formatBrDate(item.expirationDate)}</Text>
+            )}
+            {!item.expirationDate && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
+          </View>
+          <View style={styles.itemRight}>
+            {exp && badgeBg && (
+              <View style={[styles.expBadge, { backgroundColor: badgeBg }]}>
+                <Text style={[styles.expBadgeText, { color: badgeText }]}>{exp.text}</Text>
+              </View>
+            )}
+            <View style={styles.quantityBadge}>
+              <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   }
 
@@ -438,6 +540,15 @@ const styles = StyleSheet.create({
   },
   itemInfo: { flex: 1, gap: 2 },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
+  itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  expBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  expBadgeText: { fontSize: 11, fontWeight: '700' },
+  deleteAction: {
+    backgroundColor: Colors.destructive, justifyContent: 'center', alignItems: 'center',
+    width: 80, marginBottom: 8, borderRadius: 10, gap: 2,
+  },
+  deleteActionText: { fontSize: 20 },
+  deleteActionLabel: { fontSize: 11, color: '#fff', fontWeight: '600' },
   categoryPickerWrapper: {
     height: 48,
     backgroundColor: Colors.card,
@@ -455,6 +566,7 @@ const styles = StyleSheet.create({
   categoryChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
   categoryChipTextActive: { color: '#fff' },
   itemMeta: { fontSize: 12, color: Colors.textSecondary },
+  itemDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   itemMetaExpired: { color: Colors.destructive, fontWeight: '700' },
   itemMetaWarning: { color: '#F59E0B', fontWeight: '600' },
   itemMetaOk: { color: '#34C759', fontWeight: '500' },

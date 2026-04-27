@@ -13,7 +13,7 @@ export function useFridge(householdId: string | null, storageId?: string | null)
       return response.data;
     },
     enabled: !!householdId,
-    refetchInterval: 30_000,
+    refetchInterval: 5 * 60 * 1000,
   });
 }
 
@@ -39,6 +39,7 @@ export function useAddFridgeItem(householdId: string) {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
       if (variables.fromShoppingListName) {
         queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
       }
@@ -74,12 +75,41 @@ export function useUpdateFridgeItem(householdId: string) {
 export function useRemoveFridgeItem(householdId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (itemId: string) => {
-      await api.delete(`/households/${householdId}/fridge/${itemId}`);
+    mutationFn: async ({ itemId, toShoppingListName }: { itemId: string; toShoppingListName?: string }) => {
+      const params = toShoppingListName ? `?toList=${encodeURIComponent(toShoppingListName)}` : '';
+      await api.delete(`/households/${householdId}/fridge/${itemId}${params}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
     },
+  });
+}
+
+export interface FridgeActivityEntry {
+  id: string;
+  householdId: string;
+  action: 'added' | 'removed';
+  itemName: string;
+  quantity: number;
+  unit: string;
+  userId: string;
+  userName: string;
+  fromShoppingListName?: string | null;
+  toShoppingListName?: string | null;
+  createdAt: string;
+}
+
+export function useFridgeActivity(householdId: string | null) {
+  return useQuery({
+    queryKey: ['fridge-activity', householdId],
+    queryFn: async () => {
+      const res = await api.get<FridgeActivityEntry[]>(`/households/${householdId}/fridge-activity`);
+      return res.data;
+    },
+    enabled: !!householdId,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

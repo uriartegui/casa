@@ -13,15 +13,17 @@ async function bootstrap() {
   app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
-  const config = new DocumentBuilder()
-    .setTitle('Casa API')
-    .setDescription('API de organização doméstica compartilhada')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Colmeia API')
+      .setDescription('API de organização doméstica compartilhada')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   const httpAdapter = app.getHttpAdapter();
   httpAdapter.get('/health', (_req, res) => res.json({ status: 'ok' }));

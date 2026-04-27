@@ -3,14 +3,17 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThan, Not, IsNull } from 'typeorm';
+import { DataSource, Repository, MoreThan, Not, IsNull } from 'typeorm';
+import { randomBytes } from 'crypto';
 import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
 import { HouseholdInvite } from './household-invite.entity';
 import { FridgeItem } from './fridge-item.entity';
+import { FridgeActivity } from './fridge-activity.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
@@ -22,6 +25,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class HouseholdsService {
+  private readonly logger = new Logger(HouseholdsService.name);
+
   constructor(
     @InjectRepository(Household)
     private householdsRepo: Repository<Household>,
@@ -37,8 +42,11 @@ export class HouseholdsService {
     private storageRepo: Repository<Storage>,
     @InjectRepository(HouseholdInvite)
     private inviteRepo: Repository<HouseholdInvite>,
+    @InjectRepository(FridgeActivity)
+    private fridgeActivityRepo: Repository<FridgeActivity>,
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
+    private dataSource: DataSource,
   ) {}
 
   async create(name: string, ownerId: string): Promise<Household> {
@@ -79,7 +87,7 @@ export class HouseholdsService {
     let code: string;
     let collision: HouseholdInvite | null;
     do {
-      code = Math.floor(10000 + Math.random() * 90000).toString();
+      code = randomBytes(4).toString('hex').toUpperCase();
       collision = await this.inviteRepo.findOne({
         where: { code, expiresAt: MoreThan(new Date()) },
       });
@@ -107,6 +115,7 @@ export class HouseholdsService {
     });
     if (!exists) {
       await this.membersRepo.save({ userId, householdId: invite.householdId, role: 'member' });
+      await this.inviteRepo.delete({ code });
       this.eventsGateway.emitHouseholdUpdate(invite.householdId);
     }
 
@@ -189,6 +198,17 @@ export class HouseholdsService {
       .notifyHouseholdMembers(householdId, userId, '🧊 Item adicionado na geladeira', `${userName} adicionou ${saved.name}`)
       .catch(() => {});
 
+    this.fridgeActivityRepo.save({
+      householdId,
+      action: 'added',
+      itemName: saved.name,
+      quantity: saved.quantity,
+      unit: saved.unit,
+      userId,
+      userName,
+      fromShoppingListName: (data as any).fromShoppingListName ?? null,
+    }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+
     return saved;
   }
 
@@ -211,8 +231,24 @@ export class HouseholdsService {
     householdId: string,
     itemId: string,
     userId: string,
+    toShoppingListName?: string,
   ): Promise<void> {
     await this.assertMember(householdId, userId);
+    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
+    if (item) {
+      const member = await this.membersRepo.findOne({ where: { userId, householdId }, relations: ['user'] });
+      const userName = member?.user?.name ?? 'Alguém';
+      this.fridgeActivityRepo.save({
+        householdId,
+        action: 'removed',
+        itemName: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        userId,
+        userName,
+        toShoppingListName: toShoppingListName ?? undefined,
+      }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+    }
     await this.fridgeRepo.delete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
@@ -259,11 +295,23 @@ export class HouseholdsService {
     const member = await this.membersRepo.findOne({ where: { householdId, userId } });
     if (!member) throw new ForbiddenException('Sem acesso a esta casa');
     if (member.role !== 'admin') throw new ForbiddenException('Apenas o admin pode excluir a casa');
-    await this.fridgeRepo.delete({ householdId });
-    await this.shoppingRepo.delete({ householdId });
-    await this.storageRepo.delete({ householdId });
-    await this.membersRepo.delete({ householdId });
-    await this.householdsRepo.delete({ id: householdId });
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      await queryRunner.manager.delete(FridgeItem, { householdId });
+      await queryRunner.manager.delete(ShoppingItem, { householdId });
+      await queryRunner.manager.delete(Storage, { householdId });
+      await queryRunner.manager.delete(HouseholdMember, { householdId });
+      await queryRunner.manager.delete(Household, { id: householdId });
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   private async assertMember(
@@ -280,14 +328,17 @@ export class HouseholdsService {
 
   async getShoppingLists(householdId: string, userId: string): Promise<(ShoppingList & { itemCount: number })[]> {
     await this.assertMember(householdId, userId);
-    const lists = await this.shoppingListsRepo.find({
-      where: { householdId },
-      order: { createdAt: 'ASC' },
-    });
-    const counts = await Promise.all(
-      lists.map((l) => this.shoppingRepo.count({ where: { shoppingListId: l.id } })),
-    );
-    return lists.map((l, i) => Object.assign(l, { itemCount: counts[i] }));
+    const lists = await this.shoppingListsRepo.find({ where: { householdId }, order: { createdAt: 'ASC' } });
+    if (lists.length === 0) return [];
+    const counts = await this.shoppingRepo
+      .createQueryBuilder('item')
+      .select('item.shoppingListId', 'listId')
+      .addSelect('COUNT(*)', 'count')
+      .where('item.householdId = :householdId', { householdId })
+      .groupBy('item.shoppingListId')
+      .getRawMany<{ listId: string; count: string }>();
+    const countMap = Object.fromEntries(counts.map((c) => [c.listId, Number(c.count)]));
+    return lists.map((l) => Object.assign(l, { itemCount: countMap[l.id] ?? 0 }));
   }
 
   async createShoppingList(householdId: string, userId: string, dto: CreateShoppingListDto): Promise<ShoppingList> {
@@ -420,6 +471,15 @@ export class HouseholdsService {
     ]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 50);
+  }
+
+  async getFridgeActivity(householdId: string, userId: string) {
+    await this.assertMember(householdId, userId);
+    return this.fridgeActivityRepo.find({
+      where: { householdId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
   }
 
   async getFridgeCategories(householdId: string, userId: string, storageId?: string): Promise<string[]> {

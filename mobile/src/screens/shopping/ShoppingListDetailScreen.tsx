@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import {
-  View, Text, SectionList, TouchableOpacity,
+  View, Text, SectionList, TouchableOpacity, Modal,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -38,6 +38,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const addFridgeItem = useAddFridgeItem(householdId);
   const prevItemCount = useRef<number | undefined>(undefined);
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -56,7 +58,14 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }, [isFocused, sendQueue]);
 
   function handleSendAllToFridge() {
-    setSendQueue([...bought]);
+    setSelectedToSend(new Set(bought.map((i) => i.id)));
+    setShowSendModal(true);
+  }
+
+  function confirmSendToFridge() {
+    const toSend = bought.filter((i) => selectedToSend.has(i.id));
+    setShowSendModal(false);
+    setSendQueue(toSend);
   }
 
   async function handleRefresh() {
@@ -134,7 +143,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     if (items === undefined) return;
     const prev = prevItemCount.current;
     prevItemCount.current = items.length;
-    if (prev !== undefined && prev > 0 && items.length === 0) {
+    if (prev !== undefined && prev > 0 && items.length === 0 && !isLoading) {
       Alert.alert('Lista vazia', 'Todos os itens foram removidos. Deseja excluir esta lista?', [
         { text: 'Manter', style: 'cancel' },
         {
@@ -183,7 +192,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       {total > 0 && (
         <View style={styles.progressContainer}>
-          <Text style={styles.progressLabel}>{bought.length} de {total} comprados</Text>
+          <View style={styles.progressTopRow}>
+            <Text style={styles.progressFraction}>{bought.length}/{total}</Text>
+            <Text style={styles.progressLabel}>
+              {bought.length === total ? 'tudo comprado' : 'comprados'}
+            </Text>
+          </View>
           <View style={styles.progressBar}>
             <View style={[styles.progressFill, { width: `${(bought.length / total) * 100}%` as any }]} />
           </View>
@@ -207,11 +221,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           contentContainerStyle={styles.list}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
+              <View style={[styles.sectionDot, !section.isPending && { backgroundColor: Colors.success }]} />
               <Text style={[styles.sectionLabel, !section.isPending && styles.sectionLabelBought]}>
                 {section.title}
               </Text>
               {!section.isPending && bought.length > 0 && (
-                <TouchableOpacity onPress={handleClearChecked}>
+                <TouchableOpacity onPress={handleClearChecked} style={styles.clearBtn}>
                   <Text style={styles.clearButton}>Limpar</Text>
                 </TouchableOpacity>
               )}
@@ -221,12 +236,54 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         />
       )}
 
+      <Modal visible={showSendModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSendModal(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Mandar para geladeira</Text>
+            <TouchableOpacity onPress={() => setShowSendModal(false)}>
+              <Text style={styles.modalClose}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modalSubtitle}>Selecione os itens que deseja mandar:</Text>
+          {bought.map((item) => {
+            const selected = selectedToSend.has(item.id);
+            return (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.modalItem}
+                onPress={() => {
+                  setSelectedToSend((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(item.id)) next.delete(item.id);
+                    else next.add(item.id);
+                    return next;
+                  });
+                }}
+              >
+                <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
+                  {selected && <Text style={styles.modalCheckmark}>✓</Text>}
+                </View>
+                <Text style={styles.modalItemName}>{item.name}</Text>
+                <Text style={styles.modalItemQty}>{item.quantity} {item.unit ?? ''}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            style={[styles.button, { margin: 16, marginTop: 24 }]}
+            disabled={selectedToSend.size === 0}
+            onPress={confirmSendToFridge}
+          >
+            <Text style={styles.buttonText}>
+              🧊 Mandar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <View style={styles.footer}>
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
-            <Text style={styles.buttonSecondaryText}>
-              🧊 Mandar {bought.length} {bought.length === 1 ? 'comprado' : 'comprados'} para geladeira
-            </Text>
+            <Text style={styles.buttonSecondaryText}>Mandar comprados para a geladeira</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -245,18 +302,22 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   metaRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
   metaChip: { fontSize: 13, color: Colors.textSecondary },
-  progressContainer: { padding: 16, paddingBottom: 8, gap: 6 },
-  progressLabel: { fontSize: 13, fontWeight: '600', color: Colors.success },
-  progressBar: { height: 6, backgroundColor: Colors.separator, borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: Colors.success, borderRadius: 3 },
+  progressContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, gap: 8 },
+  progressTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  progressFraction: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
+  progressLabel: { fontSize: 13, color: Colors.textSecondary },
+  progressBar: { height: 4, backgroundColor: Colors.separator, borderRadius: 2, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: Colors.success, borderRadius: 2 },
   list: { paddingBottom: 16 },
   sectionHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, backgroundColor: Colors.background,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, backgroundColor: Colors.background,
   },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.5 },
+  sectionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.accent },
+  sectionLabel: { flex: 1, fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, textTransform: 'uppercase' },
   sectionLabelBought: { color: Colors.success },
-  clearButton: { fontSize: 13, color: Colors.destructive, fontWeight: '500' },
+  clearBtn: { paddingHorizontal: 8, paddingVertical: 2 },
+  clearButton: { fontSize: 12, color: Colors.destructive, fontWeight: '600' },
   itemRow: {
     backgroundColor: Colors.card, marginHorizontal: 16, marginBottom: 2,
     borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -281,10 +342,10 @@ const styles = StyleSheet.create({
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
-  footer: { padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  buttonSecondary: { backgroundColor: Colors.card, borderRadius: 10, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: Colors.accent },
+  footer: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
+  button: { backgroundColor: Colors.accent, borderRadius: 14, padding: 16, alignItems: 'center' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonSecondary: { borderRadius: 14, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent + '12' },
   buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
@@ -295,4 +356,15 @@ const styles = StyleSheet.create({
   urgentChipActive: { backgroundColor: '#F0A500' },
   urgentChipText: { fontSize: 13, fontWeight: '600', color: '#F0A500' },
   urgentChipTextActive: { color: '#fff' },
+  modalContainer: { flex: 1, backgroundColor: Colors.background },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
+  modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
+  modalSubtitle: { fontSize: 13, color: Colors.textSecondary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
+  modalItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, gap: 12 },
+  modalCheckbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center' },
+  modalCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  modalCheckmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  modalItemName: { flex: 1, fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
+  modalItemQty: { fontSize: 13, color: Colors.textSecondary },
 });

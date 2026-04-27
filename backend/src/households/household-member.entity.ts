@@ -5,12 +5,14 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  Unique,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Household } from './household.entity';
 
 export type MemberRole = 'admin' | 'member';
 
+@Unique(['userId', 'householdId'])
 @Entity('household_members')
 export class HouseholdMember {
   @PrimaryGeneratedColumn('uuid')
