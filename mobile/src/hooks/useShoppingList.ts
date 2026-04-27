@@ -1,18 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ShoppingItem } from '../types';
-
-export function useShoppingList(householdId: string | null) {
-  return useQuery({
-    queryKey: ['shopping-list', householdId],
-    queryFn: async () => {
-      const res = await api.get<ShoppingItem[]>(`/households/${householdId}/shopping-list`);
-      return res.data;
-    },
-    enabled: !!householdId,
-    refetchInterval: 30_000,
-  });
-}
 
 export function useAddShoppingItem(householdId: string) {
   const queryClient = useQueryClient();

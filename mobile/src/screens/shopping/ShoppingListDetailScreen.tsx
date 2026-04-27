@@ -16,6 +16,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
+import { ShoppingItemSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -190,7 +191,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       )}
 
       {isLoading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>
+        <View style={{ backgroundColor: Colors.background }}>
+          {Array.from({ length: 5 }).map((_, i) => <ShoppingItemSkeleton key={i} />)}
+        </View>
       ) : sections.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>Lista vazia</Text>

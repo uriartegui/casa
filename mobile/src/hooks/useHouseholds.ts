@@ -63,6 +63,18 @@ export function useLeaveHousehold() {
   });
 }
 
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ householdId, memberId }: { householdId: string; memberId: string }) => {
+      await api.delete(`/households/${householdId}/members/${memberId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['households'] });
+    },
+  });
+}
+
 export function usePromoteToAdmin() {
   const queryClient = useQueryClient();
   return useMutation({

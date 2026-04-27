@@ -6,7 +6,7 @@ import { api } from '../services/api';
 const PROJECT_ID = '1bbc4256-057a-4b26-895a-9ba95934e86c';
 
 export async function registerPushToken(): Promise<void> {
-  if (!Device.isDevice) return;
+  if (!Device.isDevice && !__DEV__) return;
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {

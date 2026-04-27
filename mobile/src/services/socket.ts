@@ -1,4 +1,5 @@
-const SOCKET_URL = 'ws://192.168.0.225:3000/ws';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.225:3000';
+const SOCKET_URL = API_URL.replace(/^http/, 'ws') + '/ws';
 
 type Listener = (data: any) => void;
 

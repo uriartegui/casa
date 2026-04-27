@@ -291,6 +291,18 @@ export class HouseholdsService {
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
+  async removeMember(householdId: string, targetMemberId: string, requestingUserId: string): Promise<void> {
+    const requester = await this.membersRepo.findOne({ where: { householdId, userId: requestingUserId } });
+    if (!requester || requester.role !== 'admin') throw new ForbiddenException('Apenas admins podem remover membros');
+
+    const target = await this.membersRepo.findOne({ where: { id: targetMemberId, householdId } });
+    if (!target) throw new NotFoundException('Membro não encontrado');
+    if (target.userId === requestingUserId) throw new BadRequestException('Use a opção "Sair da casa" para se remover');
+
+    await this.membersRepo.delete({ id: targetMemberId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
   async promoteToAdmin(householdId: string, targetMemberId: string, requestingUserId: string): Promise<HouseholdMember> {
     const requester = await this.membersRepo.findOne({ where: { householdId, userId: requestingUserId } });
     if (!requester || requester.role !== 'admin') throw new ForbiddenException('Apenas admins podem promover membros');

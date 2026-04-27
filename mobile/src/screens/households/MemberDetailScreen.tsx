@@ -5,8 +5,9 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useHouseholds, usePromoteToAdmin } from '../../hooks/useHouseholds';
+import { useHouseholds, usePromoteToAdmin, useRemoveMember } from '../../hooks/useHouseholds';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 
@@ -19,7 +20,9 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
   const { householdId, memberId } = route.params;
   const { data: households, isLoading } = useHouseholds();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const promoteToAdmin = usePromoteToAdmin();
+  const removeMember = useRemoveMember();
 
   const household = households?.find((h) => h.id === householdId);
   const member = household?.members?.find((m) => m.id === memberId);
@@ -58,10 +61,35 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
           onPress: async () => {
             try {
               await promoteToAdmin.mutateAsync({ householdId, memberId });
+              showToast(`${member!.user?.name ?? 'Membro'} agora é admin`);
               navigation.goBack();
             } catch (err: any) {
               const msg = err?.response?.data?.message ?? 'Não foi possível promover o membro.';
-              Alert.alert('Erro', String(msg));
+              showToast(String(msg), 'error');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  function handleRemove() {
+    Alert.alert(
+      `Remover ${member!.user?.name ?? 'este membro'}?`,
+      'O membro perderá acesso à casa e a todos os itens.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await removeMember.mutateAsync({ householdId, memberId });
+              showToast(`${member!.user?.name ?? 'Membro'} removido da casa`);
+              navigation.goBack();
+            } catch (err: any) {
+              const msg = err?.response?.data?.message ?? 'Não foi possível remover o membro.';
+              showToast(String(msg), 'error');
             }
           },
         },
@@ -103,6 +131,15 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
           }
         </TouchableOpacity>
       )}
+
+      {isAdmin && !isMe && (
+        <TouchableOpacity style={styles.removeButton} onPress={handleRemove} disabled={removeMember.isPending}>
+          {removeMember.isPending
+            ? <ActivityIndicator color={Colors.destructive} />
+            : <Text style={styles.removeButtonText}>Remover da casa</Text>
+          }
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -137,4 +174,6 @@ const styles = StyleSheet.create({
   separator: { height: 1, backgroundColor: Colors.separator, marginHorizontal: 14 },
   promoteButton: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
   promoteButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  removeButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
+  removeButtonText: { color: Colors.destructive, fontSize: 16, fontWeight: '600' },
 });

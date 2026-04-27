@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-const BASE_URL = __DEV__
-  ? 'http://192.168.0.225:3000'
-  : 'https://casa-api-4fq0.onrender.com';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.225:3000';
+
+console.log('[API] baseURL:', BASE_URL);
 
 export const api = axios.create({
   baseURL: BASE_URL,

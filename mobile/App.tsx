@@ -18,6 +18,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
 import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContext';
+import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { useKeepAlive } from './src/hooks/useKeepAlive';
@@ -35,10 +36,12 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <SelectedHouseholdProvider>
-              <NavigationContainer>
-                <StatusBar style="auto" />
-                <RootNavigator />
-              </NavigationContainer>
+              <ToastProvider>
+                <NavigationContainer>
+                  <StatusBar style="auto" />
+                  <RootNavigator />
+                </NavigationContainer>
+              </ToastProvider>
             </SelectedHouseholdProvider>
           </AuthProvider>
         </QueryClientProvider>

@@ -9,6 +9,7 @@ import { useHouseholds } from '../../hooks/useHouseholds';
 import { useShoppingLists, useDeleteShoppingList, useShoppingActivity, useUpdateShoppingList } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { formatBrDate, formatBrTime, formatBrShortDate } from '../../utils/dateUtils';
+import { ShoppingListCardSkeleton } from '../../components/Skeleton';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList, ShoppingActivityEvent } from '../../types';
@@ -206,7 +207,9 @@ export default function ShoppingListsScreen({ navigation }: Props) {
 
 
       {isLoading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>
+        <View style={[styles.list, { gap: 12 }]}>
+          {Array.from({ length: 4 }).map((_, i) => <ShoppingListCardSkeleton key={i} />)}
+        </View>
       ) : (
         <FlatList
           data={lists ?? []}

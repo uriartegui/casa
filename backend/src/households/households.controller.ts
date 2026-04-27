@@ -53,6 +53,16 @@ export class HouseholdsController {
     return this.householdsService.leaveHousehold(id, req.user.id);
   }
 
+  @Delete(':id/members/:memberId')
+  @ApiOperation({ summary: 'Remover membro da casa (admin only)' })
+  removeMember(
+    @Param('id') id: string,
+    @Param('memberId') memberId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.removeMember(id, memberId, req.user.id);
+  }
+
   @Patch(':id/members/:memberId/promote')
   @ApiOperation({ summary: 'Tornar membro admin (admin only)' })
   promoteToAdmin(

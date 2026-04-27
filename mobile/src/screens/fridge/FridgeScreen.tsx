@@ -15,6 +15,7 @@ import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
 import { expirationLabel, scheduleExpirationNotifications } from '../../utils/expiration';
 import { formatBrDate, formatBrTime } from '../../utils/dateUtils';
+import { FridgeItemSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -330,8 +331,8 @@ export default function FridgeScreen({ navigation }: Props) {
       )}
 
       {loadingItems ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.accent} />
+        <View style={styles.list}>
+          {Array.from({ length: 6 }).map((_, i) => <FridgeItemSkeleton key={i} />)}
         </View>
       ) : (
         <FlatList
