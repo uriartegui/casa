@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Share, Alert, Platform,
+  ActivityIndicator, Share, Alert,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
@@ -9,6 +9,8 @@ import { RouteProp } from '@react-navigation/native';
 import { useInviteCode } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+
+const API_BASE = 'https://casa-api-4fq0.onrender.com';
 
 type Props = {
   route: RouteProp<HouseholdStackParamList, 'Invite'>;
@@ -18,22 +20,23 @@ export default function InviteScreen({ route }: Props) {
   const { householdId } = route.params;
   const { data, isLoading, isError } = useInviteCode(householdId);
   const inviteCode = data?.inviteCode ?? '';
+  const inviteLink = `${API_BASE}/invite/${inviteCode}`;
 
   const handleCopy = useCallback(async () => {
-    await Clipboard.setStringAsync(inviteCode);
-    Alert.alert('Copiado!', 'Código copiado para a área de transferência.');
-  }, [inviteCode]);
+    await Clipboard.setStringAsync(inviteLink);
+    Alert.alert('Copiado!', 'Link copiado para a área de transferência.');
+  }, [inviteLink]);
 
   const handleShare = useCallback(async () => {
     try {
       await Share.share({
-        message: `Entre na minha casa no app Casa com o código: ${inviteCode}`,
+        message: `Entre na minha casa no app Casa: ${inviteLink}`,
         title: 'Convite para casa',
       });
     } catch {
       // user dismissed
     }
-  }, [inviteCode]);
+  }, [inviteLink]);
 
   if (isLoading) {
     return (
@@ -62,18 +65,16 @@ export default function InviteScreen({ route }: Props) {
       </View>
 
       <View style={styles.qrContainer}>
-        <QRCode value={inviteCode} size={180} color={Colors.textPrimary} backgroundColor={Colors.card} />
+        <QRCode value={inviteLink} size={180} color={Colors.textPrimary} backgroundColor={Colors.card} />
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.button} onPress={handleCopy}>
-          <Text style={styles.buttonText}>Copiar código</Text>
+        <TouchableOpacity style={styles.button} onPress={handleShare}>
+          <Text style={styles.buttonText}>Compartilhar link</Text>
         </TouchableOpacity>
-        {Platform.OS === 'ios' && (
-          <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleShare}>
-            <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Compartilhar</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={handleCopy}>
+          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Copiar link</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

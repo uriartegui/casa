@@ -3,6 +3,7 @@
     "name": "Casa",
     "slug": "casa-app",
     "version": "1.0.0",
+    "scheme": "casa",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

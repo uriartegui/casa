@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param, Redirect } from '@nestjs/common';
 import { AppService } from './app.service';
 
 @Controller()
@@ -8,5 +8,11 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('invite/:code')
+  @Redirect()
+  redirectInvite(@Param('code') code: string) {
+    return { url: `casa://join/${code}`, statusCode: 302 };
   }
 }

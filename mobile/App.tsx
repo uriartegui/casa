@@ -19,7 +19,7 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -30,6 +30,20 @@ import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { useKeepAlive } from './src/hooks/useKeepAlive';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const linking: LinkingOptions<any> = {
+  prefixes: ['casa://'],
+  config: {
+    screens: {
+      CasaTab: {
+        screens: {
+          JoinHousehold: 'join/:initialCode',
+        },
+      },
+    },
+  },
+};
 
 function App() {
   useKeepAlive();
@@ -45,7 +59,7 @@ function App() {
           <AuthProvider>
             <SelectedHouseholdProvider>
               <ToastProvider>
-                <NavigationContainer>
+                <NavigationContainer linking={linking}>
                   <StatusBar style="auto" />
                   <RootNavigator />
                 </NavigationContainer>

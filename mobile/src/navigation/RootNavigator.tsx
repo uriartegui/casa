@@ -6,6 +6,7 @@ import { useHouseholdSync } from '../hooks/useHouseholdSync';
 import AuthStack from './AuthStack';
 import AppTabs from './AppTabs';
 import HouseholdSetupScreen from '../screens/households/HouseholdSetupScreen';
+import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import { Colors } from '../constants/colors';
 
 function AppGate() {
@@ -28,7 +29,7 @@ function AppGate() {
 }
 
 export default function RootNavigator() {
-  const { token, isLoading } = useAuth();
+  const { token, isLoading, hasSeenOnboarding, markOnboardingSeen } = useAuth();
 
   if (isLoading) {
     return (
@@ -38,5 +39,7 @@ export default function RootNavigator() {
     );
   }
 
-  return token ? <AppGate /> : <AuthStack />;
+  if (!token) return <AuthStack />;
+  if (!hasSeenOnboarding) return <OnboardingScreen onDone={markOnboardingSeen} />;
+  return <AppGate />;
 }

@@ -4,16 +4,18 @@ import {
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { useJoinHousehold } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'JoinHousehold'>;
+  route: RouteProp<HouseholdStackParamList, 'JoinHousehold'>;
 };
 
-export default function JoinHouseholdScreen({ navigation }: Props) {
-  const [code, setCode] = useState('');
+export default function JoinHouseholdScreen({ navigation, route }: Props) {
+  const [code, setCode] = useState(route.params?.initialCode ?? '');
   const joinHousehold = useJoinHousehold();
 
   async function handleJoin() {

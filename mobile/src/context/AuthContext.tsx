@@ -8,11 +8,14 @@ import { registerPushToken } from '../utils/pushToken';
 
 const TOKEN_KEY = '@casa:token';
 const USER_KEY = '@casa:user';
+export const ONBOARDING_KEY = '@casa:onboarding_seen';
 
 interface AuthContextData {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  hasSeenOnboarding: boolean;
+  markOnboardingSeen: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -24,16 +27,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
 
   useEffect(() => {
     async function loadStoredAuth() {
-      const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
-      const storedUser = await AsyncStorage.getItem(USER_KEY);
+      const [[, storedToken], [, storedUser], [, onboardingSeen]] =
+        await AsyncStorage.multiGet([TOKEN_KEY, USER_KEY, ONBOARDING_KEY]);
       if (storedToken && storedUser) {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
         setAuthToken(storedToken);
       }
+      setHasSeenOnboarding(onboardingSeen === 'true');
       setIsLoading(false);
     }
     loadStoredAuth();
@@ -70,6 +75,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }
 
+  async function markOnboardingSeen() {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    setHasSeenOnboarding(true);
+  }
+
   async function logout() {
     socket.disconnect();
     queryClient.clear();
@@ -80,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, hasSeenOnboarding, markOnboardingSeen, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

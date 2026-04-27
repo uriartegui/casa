@@ -27,7 +27,7 @@ export type HouseholdStackParamList = {
   CreateHousehold: undefined;
   HouseholdDetail: { householdId: string; householdName: string };
   Invite: { householdId: string };
-  JoinHousehold: undefined;
+  JoinHousehold: { initialCode?: string } | undefined;
   MemberDetail: { householdId: string; memberId: string };
 };
 

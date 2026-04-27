@@ -1,17 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { Linking } from 'react-native';
 import { useCreateHousehold, useJoinHousehold } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 
 type Mode = 'pick' | 'create' | 'join';
 
+function extractInviteCode(url: string | null): string | null {
+  if (!url) return null;
+  const match = url.match(/^casa:\/\/join\/(.+)$/);
+  return match ? match[1] : null;
+}
+
 export default function HouseholdSetupScreen() {
   const [mode, setMode] = useState<Mode>('pick');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => {
+      const inviteCode = extractInviteCode(url);
+      if (inviteCode) {
+        setCode(inviteCode);
+        setMode('join');
+      }
+    });
+  }, []);
   const createHousehold = useCreateHousehold();
   const joinHousehold = useJoinHousehold();
 
