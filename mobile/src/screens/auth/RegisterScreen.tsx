@@ -18,6 +18,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleRegister() {
@@ -48,8 +49,14 @@ export default function RegisterScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Criar conta</Text>
-        <Text style={styles.subtitle}>Junte-se à sua família no Colmeia</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backText}>← Voltar</Text>
+        </TouchableOpacity>
+
+        <View style={styles.header}>
+          <Text style={styles.title}>Criar conta</Text>
+          <Text style={styles.subtitle}>Junte-se à sua família no Colmeia</Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
@@ -63,7 +70,7 @@ export default function RegisterScreen({ navigation }: Props) {
           />
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="E-mail"
             placeholderTextColor={Colors.textSecondary}
             value={email}
             onChangeText={setEmail}
@@ -71,14 +78,26 @@ export default function RegisterScreen({ navigation }: Props) {
             keyboardType="email-address"
             autoCorrect={false}
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor={Colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Senha"
+              placeholderTextColor={Colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              returnKeyType="go"
+              onSubmitEditing={handleRegister}
+            />
+            <TouchableOpacity
+              style={styles.eyeBtn}
+              onPress={() => setShowPassword((v) => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
             {isLoading
               ? <ActivityIndicator color="#fff" />
@@ -97,16 +116,53 @@ export default function RegisterScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
-  title: { fontSize: 34, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginBottom: 40 },
-  form: { gap: 12, marginBottom: 24 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
+
+  backBtn: { marginBottom: 32 },
+  backText: { color: Colors.accent, fontSize: 16, fontWeight: '500' },
+
+  header: { marginBottom: 36 },
+  title: { fontSize: 34, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary },
+
+  form: { gap: 12, marginBottom: 28 },
   input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    fontSize: 16,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.separator,
   },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 4 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    paddingHorizontal: 16,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 15,
+    fontSize: 16,
+    color: Colors.textPrimary,
+  },
+  eyeBtn: { paddingLeft: 8 },
+  eyeIcon: { fontSize: 18 },
+
+  button: {
+    backgroundColor: Colors.accent,
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
   link: { textAlign: 'center', color: Colors.textSecondary, fontSize: 14 },
   linkAccent: { color: Colors.accent, fontWeight: '600' },
 });

@@ -40,8 +40,9 @@ export default function HouseholdSetupScreen() {
     try {
       await createHousehold.mutateAsync(name.trim());
       // RootNavigator re-renders automatically when useHouseholds returns data
-    } catch {
-      Alert.alert('Erro', 'Não foi possível criar a casa.');
+    } catch (err: any) {
+      const msg = err?.message ?? err?.code ?? JSON.stringify(err);
+      Alert.alert('Erro', msg);
     }
   }
 

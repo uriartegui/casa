@@ -227,7 +227,9 @@ const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
         )}
       </View>
 
+
     </ScrollView>
+
     </View>
   );
 }
@@ -333,4 +335,5 @@ const styles = StyleSheet.create({
   itemQty: { fontSize: 13, color: Colors.textSecondary },
 
   emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
+
 });

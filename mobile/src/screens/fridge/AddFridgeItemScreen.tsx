@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
   TouchableWithoutFeedback, Keyboard,
 } from 'react-native';
+import { filterItems } from '../../constants/commonItems';
 import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -24,6 +25,8 @@ const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const { householdId, storageId } = route.params;
   const [name, setName] = useState('');
+  const [nameFocused, setNameFocused] = useState(false);
+  const suggestions = useMemo(() => filterItems(name), [name]);
   const [quantity, setQuantity] = useState('1');
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
@@ -67,10 +70,25 @@ await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, e
           placeholderTextColor={Colors.textSecondary}
           value={name}
           onChangeText={setName}
+          onFocus={() => setNameFocused(true)}
+          onBlur={() => setTimeout(() => setNameFocused(false), 150)}
           returnKeyType="next"
           autoCorrect={false}
           spellCheck={false}
         />
+        {nameFocused && suggestions.length > 0 && (
+          <View style={styles.suggestions}>
+            {suggestions.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={styles.suggestionItem}
+                onPress={() => { setName(s); setNameFocused(false); Keyboard.dismiss(); }}
+              >
+                <Text style={styles.suggestionText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <Text style={styles.label}>Quantidade</Text>
         <TextInput
@@ -140,6 +158,15 @@ const styles = StyleSheet.create({
   unitChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
   optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
+  suggestions: {
+    backgroundColor: Colors.card, borderRadius: 10, borderWidth: 1,
+    borderColor: Colors.separator, overflow: 'hidden', marginTop: -6,
+  },
+  suggestionItem: {
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderBottomWidth: 1, borderBottomColor: Colors.separator,
+  },
+  suggestionText: { fontSize: 15, color: Colors.textPrimary },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

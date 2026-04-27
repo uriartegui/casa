@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
   TouchableWithoutFeedback, Keyboard,
 } from 'react-native';
+import { filterItems } from '../../constants/commonItems';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddListItem } from '../../hooks/useShoppingLists';
@@ -29,6 +30,8 @@ const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 export default function AddShoppingItemScreen({ navigation, route }: Props) {
   const { householdId, listId, prefillName, prefillQuantity, prefillUnit } = route.params;
   const [name, setName] = useState(prefillName ?? '');
+  const [nameFocused, setNameFocused] = useState(false);
+  const suggestions = useMemo(() => filterItems(name), [name]);
   const [quantity, setQuantity] = useState(prefillQuantity ? String(prefillQuantity) : '1');
   const [unit, setUnit] = useState<Unit>((prefillUnit as Unit) ?? 'un');
   const addItem = useAddListItem(householdId, listId ?? '');
@@ -65,10 +68,25 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
           placeholderTextColor={Colors.textSecondary}
           value={name}
           onChangeText={setName}
+          onFocus={() => setNameFocused(true)}
+          onBlur={() => setTimeout(() => setNameFocused(false), 150)}
           returnKeyType="next"
           autoCorrect={false}
           spellCheck={false}
         />
+        {nameFocused && suggestions.length > 0 && (
+          <View style={styles.suggestions}>
+            {suggestions.map((s) => (
+              <TouchableOpacity
+                key={s}
+                style={styles.suggestionItem}
+                onPress={() => { setName(s); setNameFocused(false); Keyboard.dismiss(); }}
+              >
+                <Text style={styles.suggestionText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         <Text style={styles.label}>Quantidade</Text>
         <TextInput
@@ -121,4 +139,13 @@ const styles = StyleSheet.create({
   unitChipTextActive: { color: '#fff' },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  suggestions: {
+    backgroundColor: Colors.card, borderRadius: 10, borderWidth: 1,
+    borderColor: Colors.separator, overflow: 'hidden', marginTop: -6,
+  },
+  suggestionItem: {
+    paddingHorizontal: 14, paddingVertical: 11,
+    borderBottomWidth: 1, borderBottomColor: Colors.separator,
+  },
+  suggestionText: { fontSize: 15, color: Colors.textPrimary },
 });
