@@ -6,9 +6,9 @@ import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
 import { registerPushToken } from '../utils/pushToken';
 
-const TOKEN_KEY = '@casa:token';
-const USER_KEY = '@casa:user';
-export const ONBOARDING_KEY = '@casa:onboarding_seen';
+const TOKEN_KEY = '@colmeia:token';
+const USER_KEY = '@colmeia:user';
+export const ONBOARDING_KEY = '@colmeia:onboarding_seen';
 
 interface AuthContextData {
   user: User | null;

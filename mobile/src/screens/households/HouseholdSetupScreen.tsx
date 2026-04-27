@@ -11,7 +11,7 @@ type Mode = 'pick' | 'create' | 'join';
 
 function extractInviteCode(url: string | null): string | null {
   if (!url) return null;
-  const match = url.match(/^casa:\/\/join\/(.+)$/);
+  const match = url.match(/^colmeia:\/\/join\/(.+)$/);
   return match ? match[1] : null;
 }
 
@@ -63,7 +63,7 @@ export default function HouseholdSetupScreen() {
       <View style={styles.container}>
         <View style={styles.content}>
           <Text style={styles.emoji}>🏠</Text>
-          <Text style={styles.title}>Bem-vindo ao casa</Text>
+          <Text style={styles.title}>Bem-vindo ao Colmeia</Text>
           <Text style={styles.subtitle}>Para começar, crie uma casa ou entre em uma existente com um código de convite.</Text>
 
           <View style={styles.actions}>

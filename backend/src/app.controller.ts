@@ -13,6 +13,6 @@ export class AppController {
   @Get('invite/:code')
   @Redirect()
   redirectInvite(@Param('code') code: string) {
-    return { url: `casa://join/${code}`, statusCode: 302 };
+    return { url: `colmeia://join/${code}`, statusCode: 302 };
   }
 }

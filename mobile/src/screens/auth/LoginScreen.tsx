@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>casa</Text>
+        <Text style={styles.title}>Colmeia</Text>
         <Text style={styles.subtitle}>Organize sua casa com sua família</Text>
 
         <View style={styles.form}>

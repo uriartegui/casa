@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "Casa",
-    "slug": "casa-app",
+    "name": "Colmeia",
+    "slug": "colmeia-app",
     "version": "1.0.0",
-    "scheme": "casa",
+    "scheme": "colmeia",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.guiuriarte.casa",
+      "bundleIdentifier": "com.guiuriarte.colmeia",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -25,7 +25,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.guiuriarte.casa",
+      "package": "com.guiuriarte.colmeia",
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false

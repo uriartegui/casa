@@ -30,8 +30,8 @@ export default function InviteScreen({ route }: Props) {
   const handleShare = useCallback(async () => {
     try {
       await Share.share({
-        message: `Entre na minha casa no app Casa: ${inviteLink}`,
-        title: 'Convite para casa',
+        message: `Entre na minha colmeia no app Colmeia: ${inviteLink}`,
+        title: 'Convite para o Colmeia',
       });
     } catch {
       // user dismissed

@@ -49,7 +49,7 @@ export default function RegisterScreen({ navigation }: Props) {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Criar conta</Text>
-        <Text style={styles.subtitle}>Junte-se à sua família no casa</Text>
+        <Text style={styles.subtitle}>Junte-se à sua família no Colmeia</Text>
 
         <View style={styles.form}>
           <TextInput

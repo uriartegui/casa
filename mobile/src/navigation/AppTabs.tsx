@@ -180,11 +180,11 @@ export default function AppTabs() {
         })}
       />
       <Tab.Screen
-        name="CasaTab"
+        name="ColmeiaTab"
         component={HouseholdNavigator}
         options={{ title: 'Casa', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}
         listeners={({ navigation }) => ({
-          tabPress: () => navigation.navigate('CasaTab', { screen: 'HouseholdList' } as never),
+          tabPress: () => navigation.navigate('ColmeiaTab', { screen: 'HouseholdList' } as never),
         })}
       />
       <Tab.Screen

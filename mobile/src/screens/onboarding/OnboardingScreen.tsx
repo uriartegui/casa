@@ -11,7 +11,7 @@ const slides = [
   {
     key: '1',
     emoji: '🏠',
-    title: 'Bem-vindo ao Casa',
+    title: 'Bem-vindo ao Colmeia',
     subtitle: 'Organize a sua casa com todo mundo que mora com você — em tempo real.',
   },
   {

@@ -33,10 +33,10 @@ import { useKeepAlive } from './src/hooks/useKeepAlive';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const linking: LinkingOptions<any> = {
-  prefixes: ['casa://'],
+  prefixes: ['colmeia://'],
   config: {
     screens: {
-      CasaTab: {
+      ColmeiaTab: {
         screens: {
           JoinHousehold: 'join/:initialCode',
         },
