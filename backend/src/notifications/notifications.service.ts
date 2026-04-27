@@ -17,6 +17,39 @@ export class NotificationsService {
     private usersRepo: Repository<User>,
   ) {}
 
+  async notifyAllMembers(
+    householdId: string,
+    title: string,
+    body: string,
+  ): Promise<void> {
+    const members = await this.membersRepo.find({ where: { householdId } });
+    const userIds = members.map((m) => m.userId);
+    if (userIds.length === 0) return;
+
+    const users = await this.usersRepo.find({ where: { id: In(userIds) } });
+    const messages: ExpoPushMessage[] = users
+      .filter((u) => u.pushToken && Expo.isExpoPushToken(u.pushToken))
+      .map((u) => ({ to: u.pushToken as string, title, body, sound: 'default' as const }));
+
+    if (messages.length === 0) {
+      this.logger.log(`[${householdId}] Nenhum token válido`);
+      return;
+    }
+
+    const chunks = this.expo.chunkPushNotifications(messages);
+    for (const chunk of chunks) {
+      const receipts = await this.expo.sendPushNotificationsAsync(chunk).catch((err) => {
+        this.logger.error('Erro ao enviar push:', err?.message ?? err);
+        return [];
+      });
+      for (const receipt of receipts) {
+        if (receipt.status === 'error') {
+          this.logger.error(`Push falhou: ${receipt.message}`, receipt.details);
+        }
+      }
+    }
+  }
+
   async notifyHouseholdMembers(
     householdId: string,
     excludeUserId: string,
