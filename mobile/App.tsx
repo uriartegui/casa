@@ -1,6 +1,14 @@
 import 'react-native-gesture-handler';
+import * as Sentry from '@sentry/react-native';
 import React, { useEffect } from 'react';
 import * as Notifications from 'expo-notifications';
+
+Sentry.init({
+  dsn: 'https://a7512efd0839a511b22e64652111bbe7@o4511077727010816.ingest.us.sentry.io/4511290419511296',
+  environment: __DEV__ ? 'development' : 'production',
+  enabled: !__DEV__,
+  tracesSampleRate: 0.2,
+});
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -23,7 +31,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { useKeepAlive } from './src/hooks/useKeepAlive';
 
-export default function App() {
+function App() {
   useKeepAlive();
 
   useEffect(() => {
@@ -49,3 +57,5 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(App);

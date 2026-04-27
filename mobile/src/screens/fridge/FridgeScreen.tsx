@@ -13,7 +13,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
-import { expirationLabel, scheduleExpirationNotifications } from '../../utils/expiration';
+import { expirationLabel } from '../../utils/expiration';
 import { formatBrDate, formatBrTime } from '../../utils/dateUtils';
 import { FridgeItemSkeleton } from '../../components/Skeleton';
 
@@ -75,11 +75,6 @@ export default function FridgeScreen({ navigation }: Props) {
     setSelectedCategory(null);
   }, [effectiveId]);
 
-  useEffect(() => {
-    if (items && items.length > 0) {
-      scheduleExpirationNotifications(items);
-    }
-  }, [items]);
 
   const availableCategories = React.useMemo(() => {
     if (!items) return [];
