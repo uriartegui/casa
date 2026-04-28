@@ -26,14 +26,14 @@ export class AuthController {
   @Post('register')
   @ApiOperation({ summary: 'Cadastrar novo usuário' })
   register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.name, dto.password, dto.phone);
+    return this.authService.register(dto.name, dto.password, dto.phone);
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login' })
   login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+    return this.authService.login(dto.phone, dto.password);
   }
 
   @Post('refresh')

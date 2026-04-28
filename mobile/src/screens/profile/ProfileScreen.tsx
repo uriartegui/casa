@@ -85,7 +85,6 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{avatarInitial}</Text>
           </View>
           <Text style={styles.displayName}>{user?.name}</Text>
-          <Text style={styles.displayEmail}>{user?.email}</Text>
         </View>
 
         {/* Conta */}
@@ -132,15 +131,6 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
 
-          <View style={styles.divider} />
-
-          {/* E-mail (somente leitura) */}
-          <View style={[styles.row, styles.rowDisabled]}>
-            <View style={styles.rowLeft}>
-              <Text style={styles.rowLabel}>E-mail</Text>
-              <Text style={styles.rowValue}>{user?.email}</Text>
-            </View>
-          </View>
         </View>
 
         {/* Segurança */}

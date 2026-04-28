@@ -17,15 +17,12 @@ export class UsersService {
     private usersRepo: Repository<User>,
   ) {}
 
-  async create(email: string, name: string, password: string, phone: string): Promise<User> {
-    const emailExists = await this.usersRepo.findOne({ where: { email } });
-    if (emailExists) throw new ConflictException('Email já cadastrado');
-
+  async create(name: string, password: string, phone: string): Promise<User> {
     const phoneExists = await this.usersRepo.findOne({ where: { phone } });
     if (phoneExists) throw new ConflictException('Telefone já cadastrado');
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = this.usersRepo.create({ email, name, password: hashed, phone });
+    const user = this.usersRepo.create({ name, password: hashed, phone });
     return this.usersRepo.save(user);
   }
 
@@ -41,7 +38,10 @@ export class UsersService {
   }
 
   async findByPhone(phone: string): Promise<User | null> {
-    return this.usersRepo.findOne({ where: { phone } });
+    return this.usersRepo.findOne({
+      where: { phone },
+      select: { id: true, email: true, name: true, password: true, pushToken: true },
+    });
   }
 
   async updatePassword(userId: string, hashedPassword: string): Promise<void> {
@@ -55,7 +55,7 @@ export class UsersService {
   async updateProfile(
     userId: string,
     dto: UpdateProfileDto,
-  ): Promise<{ id: string; name: string; email: string }> {
+  ): Promise<{ id: string; name: string; email: string | null }> {
     if (dto.newPassword && !dto.currentPassword) {
       throw new BadRequestException('Informe a senha atual para trocar a senha');
     }

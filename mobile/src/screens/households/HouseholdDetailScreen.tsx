@@ -140,6 +140,12 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
         >
           <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Convidar pessoa</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonSecondary]}
+          onPress={() => navigation.navigate('ManageCategories', { householdId, householdName: household.name })}
+        >
+          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Gerenciar categorias</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.leaveButton} onPress={handleLeave} disabled={leaveHousehold.isPending}>
           {leaveHousehold.isPending
             ? <ActivityIndicator color={Colors.destructive} />

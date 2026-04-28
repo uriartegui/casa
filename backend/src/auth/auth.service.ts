@@ -29,13 +29,13 @@ export class AuthService {
     private smsOtpRepo: Repository<SmsOtp>,
   ) {}
 
-  async register(email: string, name: string, password: string, phone: string) {
-    const user = await this.usersService.create(email, name, password, phone);
+  async register(name: string, password: string, phone: string) {
+    const user = await this.usersService.create(name, password, phone);
     return this.generateTokens(user);
   }
 
-  async login(email: string, password: string) {
-    const user = await this.usersService.findByEmail(email);
+  async login(phone: string, password: string) {
+    const user = await this.usersService.findByPhone(phone);
     if (!user) throw new UnauthorizedException('Credenciais inválidas');
 
     const valid = await bcrypt.compare(password, user.password);
@@ -174,8 +174,8 @@ export class AuthService {
     this.logger.log(`OTP cleanup: ${result.affected ?? 0} registros removidos`);
   }
 
-  private async generateTokens(user: { id: string; email: string; name: string }) {
-    const payload = { sub: user.id, email: user.email };
+  private async generateTokens(user: { id: string; email: string | null; name: string }) {
+    const payload = { sub: user.id, email: user.email ?? null };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
 
     const rawRefreshToken = randomUUID();

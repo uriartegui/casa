@@ -19,6 +19,8 @@ import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
 
 import { ToggleShoppingItemDto } from './dto/toggle-shopping-item.dto';
 import { CreateStorageDto } from './dto/create-storage.dto';
+import { UpdateStorageDto } from './dto/update-storage.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
@@ -105,6 +107,17 @@ export class HouseholdsController {
     return this.householdsService.createStorage(id, req.user.id, dto);
   }
 
+  @Patch(':id/storages/:storageId')
+  @ApiOperation({ summary: 'Renomear compartimento' })
+  updateStorage(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('storageId', ParseUUIDPipe) storageId: string,
+    @Body() dto: UpdateStorageDto,
+    @Request() req,
+  ) {
+    return this.householdsService.updateStorage(id, storageId, req.user.id, dto);
+  }
+
   @Delete(':id/storages/:storageId')
   @ApiOperation({ summary: 'Excluir compartimento' })
   deleteStorage(
@@ -113,6 +126,39 @@ export class HouseholdsController {
     @Request() req,
   ) {
     return this.householdsService.deleteStorage(id, storageId, req.user.id);
+  }
+
+  // Categories
+
+  @Get(':id/storages/:storageId/categories')
+  @ApiOperation({ summary: 'Listar categorias do compartimento' })
+  getCategories(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('storageId', ParseUUIDPipe) storageId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.getCategories(id, storageId, req.user.id);
+  }
+
+  @Post(':id/storages/:storageId/categories')
+  @ApiOperation({ summary: 'Criar categoria no compartimento' })
+  createCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('storageId', ParseUUIDPipe) storageId: string,
+    @Body() dto: CreateCategoryDto,
+    @Request() req,
+  ) {
+    return this.householdsService.createCategory(id, storageId, req.user.id, dto);
+  }
+
+  @Delete(':id/categories/:categoryId')
+  @ApiOperation({ summary: 'Excluir categoria' })
+  deleteCategory(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.deleteCategory(id, categoryId, req.user.id);
   }
 
   // Fridge

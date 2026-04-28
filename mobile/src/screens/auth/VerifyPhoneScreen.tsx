@@ -17,7 +17,7 @@ type Props = {
 };
 
 export default function VerifyPhoneScreen({ navigation, route }: Props) {
-  const { name, email, password, phone } = route.params;
+  const { name, password, phone } = route.params;
   const { register } = useAuth();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function VerifyPhoneScreen({ navigation, route }: Props) {
     setIsLoading(true);
     try {
       await api.post('/auth/verify-otp', { phone, code, type: 'register' });
-      await register(name, email, password, phone);
+      await register(name, password, phone);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? 'Código inválido ou expirado.';
       Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));

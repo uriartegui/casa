@@ -9,13 +9,17 @@ import { Colors } from '../../constants/colors';
 
 type Mode = 'pick' | 'create' | 'join';
 
+type Props = {
+  onHouseholdCreated?: (householdId: string) => void;
+};
+
 function extractInviteCode(url: string | null): string | null {
   if (!url) return null;
   const match = url.match(/^colmeia:\/\/join\/(.+)$/);
   return match ? match[1] : null;
 }
 
-export default function HouseholdSetupScreen() {
+export default function HouseholdSetupScreen({ onHouseholdCreated }: Props) {
   const [mode, setMode] = useState<Mode>('pick');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -38,8 +42,8 @@ export default function HouseholdSetupScreen() {
       return;
     }
     try {
-      await createHousehold.mutateAsync(name.trim());
-      // RootNavigator re-renders automatically when useHouseholds returns data
+      const created = await createHousehold.mutateAsync(name.trim());
+      onHouseholdCreated?.(created.id);
     } catch (err: any) {
       const msg = err?.message ?? err?.code ?? JSON.stringify(err);
       Alert.alert('Erro', msg);

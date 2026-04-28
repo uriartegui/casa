@@ -17,7 +17,10 @@ import { FridgeActivity } from './fridge-activity.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
+import { HouseholdCategory } from './household-category.entity';
 import { CreateStorageDto } from './dto/create-storage.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateStorageDto } from './dto/update-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
@@ -40,6 +43,8 @@ export class HouseholdsService {
     private shoppingListsRepo: Repository<ShoppingList>,
     @InjectRepository(Storage)
     private storageRepo: Repository<Storage>,
+    @InjectRepository(HouseholdCategory)
+    private categoryRepo: Repository<HouseholdCategory>,
     @InjectRepository(HouseholdInvite)
     private inviteRepo: Repository<HouseholdInvite>,
     @InjectRepository(FridgeActivity)
@@ -59,10 +64,31 @@ export class HouseholdsService {
       role: 'admin',
     });
 
-    await this.storageRepo.save([
+    const [geladeira, freezer, despensa] = await this.storageRepo.save([
       { householdId: saved.id, name: 'Geladeira', emoji: '🧊' },
       { householdId: saved.id, name: 'Freezer', emoji: '❄️' },
       { householdId: saved.id, name: 'Despensa', emoji: '🏠' },
+    ]);
+
+    await this.categoryRepo.save([
+      { householdId: saved.id, storageId: geladeira.id, label: 'Laticínios', emoji: '🥛' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Carnes & Ovos', emoji: '🍖' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Frutas', emoji: '🍎' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Verduras/Legumes', emoji: '🥦' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Bebidas', emoji: '🥤' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Molhos & Condimentos', emoji: '🧂' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Prontos/Restos', emoji: '🍽️' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Carnes congeladas', emoji: '🥩' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Vegetais congelados', emoji: '🥦' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Pratos prontos', emoji: '🍕' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Sobremesas', emoji: '🍦' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Pães congelados', emoji: '🍞' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Grãos & Cereais', emoji: '🌾' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Enlatados/Conservas', emoji: '🥫' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Massas & Farinhas', emoji: '🍝' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Snacks & Biscoitos', emoji: '🍪' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Temperos', emoji: '🧂' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Bebidas', emoji: '🧃' },
     ]);
 
     return saved;
@@ -158,6 +184,57 @@ export class HouseholdsService {
       );
     }
     await this.storageRepo.delete({ id: storageId, householdId });
+  }
+
+  async updateStorage(
+    householdId: string,
+    storageId: string,
+    userId: string,
+    dto: UpdateStorageDto,
+  ): Promise<Storage> {
+    await this.assertMember(householdId, userId);
+    const storage = await this.storageRepo.findOne({ where: { id: storageId, householdId } });
+    if (!storage) throw new NotFoundException('Compartimento não encontrado');
+    if (dto.name) storage.name = dto.name.trim();
+    if (dto.emoji) storage.emoji = dto.emoji;
+    return this.storageRepo.save(storage);
+  }
+
+  // Categories
+
+  async getCategories(householdId: string, storageId: string, userId: string): Promise<HouseholdCategory[]> {
+    await this.assertMember(householdId, userId);
+    return this.categoryRepo.find({
+      where: { householdId, storageId },
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async createCategory(
+    householdId: string,
+    storageId: string,
+    userId: string,
+    dto: CreateCategoryDto,
+  ): Promise<HouseholdCategory> {
+    await this.assertMember(householdId, userId);
+    await this.assertMember(householdId, userId);
+    const storageExists = await this.storageRepo.findOne({ where: { id: storageId, householdId } });
+    if (!storageExists) throw new NotFoundException('Compartimento não encontrado');
+    return this.categoryRepo.save({
+      householdId,
+      storageId,
+      label: dto.label.trim(),
+      emoji: dto.emoji ?? '📦',
+    });
+  }
+
+  async deleteCategory(
+    householdId: string,
+    categoryId: string,
+    userId: string,
+  ): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.categoryRepo.delete({ id: categoryId, householdId });
   }
 
   // Fridge

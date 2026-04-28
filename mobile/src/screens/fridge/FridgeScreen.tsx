@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Modal, Alert,
+  StyleSheet, ActivityIndicator, RefreshControl, Modal, Alert, TextInput,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge, useRemoveFridgeItem, useFridgeActivity, FridgeActivityEntry } from '../../hooks/useFridge';
-import { useStorages } from '../../hooks/useStorages';
+import { useStorages, useDeleteStorage, useUpdateStorage } from '../../hooks/useStorages';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { api } from '../../services/api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -40,6 +40,11 @@ export default function FridgeScreen({ navigation }: Props) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const effectiveStorageId = selectedStorageId ?? storages?.[0]?.id ?? null;
 
+  const deleteStorage = useDeleteStorage(effectiveId ?? '');
+  const updateStorage = useUpdateStorage(effectiveId ?? '');
+  const [renameModal, setRenameModal] = useState<{ id: string; name: string; emoji: string } | null>(null);
+  const [renameValue, setRenameValue] = useState('');
+
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
   const { data: shoppingLists } = useShoppingLists(effectiveId);
@@ -50,6 +55,58 @@ export default function FridgeScreen({ navigation }: Props) {
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [logFilter, setLogFilter] = useState<7 | 30 | null>(null);
+
+  function handleStorageLongPress(storage: { id: string; name: string; emoji: string }) {
+    Alert.alert(`${storage.emoji} ${storage.name}`, 'O que deseja fazer?', [
+      {
+        text: 'Renomear',
+        onPress: () => {
+          setRenameValue(storage.name);
+          setRenameModal(storage);
+        },
+      },
+      {
+        text: 'Excluir',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Excluir compartimento',
+            `Remova todos os itens de "${storage.name}" antes de excluir.`,
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Excluir',
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await deleteStorage.mutateAsync(storage.id);
+                    if (selectedStorageId === storage.id) setSelectedStorageId(null);
+                  } catch (err: any) {
+                    const msg = err?.response?.data?.message ?? 'Erro ao excluir.';
+                    Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
+                  }
+                },
+              },
+            ],
+          );
+        },
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
+
+  async function handleRename() {
+    if (!renameModal) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    try {
+      await updateStorage.mutateAsync({ storageId: renameModal.id, name: trimmed });
+      setRenameModal(null);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message ?? 'Erro ao renomear.';
+      Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
+    }
+  }
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -310,6 +367,48 @@ export default function FridgeScreen({ navigation }: Props) {
     );
   }
 
+  function renderRenameModal() {
+    return (
+      <Modal
+        visible={!!renameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameModal(null)}
+      >
+        <TouchableOpacity style={styles.renameBackdrop} activeOpacity={1} onPress={() => setRenameModal(null)}>
+          <TouchableOpacity style={styles.renameBox} activeOpacity={1}>
+            <Text style={styles.renameTitle}>Renomear compartimento</Text>
+            <TextInput
+              style={styles.renameInput}
+              value={renameValue}
+              onChangeText={setRenameValue}
+              autoFocus
+              autoCapitalize="words"
+              returnKeyType="done"
+              onSubmitEditing={handleRename}
+              maxLength={40}
+            />
+            <View style={styles.renameActions}>
+              <TouchableOpacity style={styles.renameCancelBtn} onPress={() => setRenameModal(null)}>
+                <Text style={styles.renameCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.renameSaveBtn, updateStorage.isPending && { opacity: 0.6 }]}
+                onPress={handleRename}
+                disabled={updateStorage.isPending}
+              >
+                {updateStorage.isPending
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.renameSaveText}>Salvar</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    );
+  }
+
   if (loadingHouseholds) {
     return (
       <View style={styles.center}>
@@ -384,7 +483,10 @@ export default function FridgeScreen({ navigation }: Props) {
                 key={s.id}
                 style={[styles.storageChip, s.id === effectiveStorageId && styles.storageChipActive]}
                 onPress={() => setSelectedStorageId(s.id)}
+                onLongPress={() => handleStorageLongPress(s)}
+                delayLongPress={400}
               >
+                <Text style={styles.storageChipEmoji}>{s.emoji}</Text>
                 <Text style={[styles.storageChipText, s.id === effectiveStorageId && styles.storageChipTextActive]}>
                   {s.name}
                 </Text>
@@ -459,6 +561,7 @@ export default function FridgeScreen({ navigation }: Props) {
       )}
 
       {renderLogModal()}
+      {renderRenameModal()}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}
@@ -522,8 +625,36 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
   },
   storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  storageChipEmoji: { fontSize: 14 },
   storageChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   storageChipTextActive: { color: '#fff' },
+
+  renameBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  renameBox: {
+    backgroundColor: Colors.card, borderRadius: 16,
+    padding: 20, width: '85%',
+    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 10,
+  },
+  renameTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14 },
+  renameInput: {
+    borderWidth: 1, borderColor: Colors.separator, borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    fontSize: 16, color: Colors.textPrimary,
+    backgroundColor: Colors.background,
+    marginBottom: 16,
+  },
+  renameActions: { flexDirection: 'row', gap: 10 },
+  renameCancelBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
+    alignItems: 'center',
+  },
+  renameCancelText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '500' },
+  renameSaveBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    backgroundColor: Colors.accent, alignItems: 'center',
+  },
+  renameSaveText: { fontSize: 15, color: '#fff', fontWeight: '700' },
   storageAddChip: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,

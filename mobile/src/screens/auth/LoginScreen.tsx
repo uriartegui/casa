@@ -15,19 +15,24 @@ type Props = {
 
 export default function LoginScreen({ navigation }: Props) {
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleLogin() {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Preencha email e senha.');
+    if (!phone.trim() || !password.trim()) {
+      Alert.alert('Erro', 'Preencha telefone e senha.');
+      return;
+    }
+    const digits = phone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      Alert.alert('Erro', 'Telefone inválido.');
       return;
     }
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(`+55${digits}`, password);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
       Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
@@ -61,12 +66,11 @@ export default function LoginScreen({ navigation }: Props) {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="seu@email.com"
+            placeholder="(11) 99999-9999"
             placeholderTextColor={Colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
             autoCorrect={false}
           />
           <View style={styles.passwordContainer}>

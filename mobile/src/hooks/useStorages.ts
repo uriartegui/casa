@@ -45,3 +45,25 @@ export function useDeleteStorage(householdId: string) {
     },
   });
 }
+
+interface UpdateStoragePayload {
+  storageId: string;
+  name?: string;
+  emoji?: string;
+}
+
+export function useUpdateStorage(householdId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ storageId, ...body }: UpdateStoragePayload) => {
+      const response = await api.patch<Storage>(
+        `/households/${householdId}/storages/${storageId}`,
+        body,
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storages', householdId] });
+    },
+  });
+}

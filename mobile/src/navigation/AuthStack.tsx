@@ -9,7 +9,7 @@ import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
-  VerifyPhone: { name: string; email: string; password: string; phone: string };
+  VerifyPhone: { name: string; password: string; phone: string };
   ForgotPassword: undefined;
   ResetPassword: { phone: string };
 };

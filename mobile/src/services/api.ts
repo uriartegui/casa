@@ -1,11 +1,11 @@
 import axios from 'axios';
 import * as secureStorage from './secureStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://192.168.0.225:3000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://casa-api-4fq0.onrender.com';
 
 console.log('[API] baseURL:', BASE_URL);
 
-export const REFRESH_TOKEN_KEY = '@colmeia:refresh_token';
+export const REFRESH_TOKEN_KEY = 'colmeia.refresh_token';
 
 export const api = axios.create({
   baseURL: BASE_URL,

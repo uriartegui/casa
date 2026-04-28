@@ -15,14 +15,13 @@ type Props = {
 
 export default function RegisterScreen({ navigation }: Props) {
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleNext() {
-    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
+    if (!name.trim() || !phone.trim() || !password.trim()) {
       Alert.alert('Erro', 'Preencha todos os campos.');
       return;
     }
@@ -42,7 +41,6 @@ export default function RegisterScreen({ navigation }: Props) {
       await api.post('/auth/send-otp', { phone: formattedPhone, type: 'register' });
       navigation.navigate('VerifyPhone', {
         name: name.trim(),
-        email: email.trim(),
         password,
         phone: formattedPhone,
       });
@@ -77,16 +75,6 @@ export default function RegisterScreen({ navigation }: Props) {
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
-            autoCorrect={false}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Seu melhor e-mail"
-            placeholderTextColor={Colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
             autoCorrect={false}
           />
           <TextInput

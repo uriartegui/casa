@@ -17,8 +17,8 @@ interface AuthContextData {
   isLoading: boolean;
   hasSeenOnboarding: boolean;
   markOnboardingSeen: () => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
+  register: (name: string, password: string, phone: string) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updated: Partial<User>) => void;
 }
@@ -60,17 +60,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }
 
-  async function login(email: string, password: string) {
+  async function login(phone: string, password: string) {
     queryClient.clear();
-    const response = await api.post<AuthResponse>('/auth/login', { email, password });
+    const response = await api.post<AuthResponse>('/auth/login', { phone, password });
     await persistSession(response.data);
     registerPushToken().then((result) => {
       if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
     });
   }
 
-  async function register(name: string, email: string, password: string, phone: string) {
-    const response = await api.post<AuthResponse>('/auth/register', { name, email, password, phone });
+  async function register(name: string, password: string, phone: string) {
+    const response = await api.post<AuthResponse>('/auth/register', { name, password, phone });
     await persistSession(response.data);
     registerPushToken().then((result) => {
       if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useHouseholds } from '../hooks/useHouseholds';
@@ -6,11 +6,13 @@ import { useHouseholdSync } from '../hooks/useHouseholdSync';
 import AuthStack from './AuthStack';
 import AppTabs from './AppTabs';
 import HouseholdSetupScreen from '../screens/households/HouseholdSetupScreen';
+import StorageCategoriesSetupScreen from '../screens/households/StorageCategoriesSetupScreen';
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import { Colors } from '../constants/colors';
 
 function AppGate() {
   const { data: households, isLoading } = useHouseholds();
+  const [setupHouseholdId, setSetupHouseholdId] = useState<string | null>(null);
   useHouseholdSync(households);
 
   if (isLoading) {
@@ -22,7 +24,16 @@ function AppGate() {
   }
 
   if (!households || households.length === 0) {
-    return <HouseholdSetupScreen />;
+    return <HouseholdSetupScreen onHouseholdCreated={(id) => setSetupHouseholdId(id)} />;
+  }
+
+  if (setupHouseholdId) {
+    return (
+      <StorageCategoriesSetupScreen
+        householdId={setupHouseholdId}
+        onDone={() => setSetupHouseholdId(null)}
+      />
+    );
   }
 
   return <AppTabs />;

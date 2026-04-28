@@ -38,6 +38,13 @@ export interface Storage {
   emoji: string;
 }
 
+export interface HouseholdCategory {
+  id: string;
+  householdId: string;
+  label: string;
+  emoji: string;
+}
+
 export interface FridgeItem {
   id: string;
   name: string;
