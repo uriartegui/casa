@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Modal, TextInput,
+  Alert, ActivityIndicator, Modal, TextInput,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useStorages } from '../../hooks/useStorages';
 import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks/useCategories';
 import { Colors } from '../../constants/colors';
@@ -61,13 +62,13 @@ function StorageSection({
   }
 
   return (
-    <View style={styles.storageSection}>
+    <View style={styles.storageSection} pointerEvents="box-none">
       <Text style={styles.storageTitle}>{storage.emoji} {storage.name}</Text>
 
       {isLoading ? (
         <ActivityIndicator size="small" color={Colors.accent} style={{ marginVertical: 8 }} />
       ) : (
-        <View style={styles.categoryChips}>
+        <View style={styles.categoryChips} pointerEvents="box-none">
           {(categories ?? []).map((cat) => (
             <TouchableOpacity
               key={cat.id}
@@ -136,7 +137,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
         <Text style={styles.title}>Configure sua casa</Text>
         <Text style={styles.subtitle}>
           Personalize as categorias de cada compartimento. Toque em uma categoria para removê-la.

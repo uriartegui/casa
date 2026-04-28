@@ -5,7 +5,7 @@ import {
   Platform, Alert, ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { api } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 
@@ -14,6 +14,7 @@ type Props = {
 };
 
 export default function RegisterScreen({ navigation }: Props) {
+  const { register } = useAuth();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -38,14 +39,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
     setIsLoading(true);
     try {
-      await api.post('/auth/send-otp', { phone: formattedPhone, type: 'register' });
-      navigation.navigate('VerifyPhone', {
-        name: name.trim(),
-        password,
-        phone: formattedPhone,
-      });
+      await register(name.trim(), password, formattedPhone);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Não foi possível enviar o código.';
+      const msg = err?.response?.data?.message ?? err?.message ?? 'Erro ao criar conta.';
       Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     } finally {
       setIsLoading(false);

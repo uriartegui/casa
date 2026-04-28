@@ -18,7 +18,7 @@ type Props = {
 
 export default function InviteScreen({ route }: Props) {
   const { householdId } = route.params;
-  const { data, isLoading, isError } = useInviteCode(householdId);
+  const { data, isLoading, isError, error, refetch } = useInviteCode(householdId);
   const inviteCode = data?.inviteCode ?? '';
   const inviteLink = `${API_BASE}/invite/${inviteCode}`;
 
@@ -50,6 +50,10 @@ export default function InviteScreen({ route }: Props) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>Não foi possível carregar o código.</Text>
+        <Text style={styles.errorDetail}>{(error as any)?.response?.data?.message ?? (error as any)?.message ?? ''}</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={() => refetch()}>
+          <Text style={styles.retryText}>Tentar novamente</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -83,7 +87,10 @@ export default function InviteScreen({ route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background, padding: 24, gap: 24 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  errorText: { color: Colors.textSecondary, fontSize: 16 },
+  errorText: { color: Colors.textSecondary, fontSize: 16, marginBottom: 8 },
+  errorDetail: { color: Colors.destructive, fontSize: 12, marginBottom: 16, textAlign: 'center', paddingHorizontal: 24 },
+  retryBtn: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
+  retryText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   card: {
     backgroundColor: Colors.card, borderRadius: 16, padding: 24,
     alignItems: 'center', borderWidth: 1, borderColor: Colors.separator,

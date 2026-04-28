@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Linking } from 'react-native';
 import { useCreateHousehold, useJoinHousehold } from '../../hooks/useHouseholds';
+import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 
 type Mode = 'pick' | 'create' | 'join';
@@ -23,6 +24,7 @@ export default function HouseholdSetupScreen({ onHouseholdCreated }: Props) {
   const [mode, setMode] = useState<Mode>('pick');
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
+  const { logout } = useAuth();
 
   useEffect(() => {
     Linking.getInitialURL().then((url) => {
@@ -77,6 +79,9 @@ export default function HouseholdSetupScreen({ onHouseholdCreated }: Props) {
             </TouchableOpacity>
             <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={() => setMode('join')}>
               <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Entrar com código</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutBtn} onPress={() => Alert.alert('Sair da conta', 'Tem certeza?', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sair', style: 'destructive', onPress: logout }])}>
+              <Text style={styles.logoutText}>Sair da conta</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -165,4 +170,6 @@ const styles = StyleSheet.create({
   buttonTextSecondary: { color: Colors.accent },
   back: { marginBottom: 24 },
   backText: { color: Colors.accent, fontSize: 16, fontWeight: '500' },
+  logoutBtn: { alignItems: 'center', paddingVertical: 12, marginTop: 8 },
+  logoutText: { color: Colors.textSecondary, fontSize: 14 },
 });

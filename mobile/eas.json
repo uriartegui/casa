@@ -21,8 +21,12 @@
       }
     },
     "production": {
+      "distribution": "store",
       "android": {
         "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://casa-api-4fq0.onrender.com"
