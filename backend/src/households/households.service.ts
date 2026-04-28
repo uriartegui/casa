@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, MoreThan, Not, IsNull } from 'typeorm';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
 import { HouseholdMember } from './household-member.entity';
@@ -113,7 +113,7 @@ export class HouseholdsService {
     let code: string;
     let collision: HouseholdInvite | null;
     do {
-      code = randomBytes(4).toString('hex').toUpperCase();
+      code = randomInt(10000, 100000).toString();
       collision = await this.inviteRepo.findOne({
         where: { code, expiresAt: MoreThan(new Date()) },
       });
