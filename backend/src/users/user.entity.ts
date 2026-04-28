@@ -24,6 +24,9 @@ export class User {
   @Column({ nullable: true, type: 'text' })
   pushToken: string | null;
 
+  @Column({ type: 'varchar', unique: true })
+  phone: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

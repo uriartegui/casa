@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { api, setAuthToken, setUnauthorizedHandler } from '../services/api';
+import * as secureStorage from '../services/secureStorage';
+import { api, setAuthToken, setUnauthorizedHandler, REFRESH_TOKEN_KEY } from '../services/api';
 import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
@@ -17,8 +18,9 @@ interface AuthContextData {
   hasSeenOnboarding: boolean;
   markOnboardingSeen: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, phone: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updated: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -48,31 +50,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUnauthorizedHandler(logout);
   }, []);
 
+  async function persistSession(data: AuthResponse) {
+    const { accessToken, refreshToken, user: u } = data;
+    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
+    await AsyncStorage.setItem(USER_KEY, JSON.stringify(u));
+    await secureStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    setAuthToken(accessToken);
+    setToken(accessToken);
+    setUser(u);
+  }
+
   async function login(email: string, password: string) {
     queryClient.clear();
     const response = await api.post<AuthResponse>('/auth/login', { email, password });
-    const { accessToken, user: loggedUser } = response.data;
-    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(loggedUser));
-    setAuthToken(accessToken);
-    setToken(accessToken);
-    setUser(loggedUser);
+    await persistSession(response.data);
     registerPushToken().then((result) => {
       if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
     });
   }
 
-  async function register(name: string, email: string, password: string) {
-    const response = await api.post<AuthResponse>('/auth/register', { name, email, password });
-    const { accessToken, user: registeredUser } = response.data;
-    await AsyncStorage.setItem(TOKEN_KEY, accessToken);
-    await AsyncStorage.setItem(USER_KEY, JSON.stringify(registeredUser));
-    setAuthToken(accessToken);
-    setToken(accessToken);
-    setUser(registeredUser);
+  async function register(name: string, email: string, password: string, phone: string) {
+    const response = await api.post<AuthResponse>('/auth/register', { name, email, password, phone });
+    await persistSession(response.data);
     registerPushToken().then((result) => {
       if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
     });
+  }
+
+  async function logout() {
+    try {
+      const storedRefresh = await secureStorage.getItem(REFRESH_TOKEN_KEY);
+      if (storedRefresh) {
+        await api.post('/auth/logout', { refreshToken: storedRefresh });
+      }
+    } catch {
+      // ignora falha de rede no logout — limpa local de qualquer forma
+    }
+    socket.disconnect();
+    queryClient.clear();
+    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await secureStorage.deleteItem(REFRESH_TOKEN_KEY);
+    setAuthToken(null);
+    setToken(null);
+    setUser(null);
   }
 
   async function markOnboardingSeen() {
@@ -80,17 +100,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setHasSeenOnboarding(true);
   }
 
-  async function logout() {
-    socket.disconnect();
-    queryClient.clear();
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
-    setAuthToken(null);
-    setToken(null);
-    setUser(null);
+  function updateUser(updated: Partial<User>) {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...updated };
+      AsyncStorage.setItem(USER_KEY, JSON.stringify(next));
+      return next;
+    });
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, hasSeenOnboarding, markOnboardingSeen, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, isLoading, hasSeenOnboarding, markOnboardingSeen, login, register, logout, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

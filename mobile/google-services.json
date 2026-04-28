@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:65900292766:android:1deafe0ef6bb664d3c698f",
+        "mobilesdk_app_id": "1:65900292766:android:5e1260f49b8ca44e3c698f",
         "android_client_info": {
-          "package_name": "com.guiuriarte.casa"
+          "package_name": "com.guiuriarte.colmeia"
         }
       },
       "oauth_client": [],

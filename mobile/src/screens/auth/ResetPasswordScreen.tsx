@@ -5,49 +5,40 @@ import {
   Platform, Alert, ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 
 type Props = {
-  navigation: NativeStackNavigationProp<AuthStackParamList, 'Register'>;
+  navigation: NativeStackNavigationProp<AuthStackParamList, 'ResetPassword'>;
+  route: RouteProp<AuthStackParamList, 'ResetPassword'>;
 };
 
-export default function RegisterScreen({ navigation }: Props) {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
+export default function ResetPasswordScreen({ navigation, route }: Props) {
+  const { phone } = route.params;
+  const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleNext() {
-    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
-      Alert.alert('Erro', 'Preencha todos os campos.');
+  async function handleReset() {
+    if (code.length !== 6) {
+      Alert.alert('Erro', 'Digite o código de 6 dígitos.');
       return;
     }
-    if (password.length < 6) {
-      Alert.alert('Erro', 'Senha deve ter pelo menos 6 caracteres.');
+    if (newPassword.length < 6) {
+      Alert.alert('Erro', 'A nova senha deve ter pelo menos 6 caracteres.');
       return;
     }
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (digitsOnly.length < 10) {
-      Alert.alert('Erro', 'Telefone inválido.');
-      return;
-    }
-    const formattedPhone = `+55${digitsOnly}`;
-
     setIsLoading(true);
     try {
-      await api.post('/auth/send-otp', { phone: formattedPhone, type: 'register' });
-      navigation.navigate('VerifyPhone', {
-        name: name.trim(),
-        email: email.trim(),
-        password,
-        phone: formattedPhone,
-      });
+      await api.post('/auth/reset-password', { phone, code, newPassword });
+      Alert.alert('Senha redefinida!', 'Faça login com sua nova senha.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Não foi possível enviar o código.';
+      const msg = err?.response?.data?.message ?? 'Código inválido ou expirado.';
       Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
     } finally {
       setIsLoading(false);
@@ -65,48 +56,37 @@ export default function RegisterScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <Text style={styles.title}>Criar conta</Text>
-          <Text style={styles.subtitle}>Junte-se à sua família no Colmeia</Text>
+          <Text style={styles.title}>Nova senha</Text>
+          <Text style={styles.subtitle}>
+            Digite o código recebido em{'\n'}
+            <Text style={styles.phone}>{phone}</Text>
+            {' '}e escolha uma nova senha.
+          </Text>
         </View>
 
         <View style={styles.form}>
           <TextInput
-            style={styles.input}
-            placeholder="Como você se chama"
+            style={styles.codeInput}
+            placeholder="Código SMS"
             placeholderTextColor={Colors.textSecondary}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-            autoCorrect={false}
+            value={code}
+            onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad"
+            maxLength={6}
+            textAlign="center"
+            autoFocus
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Seu melhor e-mail"
-            placeholderTextColor={Colors.textSecondary}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoCorrect={false}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="(11) 99999-9999"
-            placeholderTextColor={Colors.textSecondary}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-          />
+
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
               placeholder="Mínimo 6 caracteres"
               placeholderTextColor={Colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
+              value={newPassword}
+              onChangeText={setNewPassword}
               secureTextEntry={!showPassword}
               returnKeyType="go"
-              onSubmitEditing={handleNext}
+              onSubmitEditing={handleReset}
             />
             <TouchableOpacity
               style={styles.eyeBtn}
@@ -117,17 +97,13 @@ export default function RegisterScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleNext} disabled={isLoading}>
+          <TouchableOpacity style={styles.button} onPress={handleReset} disabled={isLoading}>
             {isLoading
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>Continuar</Text>
+              : <Text style={styles.buttonText}>Redefinir senha</Text>
             }
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.link}>Já tem conta? <Text style={styles.linkAccent}>Entrar</Text></Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -141,19 +117,21 @@ const styles = StyleSheet.create({
   backText: { color: Colors.accent, fontSize: 16, fontWeight: '500' },
 
   header: { marginBottom: 36 },
-  title: { fontSize: 34, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
-  subtitle: { fontSize: 15, color: Colors.textSecondary },
+  title: { fontSize: 34, fontWeight: '800', color: Colors.textPrimary, marginBottom: 10 },
+  subtitle: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22 },
+  phone: { fontWeight: '600', color: Colors.textPrimary },
 
-  form: { gap: 12, marginBottom: 28 },
-  input: {
+  form: { gap: 12 },
+  codeInput: {
     backgroundColor: Colors.card,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 15,
-    fontSize: 16,
+    paddingVertical: 18,
+    fontSize: 32,
+    fontWeight: '700',
     color: Colors.textPrimary,
     borderWidth: 1,
     borderColor: Colors.separator,
+    letterSpacing: 8,
   },
   passwordContainer: {
     flexDirection: 'row',
@@ -181,7 +159,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-
-  link: { textAlign: 'center', color: Colors.textSecondary, fontSize: 14 },
-  linkAccent: { color: Colors.accent, fontWeight: '600' },
 });

@@ -41,7 +41,7 @@ export default function JoinHouseholdScreen({ navigation, route }: Props) {
         <Text style={styles.label}>Código de convite</Text>
         <TextInput
           style={styles.input}
-          placeholder="00000"
+          placeholder="Código de convite"
           placeholderTextColor={Colors.textSecondary}
           value={code}
           onChangeText={(t) => setCode(t.replace(/\D/g, '').slice(0, 5))}

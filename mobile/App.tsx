@@ -24,6 +24,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
+import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContext';
 import { ToastProvider } from './src/context/ToastContext';
@@ -60,8 +61,12 @@ function App() {
             <SelectedHouseholdProvider>
               <ToastProvider>
                 <NavigationContainer linking={linking}>
-                  <StatusBar style="auto" />
-                  <RootNavigator />
+                  <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                    <View style={{ flex: 1 }}>
+                      <StatusBar style="auto" />
+                      <RootNavigator />
+                    </View>
+                  </TouchableWithoutFeedback>
                 </NavigationContainer>
               </ToastProvider>
             </SelectedHouseholdProvider>

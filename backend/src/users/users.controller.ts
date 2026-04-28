@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { UpdatePushTokenDto } from './dto/update-push-token.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -14,6 +15,11 @@ export class UsersController {
   @Get('me')
   async getMe(@Request() req: any) {
     return this.usersService.findById(req.user.id);
+  }
+
+  @Patch('me')
+  async updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
+    return this.usersService.updateProfile(req.user.id, dto);
   }
 
   @Patch('me/push-token')

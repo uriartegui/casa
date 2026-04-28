@@ -38,9 +38,10 @@
       "@sentry/react-native/expo",
       "expo-secure-store"
     ],
+    "owner": "guiuriarte19",
     "extra": {
       "eas": {
-        "projectId": "1bbc4256-057a-4b26-895a-9ba95934e86c"
+        "projectId": "0e4e324d-e4c7-4ad1-8589-be697ab92244"
       }
     }
   }

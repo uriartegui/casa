@@ -61,7 +61,7 @@ export default function LoginScreen({ navigation }: Props) {
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="E-mail"
+            placeholder="seu@email.com"
             placeholderTextColor={Colors.textSecondary}
             value={email}
             onChangeText={setEmail}
@@ -72,7 +72,7 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
-              placeholder="Senha"
+              placeholder="Sua senha"
               placeholderTextColor={Colors.textSecondary}
               value={password}
               onChangeText={setPassword}
@@ -96,6 +96,12 @@ export default function LoginScreen({ navigation }: Props) {
             }
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={[styles.link, { marginBottom: 12 }]}>
+            <Text style={styles.linkAccent}>Esqueci minha senha</Text>
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity onPress={() => navigation.navigate('Register')}>
           <Text style={styles.link}>Não tem conta? <Text style={styles.linkAccent}>Criar conta</Text></Text>
