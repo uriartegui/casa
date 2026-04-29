@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Colmeia",
+    "name": "Colmeia - Casa Compartilhada",
     "slug": "colmeia-app",
     "version": "1.0.0",
     "scheme": "colmeia",
@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.guiuriarte.colmeia",
+      "appleTeamId": "89M8K9745R",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -33,11 +34,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "@react-native-community/datetimepicker",
-      "@sentry/react-native/expo",
-      "expo-secure-store"
-    ],
+    "plugins": ["@react-native-community/datetimepicker", "expo-secure-store"],
     "owner": "guiuriarte19",
     "extra": {
       "eas": {
