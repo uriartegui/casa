@@ -1,5 +1,4 @@
 const { getDefaultConfig } = require('expo/metro-config');
-const { withSentryConfig } = require('@sentry/react-native/metro');
 
 const config = getDefaultConfig(__dirname);
 
@@ -8,4 +7,4 @@ const config = getDefaultConfig(__dirname);
 // fall back to the "main" field which resolves correctly.
 config.resolver.unstable_enablePackageExports = false;
 
-module.exports = withSentryConfig(config);
+module.exports = config;
