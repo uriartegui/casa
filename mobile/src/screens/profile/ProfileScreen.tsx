@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ScrollView, ActivityIndicator,
-  Modal, KeyboardAvoidingView, Platform,
+  Modal, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
@@ -141,6 +141,18 @@ export default function ProfileScreen() {
               <Text style={styles.rowLabel}>Senha</Text>
               <Text style={styles.rowValue}>Alterar senha</Text>
             </View>
+            <Text style={styles.chevron}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Legal */}
+        <Text style={styles.sectionLabel}>LEGAL</Text>
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => Linking.openURL('https://uriartegui.github.io/casa/privacy-policy.html')}
+          >
+            <Text style={styles.rowValue}>Política de Privacidade</Text>
             <Text style={styles.chevron}>›</Text>
           </TouchableOpacity>
         </View>
