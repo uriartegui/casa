@@ -12,6 +12,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { HouseholdsService } from './households.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateHouseholdDto } from './dto/create-household.dto';
@@ -84,6 +85,7 @@ export class HouseholdsController {
   }
 
   @Post('join/:code')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Entrar em uma casa por convite' })
   join(@Param('code') code: string, @Request() req) {
     return this.householdsService.joinByCode(code, req.user.id);

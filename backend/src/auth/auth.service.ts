@@ -174,6 +174,16 @@ export class AuthService {
     this.logger.log(`OTP cleanup: ${result.affected ?? 0} registros removidos`);
   }
 
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async cleanupRefreshTokens() {
+    const expired = await this.refreshTokenRepo.delete({ expiresAt: LessThan(new Date()) });
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const revoked = await this.refreshTokenRepo.delete({ revokedAt: LessThan(weekAgo) });
+    this.logger.log(
+      `Refresh token cleanup: ${(expired.affected ?? 0) + (revoked.affected ?? 0)} registros removidos`,
+    );
+  }
+
   private async generateTokens(user: { id: string; email: string | null; name: string }) {
     const payload = { sub: user.id, email: user.email ?? null };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });

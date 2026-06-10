@@ -183,6 +183,7 @@ export class HouseholdsService {
         'Remova todos os itens antes de excluir este compartimento',
       );
     }
+    await this.categoryRepo.delete({ storageId, householdId });
     await this.storageRepo.delete({ id: storageId, householdId });
   }
 
@@ -216,7 +217,6 @@ export class HouseholdsService {
     userId: string,
     dto: CreateCategoryDto,
   ): Promise<HouseholdCategory> {
-    await this.assertMember(householdId, userId);
     await this.assertMember(householdId, userId);
     const storageExists = await this.storageRepo.findOne({ where: { id: storageId, householdId } });
     if (!storageExists) throw new NotFoundException('Compartimento não encontrado');
@@ -378,8 +378,12 @@ export class HouseholdsService {
     await queryRunner.startTransaction();
     try {
       await queryRunner.manager.delete(FridgeItem, { householdId });
+      await queryRunner.manager.delete(FridgeActivity, { householdId });
       await queryRunner.manager.delete(ShoppingItem, { householdId });
+      await queryRunner.manager.delete(ShoppingList, { householdId });
+      await queryRunner.manager.delete(HouseholdCategory, { householdId });
       await queryRunner.manager.delete(Storage, { householdId });
+      await queryRunner.manager.delete(HouseholdInvite, { householdId });
       await queryRunner.manager.delete(HouseholdMember, { householdId });
       await queryRunner.manager.delete(Household, { id: householdId });
       await queryRunner.commitTransaction();
