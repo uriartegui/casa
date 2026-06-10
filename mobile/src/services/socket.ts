@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ACCESS_TOKEN_KEY } from './api';
+import { API_URL } from '../config';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://colmeiaapp.duckdns.org';
 const SOCKET_BASE_URL = API_URL.replace(/^http/, 'ws') + '/ws';
 const TOKEN_KEY = ACCESS_TOKEN_KEY;
 
@@ -11,6 +11,9 @@ class NativeSocket {
   private ws: WebSocket | null = null;
   private listeners = new Map<string, Set<Listener>>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  // Salas desejadas — reenviadas a cada (re)conexão, já que o servidor
+  // perde o estado de join quando a conexão cai.
+  private rooms = new Set<string>();
 
   async connect() {
     if (this.ws?.readyState === WebSocket.OPEN) return;
@@ -22,6 +25,7 @@ class NativeSocket {
 
     this.ws.onopen = () => {
       if (this.reconnectTimer) { clearTimeout(this.reconnectTimer); this.reconnectTimer = null; }
+      this.rooms.forEach((id) => this.send('join', id));
     };
 
     this.ws.onmessage = (e) => {
@@ -44,6 +48,16 @@ class NativeSocket {
     }
   }
 
+  join(householdId: string) {
+    this.rooms.add(householdId);
+    this.send('join', householdId);
+  }
+
+  leave(householdId: string) {
+    this.rooms.delete(householdId);
+    this.send('leave', householdId);
+  }
+
   on(event: string, fn: Listener) {
     if (!this.listeners.has(event)) this.listeners.set(event, new Set());
     this.listeners.get(event)!.add(fn);
@@ -55,7 +69,12 @@ class NativeSocket {
 
   disconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-    this.ws?.close();
+    this.rooms.clear();
+    if (this.ws) {
+      // evita que o onclose agende reconexão após logout
+      this.ws.onclose = null;
+      this.ws.close();
+    }
     this.ws = null;
   }
 }

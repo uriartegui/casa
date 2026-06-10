@@ -2,6 +2,11 @@ const MONTHS_PT = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set'
 const BR_OFFSET_MS = -3 * 60 * 60 * 1000; // UTC-3, sem horário de verão desde 2019
 
 function toBR(isoString: string): Date {
+  // Datas puras (ex.: validade '2026-06-15') não têm horário — aplicar o
+  // offset de fuso faria a data voltar um dia. Só timestamps são deslocados.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(isoString)) {
+    return new Date(isoString + 'T00:00:00Z');
+  }
   const utcMs = new Date(isoString).getTime();
   return new Date(utcMs + BR_OFFSET_MS);
 }

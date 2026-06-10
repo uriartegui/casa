@@ -9,6 +9,7 @@ import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
+import { useStorages } from '../../hooks/useStorages';
 import { Colors } from '../../constants/colors';
 import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks/useCategories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
@@ -24,7 +25,7 @@ const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 const EMOJI_OPTIONS = ['📦', '🥛', '🍖', '🍎', '🥦', '🌾', '🥤', '🧊', '🍕', '🧀', '🥫', '🍞', '🧂', '🍽️', '🍦', '🧃'];
 
 export default function AddFridgeItemScreen({ navigation, route }: Props) {
-  const { householdId, storageId } = route.params;
+  const { householdId, storageId: routeStorageId } = route.params;
   const [name, setName] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
   const suggestions = useMemo(() => filterItems(name), [name]);
@@ -32,6 +33,12 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+
+  // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
+  // escolhe um — item sem compartimento não aparece na aba Geladeira.
+  const { data: storages } = useStorages(householdId);
+  const [pickedStorageId, setPickedStorageId] = useState<string | null>(routeStorageId ?? null);
+  const storageId = pickedStorageId ?? storages?.[0]?.id ?? undefined;
 
   const addItem = useAddFridgeItem(householdId);
   const { data: categories } = useCategories(householdId, storageId ?? null);
@@ -150,6 +157,25 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
               </TouchableOpacity>
             ))}
           </View>
+
+          {!routeStorageId && (storages?.length ?? 0) > 0 && (
+            <>
+              <Text style={styles.label}>Compartimento</Text>
+              <View style={styles.chipRow}>
+                {(storages ?? []).map((s) => (
+                  <TouchableOpacity
+                    key={s.id}
+                    style={[styles.chip, storageId === s.id && styles.chipActive]}
+                    onPress={() => { setPickedStorageId(s.id); setCategory(null); }}
+                  >
+                    <Text style={[styles.chipText, storageId === s.id && styles.chipTextActive]}>
+                      {s.emoji} {s.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
 
           <Text style={styles.label}>
             Categoria <Text style={styles.optional}>(opcional · segure para excluir)</Text>

@@ -1,8 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as secureStorage from './secureStorage';
+import { API_URL } from '../config';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://colmeiaapp.duckdns.org';
+const BASE_URL = API_URL;
 
 console.log('[API] baseURL:', BASE_URL);
 

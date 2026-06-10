@@ -18,14 +18,14 @@ export function useHouseholdSync(households: Household[] | undefined) {
 
     currentIds.forEach((id) => {
       if (!joinedRooms.current.has(id)) {
-        socket.send('join', id);
+        socket.join(id);
         joinedRooms.current.add(id);
       }
     });
 
     joinedRooms.current.forEach((id) => {
       if (!currentIds.has(id)) {
-        socket.send('leave', id);
+        socket.leave(id);
         joinedRooms.current.delete(id);
       }
     });
@@ -33,8 +33,13 @@ export function useHouseholdSync(households: Household[] | undefined) {
     function onUpdate({ householdId }: { householdId: string }) {
       queryClient.invalidateQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
-      queryClient.invalidateQueries({ queryKey: ['shopping', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-categories', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
       queryClient.invalidateQueries({ queryKey: ['storages', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
     }
 
     socket.on('household:updated', onUpdate);

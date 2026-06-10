@@ -9,8 +9,9 @@ import { RouteProp } from '@react-navigation/native';
 import { useInviteCode } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+import { API_URL } from '../../config';
 
-const API_BASE = 'https://casa-api-4fq0.onrender.com';
+const API_BASE = API_URL;
 
 type Props = {
   route: RouteProp<HouseholdStackParamList, 'Invite'>;
