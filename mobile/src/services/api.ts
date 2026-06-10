@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as secureStorage from './secureStorage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://casa-api-4fq0.onrender.com';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://colmeiaapp.duckdns.org';
 
 console.log('[API] baseURL:', BASE_URL);
 

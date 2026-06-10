@@ -30,7 +30,6 @@ import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContex
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
-import { useKeepAlive } from './src/hooks/useKeepAlive';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const linking: LinkingOptions<any> = {
@@ -47,8 +46,6 @@ const linking: LinkingOptions<any> = {
 };
 
 function App() {
-  useKeepAlive();
-
   useEffect(() => {
     Notifications.requestPermissionsAsync();
   }, []);
