@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, MoreThan, Not, IsNull } from 'typeorm';
+import { DataSource, Repository, MoreThan, LessThan, Not, IsNull } from 'typeorm';
 import { randomInt } from 'crypto';
 import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
@@ -109,6 +109,7 @@ export class HouseholdsService {
 
   async getInviteCode(householdId: string, userId: string): Promise<string> {
     await this.assertMember(householdId, userId);
+    await this.inviteRepo.delete({ expiresAt: LessThan(new Date()) });
 
     let code: string;
     let collision: HouseholdInvite | null;
@@ -141,7 +142,8 @@ export class HouseholdsService {
     });
     if (!exists) {
       await this.membersRepo.save({ userId, householdId: invite.householdId, role: 'member' });
-      await this.inviteRepo.delete({ code });
+      // O convite NÃO é deletado aqui: o mesmo código pode ser usado por
+      // várias pessoas até expirar (a tela promete "válido por 2 horas").
       this.eventsGateway.emitHouseholdUpdate(invite.householdId);
     }
 

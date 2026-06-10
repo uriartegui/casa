@@ -10,6 +10,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
+  // Atrás do Caddy todos os requests chegam do IP do proxy; sem isto o
+  // rate limit (ThrottlerGuard usa req.ip) vira um balde global para
+  // todos os usuários em vez de por cliente.
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.useWebSocketAdapter(new WsAdapter(app));
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
