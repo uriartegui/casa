@@ -2,6 +2,9 @@ services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    # Exposto apenas no localhost da VPS — acesso externo somente via túnel SSH.
+    ports:
+      - '127.0.0.1:5432:5432'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-casa}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no deploy/.env}
