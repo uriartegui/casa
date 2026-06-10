@@ -28,13 +28,14 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const { data: lists, isLoading, refetch } = useShoppingLists(effectiveId);
   const { data: activity, refetch: refetchActivity } = useShoppingActivity(effectiveId);
 
-  React.useEffect(() => {
-    if (showActivity) refetchActivity();
-  }, [showActivity]);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
   const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
+
+  React.useEffect(() => {
+    if (showActivity) refetchActivity();
+  }, [showActivity]);
 
   const household = households?.find((h) => h.id === effectiveId);
 

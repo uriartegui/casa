@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, View, StyleSheet, ViewStyle } from 'react-native';
+import { Animated, View, StyleSheet, ViewStyle, DimensionValue } from 'react-native';
 
-function SkeletonBlock({ width, height, style }: { width?: number | string; height: number; style?: ViewStyle }) {
+function SkeletonBlock({ width, height, style }: { width?: DimensionValue; height: number; style?: ViewStyle }) {
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {

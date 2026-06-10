@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ACCESS_TOKEN_KEY } from './api';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://casa-api-4fq0.onrender.com';
 const SOCKET_BASE_URL = API_URL.replace(/^http/, 'ws') + '/ws';
-const TOKEN_KEY = '@colmeia:token';
+const TOKEN_KEY = ACCESS_TOKEN_KEY;
 
 type Listener = (data: any) => void;
 

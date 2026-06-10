@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as secureStorage from '../services/secureStorage';
-import { api, setAuthToken, setUnauthorizedHandler, REFRESH_TOKEN_KEY } from '../services/api';
+import { api, setAuthToken, setUnauthorizedHandler, REFRESH_TOKEN_KEY, ACCESS_TOKEN_KEY } from '../services/api';
 import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
 import { registerPushToken } from '../utils/pushToken';
 
-const TOKEN_KEY = '@colmeia:token';
+const TOKEN_KEY = ACCESS_TOKEN_KEY;
 const USER_KEY = '@colmeia:user';
 export const ONBOARDING_KEY = '@colmeia:onboarding_seen';
 

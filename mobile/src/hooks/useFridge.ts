@@ -20,7 +20,7 @@ export function useFridge(householdId: string | null, storageId?: string | null)
 interface AddFridgeItemPayload {
   name: string;
   quantity: number;
-  unit: string;
+  unit?: string;
   storageId?: string;
   category?: string;
   expirationDate?: string;

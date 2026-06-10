@@ -96,8 +96,9 @@ function HomeNavigator() {
       <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <HomeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <HomeStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
-      <HomeStack.Screen name="HomeShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
-      <HomeStack.Screen name="HomeCreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
+      {/* Telas tipadas para o ShoppingStack, reutilizadas aqui com rotas de params compatíveis */}
+      <HomeStack.Screen name="HomeShoppingListDetail" component={ShoppingListDetailScreen as unknown as React.ComponentType} options={({ route }) => ({ title: route.params.listName })} />
+      <HomeStack.Screen name="HomeCreateShoppingList" component={CreateShoppingListScreen as unknown as React.ComponentType} options={{ title: 'Nova Lista', presentation: 'modal' }} />
     </HomeStack.Navigator>
   );
 }

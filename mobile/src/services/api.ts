@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as secureStorage from './secureStorage';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://casa-api-4fq0.onrender.com';
@@ -6,6 +7,7 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://casa-api-4fq0.onren
 console.log('[API] baseURL:', BASE_URL);
 
 export const REFRESH_TOKEN_KEY = 'colmeia.refresh_token';
+export const ACCESS_TOKEN_KEY = '@colmeia:token';
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -68,6 +70,9 @@ api.interceptors.response.use(
 
       setAuthToken(newAccess);
       await secureStorage.setItem(REFRESH_TOKEN_KEY, newRefresh);
+      // O socket relê o token do AsyncStorage ao reconectar — sem isso ele
+      // fica preso num loop de reconexão com o access token expirado.
+      await AsyncStorage.setItem(ACCESS_TOKEN_KEY, newAccess);
 
       drainQueue(newAccess, null);
       original.headers['Authorization'] = `Bearer ${newAccess}`;
