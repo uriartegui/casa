@@ -84,6 +84,7 @@ export function useAddListItem(householdId: string, listId: string) {
 
 export function useToggleListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
+  const queryKey = ['shopping-list-items', householdId, listId];
   return useMutation({
     mutationFn: async ({ itemId, checked }: { itemId: string; checked: boolean }) => {
       const res = await api.patch<ShoppingItem>(
@@ -92,8 +93,20 @@ export function useToggleListItem(householdId: string, listId: string) {
       );
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+    // Atualização otimista: a UI responde no toque e reverte se o servidor falhar.
+    onMutate: async ({ itemId, checked }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) =>
+        old?.map((i) => (i.id === itemId ? { ...i, checked } : i)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }

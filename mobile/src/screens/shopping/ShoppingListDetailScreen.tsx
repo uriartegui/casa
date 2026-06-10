@@ -13,6 +13,7 @@ import {
 } from '../../hooks/useShoppingLists';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import MarketModeModal from './MarketModeModal';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
@@ -39,6 +40,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const prevItemCount = useRef<number | undefined>(undefined);
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
   const [showSendModal, setShowSendModal] = useState(false);
+  const [showMarketMode, setShowMarketMode] = useState(false);
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
 
@@ -281,6 +283,11 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       </Modal>
 
       <View style={styles.footer}>
+        {pending.length > 0 && (
+          <TouchableOpacity style={styles.marketBtn} onPress={() => setShowMarketMode(true)}>
+            <Text style={styles.marketBtnText}>🛒 Modo mercado</Text>
+          </TouchableOpacity>
+        )}
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
             <Text style={styles.buttonSecondaryText}>Mandar comprados para a geladeira</Text>
@@ -293,6 +300,14 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           <Text style={styles.buttonText}>+ Adicionar item</Text>
         </TouchableOpacity>
       </View>
+
+      <MarketModeModal
+        visible={showMarketMode}
+        onClose={() => setShowMarketMode(false)}
+        householdId={householdId}
+        listId={listId}
+        listName={listName}
+      />
     </View>
   );
 }
@@ -347,6 +362,10 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   buttonSecondary: { borderRadius: 14, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent + '12' },
   buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
+  marketBtn: {
+    backgroundColor: Colors.success, borderRadius: 14, padding: 16, alignItems: 'center',
+  },
+  marketBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {
