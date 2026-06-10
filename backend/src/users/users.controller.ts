@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Body, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Request,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
@@ -26,5 +36,11 @@ export class UsersController {
   async updatePushToken(@Request() req: any, @Body() dto: UpdatePushTokenDto) {
     await this.usersService.updatePushToken(req.user.id, dto.pushToken);
     return { ok: true };
+  }
+
+  @Delete('me')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteAccount(@Request() req: any) {
+    await this.usersService.deleteAccount(req.user.id);
   }
 }

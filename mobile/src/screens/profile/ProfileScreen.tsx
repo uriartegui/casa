@@ -21,6 +21,7 @@ export default function ProfileScreen() {
   const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const avatarInitial = (user?.name ?? '?')[0].toUpperCase();
 
@@ -73,6 +74,41 @@ export default function ProfileScreen() {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sair', style: 'destructive', onPress: logout },
     ]);
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Excluir conta',
+      'Sua conta e seus dados pessoais serão excluídos permanentemente. Casas em que você é o único membro serão apagadas com tudo dentro. Essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Tem certeza?', 'Confirme a exclusão definitiva da sua conta.', [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Excluir minha conta',
+                style: 'destructive',
+                onPress: async () => {
+                  setDeletingAccount(true);
+                  try {
+                    await api.delete('/users/me');
+                    await logout();
+                  } catch (err: any) {
+                    const msg = err?.response?.data?.message ?? 'Erro ao excluir conta.';
+                    Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
+                  } finally {
+                    setDeletingAccount(false);
+                  }
+                },
+              },
+            ]);
+          },
+        },
+      ],
+    );
   }
 
   return (
@@ -162,6 +198,17 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <TouchableOpacity style={styles.row} onPress={handleLogout}>
             <Text style={styles.destructiveLabel}>Sair da conta</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
+            onPress={handleDeleteAccount}
+            disabled={deletingAccount}
+          >
+            {deletingAccount
+              ? <ActivityIndicator size="small" color={Colors.destructive} />
+              : <Text style={styles.destructiveLabel}>Excluir conta</Text>
+            }
           </TouchableOpacity>
         </View>
 

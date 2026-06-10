@@ -5,16 +5,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { User } from './user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { HouseholdMember } from '../households/household-member.entity';
+import { Household } from '../households/household.entity';
+import { HouseholdInvite } from '../households/household-invite.entity';
+import { HouseholdCategory } from '../households/household-category.entity';
+import { FridgeItem } from '../households/fridge-item.entity';
+import { FridgeActivity } from '../households/fridge-activity.entity';
+import { ShoppingItem } from '../households/shopping-item.entity';
+import { ShoppingList } from '../households/shopping-list.entity';
+import { Storage } from '../households/storage.entity';
+import { RefreshToken } from '../auth/refresh-token.entity';
+import { SmsOtp } from '../auth/sms-otp.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepo: Repository<User>,
+    private dataSource: DataSource,
   ) {}
 
   async create(name: string, password: string, phone: string): Promise<User> {
@@ -84,5 +97,69 @@ export class UsersService {
     await this.usersRepo.update(userId, updates);
     const updated = await this.usersRepo.findOne({ where: { id: userId } });
     return { id: updated!.id, name: updated!.name, email: updated!.email };
+  }
+
+  /**
+   * Exclusão de conta (exigência da App Store 5.1.1(v)).
+   * Casas onde o usuário é o único membro são apagadas por inteiro; nas
+   * compartilhadas ele sai (promovendo o membro mais antigo se era o único
+   * admin). Itens criados por ele em casas compartilhadas pertencem à casa
+   * e têm FK para users, então o registro do usuário é anonimizado em vez
+   * de removido: todo dado pessoal (nome, telefone, senha, push token) é
+   * apagado e o login fica impossível.
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Usuário não encontrado');
+
+    await this.dataSource.transaction(async (em) => {
+      const memberships = await em.find(HouseholdMember, { where: { userId } });
+
+      for (const membership of memberships) {
+        const members = await em.find(HouseholdMember, {
+          where: { householdId: membership.householdId },
+        });
+
+        if (members.length === 1) {
+          const householdId = membership.householdId;
+          await em.delete(FridgeItem, { householdId });
+          await em.delete(FridgeActivity, { householdId });
+          await em.delete(ShoppingItem, { householdId });
+          await em.delete(ShoppingList, { householdId });
+          await em.delete(HouseholdCategory, { householdId });
+          await em.delete(Storage, { householdId });
+          await em.delete(HouseholdInvite, { householdId });
+          await em.delete(HouseholdMember, { householdId });
+          await em.delete(Household, { id: householdId });
+          continue;
+        }
+
+        const others = members.filter((m) => m.userId !== userId);
+        const isSoleAdmin =
+          membership.role === 'admin' && !others.some((m) => m.role === 'admin');
+        if (isSoleAdmin) {
+          const successor = others.sort(
+            (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime(),
+          )[0];
+          await em.update(HouseholdMember, { id: successor.id }, { role: 'admin' });
+        }
+        await em.delete(HouseholdMember, { id: membership.id });
+      }
+
+      await em.delete(RefreshToken, { userId });
+      await em.delete(SmsOtp, { phone: user.phone });
+      await em.update(FridgeActivity, { userId }, { userName: 'Usuário removido' });
+      await em.update(
+        User,
+        { id: userId },
+        {
+          name: 'Usuário removido',
+          phone: `deleted:${userId}`,
+          email: null,
+          pushToken: null,
+          password: await bcrypt.hash(randomUUID(), 10),
+        },
+      );
+    });
   }
 }
