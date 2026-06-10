@@ -41,7 +41,13 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    if (error.response?.status !== 401 || original._retry) {
+    // 401 em /auth/* é resposta de negócio (ex.: senha errada no login),
+    // não sessão expirada — repassa o erro original sem tentar refresh.
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      original.url?.includes('/auth/')
+    ) {
       return Promise.reject(error);
     }
 
