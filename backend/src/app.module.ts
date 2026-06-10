@@ -38,8 +38,10 @@ import { NotificationsModule } from './notifications/notifications.module';
         database: config.get('DATABASE_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/migrations/*{.ts,.js}'],
-        synchronize: true,
-        migrationsRun: false,
+        // Schema é gerenciado por migrations (npm run migration:generate)
+        // e aplicado automaticamente no boot.
+        synchronize: false,
+        migrationsRun: true,
       }),
       inject: [ConfigService],
     }),
