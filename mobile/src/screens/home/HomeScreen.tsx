@@ -23,15 +23,15 @@ type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const { user } = useAuth();
-  const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
+  const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households } = useHouseholds();
-const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
+  const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
 
   useEffect(() => {
-    if (!selectedHouseholdId && households && households.length > 0) {
+    if (isSelectedHouseholdReady && !selectedHouseholdId && households && households.length > 0) {
       setSelectedHouseholdId(households[0].id);
     }
-  }, [households, selectedHouseholdId, setSelectedHouseholdId]);
+  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
 
 
   const household = households?.find((h) => h.id === effectiveId);

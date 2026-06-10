@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView, Alert,
@@ -7,13 +7,13 @@ import {
 import DateField from '../../components/DateField';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useUpdateFridgeItem, useRemoveFridgeItem } from '../../hooks/useFridge';
+import { useUpdateFridgeItem, useRemoveFridgeItem, useFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { useCategories } from '../../hooks/useCategories';
 import { useToast } from '../../context/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
-import { getCategoriesForStorage } from '../../constants/categories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 
@@ -26,20 +26,36 @@ const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
 
 export default function FridgeItemDetailScreen({ navigation, route }: Props) {
-  const { item, householdId } = route.params;
-  const [name, setName] = useState(item.name);
-  const [quantity, setQuantity] = useState(String(item.quantity));
-  const [unit, setUnit] = useState<Unit>((item.unit as Unit) ?? 'un');
+  const { item: initialItem, householdId } = route.params;
+  const { data: freshItem } = useFridgeItem(householdId, initialItem.id);
+  const item = freshItem ?? initialItem;
+  const isEditingRef = useRef(false);
+  const [name, setName] = useState(initialItem.name);
+  const [quantity, setQuantity] = useState(String(initialItem.quantity));
+  const [unit, setUnit] = useState<Unit>((initialItem.unit as Unit) ?? 'un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(
-    item.expirationDate ? new Date(item.expirationDate + 'T00:00:00') : null
+    initialItem.expirationDate ? new Date(initialItem.expirationDate + 'T00:00:00') : null
   );
-  const [category, setCategory] = useState<string | null>(item.category ?? null);
-  const categories = getCategoriesForStorage(item.storage?.name);
+  const [category, setCategory] = useState<string | null>(initialItem.category ?? null);
+  const { data: categories } = useCategories(householdId, item.storageId ?? item.storage?.id ?? null);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
   const { data: shoppingLists } = useShoppingLists(householdId);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!freshItem || isEditingRef.current) return;
+    setName(freshItem.name);
+    setQuantity(String(freshItem.quantity));
+    setUnit((freshItem.unit as Unit) ?? 'un');
+    setExpirationDate(freshItem.expirationDate ? new Date(freshItem.expirationDate + 'T00:00:00') : null);
+    setCategory(freshItem.category ?? null);
+  }, [freshItem]);
+
+  function markEditing() {
+    isEditingRef.current = true;
+  }
 
   async function handleSave() {
     if (!name.trim()) {
@@ -72,6 +88,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         name: item.name,
         quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
         unit: item.unit ?? 'un',
+        category: item.category ?? undefined,
       });
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
@@ -130,7 +147,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.input}
           value={name}
-          onChangeText={setName}
+          onChangeText={(value) => { markEditing(); setName(value); }}
           returnKeyType="next"
           placeholderTextColor={Colors.textSecondary}
           autoCorrect={false}
@@ -141,7 +158,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.input}
           value={quantity}
-          onChangeText={setQuantity}
+          onChangeText={(value) => { markEditing(); setQuantity(value); }}
           keyboardType="decimal-pad"
           returnKeyType="done"
           placeholderTextColor={Colors.textSecondary}
@@ -153,7 +170,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
             <TouchableOpacity
               key={u}
               style={[styles.unitChip, unit === u && styles.unitChipActive]}
-              onPress={() => setUnit(u)}
+              onPress={() => { markEditing(); setUnit(u); }}
             >
               <Text style={[styles.unitChipText, unit === u && styles.unitChipTextActive]}>{u}</Text>
             </TouchableOpacity>
@@ -162,11 +179,11 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
         <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
         <View style={styles.unitRow}>
-          {categories.map((c) => (
+          {(categories ?? []).map((c) => (
             <TouchableOpacity
-              key={c.label}
+              key={c.id}
               style={[styles.unitChip, category === c.label && styles.unitChipActive]}
-              onPress={() => setCategory(category === c.label ? null : c.label)}
+              onPress={() => { markEditing(); setCategory(category === c.label ? null : c.label); }}
             >
               <Text style={[styles.unitChipText, category === c.label && styles.unitChipTextActive]}>
                 {c.emoji} {c.label}
@@ -176,7 +193,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
-        <DateField value={expirationDate} onChange={setExpirationDate} />
+        <DateField value={expirationDate} onChange={(value) => { markEditing(); setExpirationDate(value); }} />
         <TouchableOpacity style={styles.button} onPress={handleSave} disabled={updateItem.isPending}>
           {updateItem.isPending
             ? <ActivityIndicator color="#fff" />

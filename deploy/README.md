@@ -31,6 +31,14 @@ Todo push na `main` que toque `backend/` ou `deploy/` dispara o workflow
 [.github/workflows/deploy.yml](../.github/workflows/deploy.yml), que conecta na
 VPS via SSH e roda `docker compose up -d --build`.
 
+O painel de deploy fica no GitHub:
+
+- **Actions**: histórico de cada deploy, commit, duração, logs e resumo do run.
+- **Environments → production**: status do ambiente de produção e URL da API.
+- **Run summary**: card com commit, autor, ambiente e resultado do health check.
+
+Também é possível disparar um deploy manual pela aba **Actions → Deploy API → Run workflow**.
+
 Secrets necessários no GitHub (Settings → Secrets and variables → Actions):
 
 | Secret | Valor |

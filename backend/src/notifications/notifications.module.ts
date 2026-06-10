@@ -4,13 +4,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationsService } from './notifications.service';
 import { ExpirationService } from './expiration.service';
 import { HouseholdMember } from '../households/household-member.entity';
-import { User } from '../users/user.entity';
+import { PushToken } from '../users/push-token.entity';
 import { FridgeItem } from '../households/fridge-item.entity';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
-    TypeOrmModule.forFeature([HouseholdMember, User, FridgeItem]),
+    TypeOrmModule.forFeature([HouseholdMember, PushToken, FridgeItem]),
   ],
   providers: [NotificationsService, ExpirationService],
   exports: [NotificationsService],

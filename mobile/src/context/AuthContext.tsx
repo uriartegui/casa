@@ -5,7 +5,7 @@ import { api, setAuthToken, setUnauthorizedHandler, REFRESH_TOKEN_KEY, ACCESS_TO
 import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
-import { registerPushToken } from '../utils/pushToken';
+import { registerPushToken, unregisterPushToken } from '../utils/pushToken';
 
 const TOKEN_KEY = ACCESS_TOKEN_KEY;
 const USER_KEY = '@colmeia:user';
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     try {
+      await unregisterPushToken();
       const storedRefresh = await secureStorage.getItem(REFRESH_TOKEN_KEY);
       if (storedRefresh) {
         await api.post('/auth/logout', { refreshToken: storedRefresh });

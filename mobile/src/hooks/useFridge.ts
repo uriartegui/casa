@@ -17,6 +17,19 @@ export function useFridge(householdId: string | null, storageId?: string | null)
   });
 }
 
+export function useFridgeItem(householdId: string | null, itemId: string | null) {
+  return useQuery({
+    queryKey: ['fridge-item', householdId, itemId],
+    queryFn: async () => {
+      const response = await api.get<FridgeItem>(
+        `/households/${householdId}/fridge/${itemId}`,
+      );
+      return response.data;
+    },
+    enabled: !!householdId && !!itemId,
+  });
+}
+
 interface AddFridgeItemPayload {
   name: string;
   quantity: number;
@@ -66,8 +79,9 @@ export function useUpdateFridgeItem(householdId: string) {
       );
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId, variables.itemId] });
     },
   });
 }

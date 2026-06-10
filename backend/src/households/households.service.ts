@@ -254,6 +254,20 @@ export class HouseholdsService {
     });
   }
 
+  async getFridgeItem(
+    householdId: string,
+    itemId: string,
+    userId: string,
+  ): Promise<FridgeItem> {
+    await this.assertMember(householdId, userId);
+    const item = await this.fridgeRepo.findOne({
+      where: { id: itemId, householdId },
+      relations: ['storage', 'createdBy'],
+    });
+    if (!item) throw new NotFoundException('Item não encontrado');
+    return item;
+  }
+
   async addFridgeItem(
     householdId: string,
     userId: string,
@@ -476,6 +490,7 @@ export class HouseholdsService {
       name: dto.name,
       quantity: dto.quantity ?? 1,
       unit: dto.unit ?? 'un',
+      category: dto.category ?? null,
       checked: false,
     });
     const saved = await this.shoppingRepo.save(item) as ShoppingItem;

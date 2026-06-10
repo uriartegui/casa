@@ -21,9 +21,9 @@ type Props = {
 type FilterPeriod = 'all' | '7d' | '30d';
 
 export default function ShoppingListsScreen({ navigation }: Props) {
-  const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
+  const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households, isLoading: loadingHouseholds } = useHouseholds();
-  const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
+  const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
 
   const { data: lists, isLoading, refetch } = useShoppingLists(effectiveId);
   const { data: activity, refetch: refetchActivity } = useShoppingActivity(effectiveId);
@@ -53,10 +53,10 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const updateList = useUpdateShoppingList(effectiveId ?? '');
 
   React.useEffect(() => {
-    if (!selectedHouseholdId && households?.[0]) {
+    if (isSelectedHouseholdReady && !selectedHouseholdId && households?.[0]) {
       setSelectedHouseholdId(households[0].id);
     }
-  }, [households, selectedHouseholdId, setSelectedHouseholdId]);
+  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
 
   async function handleRefresh() {
     setManualRefreshing(true);

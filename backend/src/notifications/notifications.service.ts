@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import Expo, { ExpoPushMessage } from 'expo-server-sdk';
 import { HouseholdMember } from '../households/household-member.entity';
-import { User } from '../users/user.entity';
+import { PushToken } from '../users/push-token.entity';
 
 @Injectable()
 export class NotificationsService {
@@ -13,9 +13,17 @@ export class NotificationsService {
   constructor(
     @InjectRepository(HouseholdMember)
     private membersRepo: Repository<HouseholdMember>,
-    @InjectRepository(User)
-    private usersRepo: Repository<User>,
+    @InjectRepository(PushToken)
+    private pushTokensRepo: Repository<PushToken>,
   ) {}
+
+  private async getPushMessages(userIds: string[], title: string, body: string): Promise<ExpoPushMessage[]> {
+    const tokens = await this.pushTokensRepo.find({ where: { userId: In(userIds) } });
+    const uniqueTokens = Array.from(new Set(tokens.map((t) => t.token)));
+    return uniqueTokens
+      .filter((token) => Expo.isExpoPushToken(token))
+      .map((token) => ({ to: token, title, body, sound: 'default' as const }));
+  }
 
   async notifyAllMembers(
     householdId: string,
@@ -26,10 +34,7 @@ export class NotificationsService {
     const userIds = members.map((m) => m.userId);
     if (userIds.length === 0) return;
 
-    const users = await this.usersRepo.find({ where: { id: In(userIds) } });
-    const messages: ExpoPushMessage[] = users
-      .filter((u) => u.pushToken && Expo.isExpoPushToken(u.pushToken))
-      .map((u) => ({ to: u.pushToken as string, title, body, sound: 'default' as const }));
+    const messages = await this.getPushMessages(userIds, title, body);
 
     if (messages.length === 0) {
       this.logger.log(`[${householdId}] Nenhum token válido`);
@@ -63,18 +68,7 @@ export class NotificationsService {
 
     if (otherUserIds.length === 0) return;
 
-    const users = await this.usersRepo.find({
-      where: { id: In(otherUserIds) },
-    });
-
-    const messages: ExpoPushMessage[] = users
-      .filter((u) => u.pushToken && Expo.isExpoPushToken(u.pushToken))
-      .map((u) => ({
-        to: u.pushToken as string,
-        title,
-        body,
-        sound: 'default' as const,
-      }));
+    const messages = await this.getPushMessages(otherUserIds, title, body);
 
     if (messages.length === 0) {
       this.logger.log(`[${householdId}] Nenhum token válido para notificar`);

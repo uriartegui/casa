@@ -68,7 +68,7 @@ export function useAddListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
   const queryKey = ['shopping-list-items', householdId, listId];
   return useMutation({
-    mutationFn: async (data: { name: string; quantity?: number; unit?: string }) => {
+    mutationFn: async (data: { name: string; quantity?: number; unit?: string; category?: string }) => {
       const res = await api.post<ShoppingItem>(
         `/households/${householdId}/shopping-lists/${listId}/items`,
         data,
@@ -85,6 +85,7 @@ export function useAddListItem(householdId: string, listId: string) {
         name: data.name,
         quantity: data.quantity ?? 1,
         unit: data.unit ?? 'un',
+        category: data.category ?? null,
         checked: false,
       } as ShoppingItem;
       queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => [...(old ?? []), temp]);

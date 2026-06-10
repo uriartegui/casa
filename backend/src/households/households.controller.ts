@@ -181,6 +181,16 @@ export class HouseholdsController {
     return this.householdsService.getFridgeItems(id, req.user.id, storageId);
   }
 
+  @Get(':id/fridge/:itemId')
+  @ApiOperation({ summary: 'Ver item da geladeira' })
+  getFridgeItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.getFridgeItem(id, itemId, req.user.id);
+  }
+
   @Post(':id/fridge')
   @ApiOperation({ summary: 'Adicionar item na geladeira' })
   addItem(

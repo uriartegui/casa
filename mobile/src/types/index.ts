@@ -65,6 +65,7 @@ export interface ShoppingItem {
   name: string;
   quantity: number;
   unit?: string;
+  category?: string | null;
   checked: boolean;
   householdId: string;
   shoppingListId: string | null;

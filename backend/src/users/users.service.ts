@@ -21,12 +21,15 @@ import { ShoppingList } from '../households/shopping-list.entity';
 import { Storage } from '../households/storage.entity';
 import { RefreshToken } from '../auth/refresh-token.entity';
 import { SmsOtp } from '../auth/sms-otp.entity';
+import { PushToken } from './push-token.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepo: Repository<User>,
+    @InjectRepository(PushToken)
+    private pushTokensRepo: Repository<PushToken>,
     private dataSource: DataSource,
   ) {}
 
@@ -62,7 +65,19 @@ export class UsersService {
   }
 
   async updatePushToken(userId: string, pushToken: string): Promise<void> {
+    await this.pushTokensRepo.upsert(
+      { userId, token: pushToken },
+      ['token'],
+    );
     await this.usersRepo.update(userId, { pushToken });
+  }
+
+  async removePushToken(userId: string, pushToken: string): Promise<void> {
+    await this.pushTokensRepo.delete({ userId, token: pushToken });
+    const remaining = await this.pushTokensRepo.findOne({ where: { userId } });
+    if (!remaining) {
+      await this.usersRepo.update(userId, { pushToken: null });
+    }
   }
 
   async updateProfile(
@@ -146,6 +161,7 @@ export class UsersService {
         await em.delete(HouseholdMember, { id: membership.id });
       }
 
+      await em.delete(PushToken, { userId });
       await em.delete(RefreshToken, { userId });
       await em.delete(SmsOtp, { phone: user.phone });
       await em.update(FridgeActivity, { userId }, { userName: 'Usuário removido' });

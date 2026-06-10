@@ -28,9 +28,9 @@ type Props = {
 
 export default function FridgeScreen({ navigation }: Props) {
   const HOUSEHOLD_DROPDOWN_WIDTH = 180;
-  const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
+  const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households, isLoading: loadingHouseholds } = useHouseholds();
-  const effectiveId = selectedHouseholdId ?? households?.[0]?.id ?? null;
+  const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
   const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
   const [pickerAnchor, setPickerAnchor] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<View>(null);
@@ -128,6 +128,7 @@ export default function FridgeScreen({ navigation }: Props) {
   }, [navigation, households, effectiveId]);
 
   useEffect(() => {
+    if (!isSelectedHouseholdReady) return;
     if (!households) return;
     const valid = households.find((h) => h.id === selectedHouseholdId);
     if (selectedHouseholdId && !valid) {
@@ -135,7 +136,7 @@ export default function FridgeScreen({ navigation }: Props) {
     } else if (!selectedHouseholdId && households[0]) {
       setSelectedHouseholdId(households[0].id);
     }
-  }, [households, selectedHouseholdId, setSelectedHouseholdId]);
+  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
 
   useEffect(() => {
     setSelectedStorageId(null);

@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "mobile:start": "npm --prefix mobile run start",
+    "mobile:start:clear": "npm --prefix mobile run start:clear",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:typecheck": "npm --prefix mobile run typecheck"
+  },
   "dependencies": {
     "@nestjs/swagger": "^11.3.0",
     "swagger-ui-express": "^5.0.1"

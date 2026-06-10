@@ -3,7 +3,7 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
-  KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,7 +15,9 @@ import {
 import { useKeepAwake } from 'expo-keep-awake';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
-import { filterItems } from '../../constants/commonItems';
+import {
+  filterItems, categoryFor, SHOPPING_CATEGORIES, ShoppingCategory,
+} from '../../constants/commonItems';
 import { Unit } from '../../types';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -35,6 +37,16 @@ function KeepAwakeWhileFocused() {
 }
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
+
+function compareNames(a: ShoppingItem, b: ShoppingItem) {
+  return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+}
+
+// Categorias desconhecidas caem junto de "Outros", no fim.
+function categoryRank(category: string) {
+  const idx = SHOPPING_CATEGORIES.indexOf(category as ShoppingCategory);
+  return idx === -1 ? SHOPPING_CATEGORIES.length - 1 : idx;
+}
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
@@ -57,6 +69,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addModal, setAddModal] = useState(false);
   const [addQty, setAddQty] = useState('1');
   const [addUnit, setAddUnit] = useState<Unit>('un');
+  const [addCategory, setAddCategory] = useState<ShoppingCategory | null>(null);
   const suggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
@@ -103,6 +116,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     if (name) setQuickName(name);
     setAddQty('1');
     setAddUnit('un');
+    setAddCategory(categoryFor(value));
     setAddModal(true);
   }
 
@@ -114,7 +128,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
-    addItem.mutate({ name, quantity: qty, unit: addUnit });
+    addItem.mutate({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
     setQuickName('');
     setAddModal(false);
   }
@@ -230,9 +244,25 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     );
   }
 
+  // A comprar: uma seção por categoria (ordem dos corredores), itens em
+  // ordem alfabética. Se ninguém categorizou nada, mantém a seção única.
+  const pendingByCategory = new Map<string, ShoppingItem[]>();
+  for (const item of pending) {
+    const cat = item.category || 'Outros';
+    const group = pendingByCategory.get(cat);
+    if (group) group.push(item);
+    else pendingByCategory.set(cat, [item]);
+  }
+  const onlyUncategorized = pendingByCategory.size === 1 && pendingByCategory.has('Outros');
+  const pendingSections = onlyUncategorized
+    ? [{ title: `A COMPRAR (${pending.length})`, data: [...pending].sort(compareNames), isPending: true }]
+    : [...pendingByCategory.entries()]
+        .sort((a, b) => categoryRank(a[0]) - categoryRank(b[0]) || a[0].localeCompare(b[0], 'pt-BR'))
+        .map(([cat, data]) => ({ title: `${cat} (${data.length})`, data: data.sort(compareNames), isPending: true }));
+
   const sections = [
-    ...(pending.length > 0 ? [{ title: `A COMPRAR (${pending.length})`, data: pending, isPending: true }] : []),
-    ...(bought.length > 0 ? [{ title: `COMPRADOS (${bought.length})`, data: bought, isPending: false }] : []),
+    ...(pending.length > 0 ? pendingSections : []),
+    ...(bought.length > 0 ? [{ title: `COMPRADOS (${bought.length})`, data: [...bought].sort(compareNames), isPending: false }] : []),
   ];
 
   return (
@@ -408,6 +438,19 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                 ))}
               </View>
 
+              <Text style={styles.sheetLabel}>Categoria</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
+                {SHOPPING_CATEGORIES.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    style={[styles.unitChip, addCategory === c && styles.unitChipActive]}
+                    onPress={() => setAddCategory(addCategory === c ? null : c)}
+                  >
+                    <Text style={[styles.unitChipText, addCategory === c && styles.unitChipTextActive]}>{c}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
               <TouchableOpacity style={styles.button} onPress={confirmAdd} disabled={addItem.isPending}>
                 {addItem.isPending
                   ? <ActivityIndicator color="#fff" />
@@ -524,6 +567,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
   unitRow: { flexDirection: 'row', gap: 8 },
+  categoryRow: { flexDirection: 'row', gap: 8, paddingRight: 12 },
   unitChip: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18,
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,

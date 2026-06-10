@@ -31,6 +31,9 @@ export class ShoppingItem {
   @Column({ nullable: true })
   unit: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  category: string | null;
+
   @Column({ default: false })
   checked: boolean;
 

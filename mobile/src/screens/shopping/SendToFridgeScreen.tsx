@@ -7,45 +7,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
+import { useCategories } from '../../hooks/useCategories';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
 import DateField from '../../components/DateField';
-
-type CategoryChip = { label: string; value: string };
-
-const STORAGE_CATEGORIES: Record<string, CategoryChip[]> = {
-  geladeira: [
-    { label: '🥛 Laticínios', value: 'Laticínios' },
-    { label: '🍖 Carnes & Ovos', value: 'Carnes & Ovos' },
-    { label: '🍎 Frutas', value: 'Frutas' },
-    { label: '🥬 Verduras/Legumes', value: 'Verduras/Legumes' },
-    { label: '🧃 Bebidas', value: 'Bebidas' },
-    { label: '🫙 Molhos & Condimentos', value: 'Molhos & Condimentos' },
-    { label: '🍽️ Prontos/Restos', value: 'Prontos/Restos' },
-  ],
-  freezer: [
-    { label: '🧊 Carnes congeladas', value: 'Carnes congeladas' },
-    { label: '🥬 Vegetais congelados', value: 'Vegetais congelados' },
-    { label: '🍕 Pratos prontos', value: 'Pratos prontos' },
-    { label: '🍦 Sobremesas', value: 'Sobremesas' },
-    { label: '🥖 Pães congelados', value: 'Pães congelados' },
-  ],
-  despensa: [
-    { label: '🌾 Grãos & Cereais', value: 'Grãos & Cereais' },
-    { label: '🥫 Enlatados/Conservas', value: 'Enlatados/Conservas' },
-    { label: '🍝 Massas & Farinhas', value: 'Massas & Farinhas' },
-    { label: '🍪 Snacks & Biscoitos', value: 'Snacks & Biscoitos' },
-    { label: '🫙 Temperos & Condimentos', value: 'Temperos & Condimentos' },
-    { label: '🧃 Bebidas', value: 'Bebidas' },
-  ],
-};
-
-function getCategoriesForStorage(name: string): CategoryChip[] {
-  const key = name.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
-  for (const [k, cats] of Object.entries(STORAGE_CATEGORIES)) {
-    if (key.includes(k)) return cats;
-  }
-  return [];
-}
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 
@@ -60,9 +24,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   const { data: storages } = useStorages(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
   const [category, setCategory] = useState('');
-
-  const selectedStorage = storages?.find((s) => s.id === selectedStorageId);
-  const categoryChips = selectedStorage ? getCategoriesForStorage(selectedStorage.name) : [];
+  const { data: categories } = useCategories(householdId, selectedStorageId);
 
   React.useEffect(() => {
     if (storages && storages.length > 0 && selectedStorageId === null) {
@@ -115,7 +77,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   key={s.id}
                   style={[styles.chip, selectedStorageId === s.id && styles.chipActive]}
-                  onPress={() => setSelectedStorageId(s.id)}
+                  onPress={() => { setSelectedStorageId(s.id); setCategory(''); }}
                 >
                   <Text style={[styles.chipText, selectedStorageId === s.id && styles.chipTextActive]}>
                     {s.emoji} {s.name}
@@ -126,17 +88,19 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
           </>
         )}
 
-        {selectedStorageId && categoryChips.length > 0 && (
+        {(categories?.length ?? 0) > 0 && (
           <>
             <Text style={styles.label}>Categoria (opcional)</Text>
             <View style={styles.chipRow}>
-              {categoryChips.map((cat) => (
+              {(categories ?? []).map((cat) => (
                 <TouchableOpacity
-                  key={cat.value}
-                  style={[styles.chip, category === cat.value && styles.chipActive]}
-                  onPress={() => setCategory(cat.value === category ? '' : cat.value)}
+                  key={cat.id}
+                  style={[styles.chip, category === cat.label && styles.chipActive]}
+                  onPress={() => setCategory(cat.label === category ? '' : cat.label)}
                 >
-                  <Text style={[styles.chipText, category === cat.value && styles.chipTextActive]}>{cat.label}</Text>
+                  <Text style={[styles.chipText, category === cat.label && styles.chipTextActive]}>
+                    {cat.emoji} {cat.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>

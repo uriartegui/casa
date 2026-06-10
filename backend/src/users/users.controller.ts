@@ -38,6 +38,12 @@ export class UsersController {
     return { ok: true };
   }
 
+  @Delete('me/push-token')
+  async removePushToken(@Request() req: any, @Body() dto: UpdatePushTokenDto) {
+    await this.usersService.removePushToken(req.user.id, dto.pushToken);
+    return { ok: true };
+  }
+
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteAccount(@Request() req: any) {

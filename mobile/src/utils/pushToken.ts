@@ -56,3 +56,15 @@ export async function registerPushToken(): Promise<PushTokenResult> {
     return { ok: false, reason: 'api-error', detail: err?.message };
   }
 }
+
+export async function unregisterPushToken(): Promise<void> {
+  try {
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
+    await api.delete('/users/me/push-token', {
+      data: { pushToken: tokenData.data },
+    });
+    console.log('[Push] Token removido do backend com sucesso');
+  } catch (err: any) {
+    console.warn('[Push] Não foi possível remover token do backend:', err?.message ?? err);
+  }
+}

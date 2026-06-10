@@ -1,4 +1,5 @@
 name: CI
+run-name: CI - ${{ github.ref_name }} @ ${{ github.sha }}
 
 on:
   push:
@@ -7,6 +8,7 @@ on:
 
 jobs:
   backend:
+    name: Backend build and tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -18,11 +20,26 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: backend/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
+      - name: Install dependencies
+        run: npm ci
+      - name: Build backend
+        run: npm run build
+      - name: Run backend tests
+        run: npm test
+      - name: Publish CI summary
+        if: always()
+        run: |
+          {
+            echo "## Backend"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Job status | ${{ job.status }} |"
+            echo "| Scope | backend |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   mobile:
+    name: Mobile typecheck
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,5 +51,18 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
-      - run: npm ci
-      - run: npx tsc --noEmit
+      - name: Install dependencies
+        run: npm ci
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+      - name: Publish CI summary
+        if: always()
+        run: |
+          {
+            echo "## Mobile"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Job status | ${{ job.status }} |"
+            echo "| Scope | mobile |"
+          } >> "$GITHUB_STEP_SUMMARY"

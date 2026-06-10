@@ -33,6 +33,7 @@ export function useHouseholdSync(households: Household[] | undefined) {
     function onUpdate({ householdId }: { householdId: string }) {
       queryClient.invalidateQueries({ queryKey: ['households'] });
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId] });
       queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
       queryClient.invalidateQueries({ queryKey: ['fridge-categories', householdId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
