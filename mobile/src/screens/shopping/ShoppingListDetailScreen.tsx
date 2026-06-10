@@ -1,19 +1,20 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import {
-  View, Text, SectionList, TouchableOpacity, Modal,
+  View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import {
-  useListItems, useToggleListItem, useRemoveListItem,
+  useListItems, useToggleListItem, useRemoveListItem, useAddListItem,
   useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
 } from '../../hooks/useShoppingLists';
+import { useKeepAwake } from 'expo-keep-awake';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
-import MarketModeModal from './MarketModeModal';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
@@ -23,6 +24,13 @@ type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
   route: RouteProp<ShoppingStackParamList, 'ShoppingListDetail'>;
 };
+
+// Mantém a tela acesa enquanto a lista está em foco (uso no mercado).
+// Em componente próprio porque hooks não podem ser condicionais.
+function KeepAwakeWhileFocused() {
+  useKeepAwake();
+  return null;
+}
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
@@ -40,7 +48,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const prevItemCount = useRef<number | undefined>(undefined);
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
   const [showSendModal, setShowSendModal] = useState(false);
-  const [showMarketMode, setShowMarketMode] = useState(false);
+  const addItem = useAddListItem(householdId, listId);
+  const [quickName, setQuickName] = useState('');
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
 
@@ -78,6 +87,13 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   function handleToggle(item: ShoppingItem) {
     toggleItem.mutate({ itemId: item.id, checked: !item.checked });
+  }
+
+  function handleQuickAdd() {
+    const name = quickName.trim();
+    if (!name) return;
+    setQuickName('');
+    addItem.mutate({ name, quantity: 1, unit: 'un' });
   }
 
   function handleClearChecked() {
@@ -191,7 +207,11 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   ];
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {isFocused && <KeepAwakeWhileFocused />}
       {total > 0 && (
         <View style={styles.progressContainer}>
           <View style={styles.progressTopRow}>
@@ -283,32 +303,38 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       </Modal>
 
       <View style={styles.footer}>
-        {pending.length > 0 && (
-          <TouchableOpacity style={styles.marketBtn} onPress={() => setShowMarketMode(true)}>
-            <Text style={styles.marketBtnText}>🛒 Modo mercado</Text>
+        <View style={styles.quickAddRow}>
+          <TextInput
+            style={styles.quickAddInput}
+            placeholder="Adição rápida (1 un) — digite e dê enter"
+            placeholderTextColor={Colors.textSecondary}
+            value={quickName}
+            onChangeText={setQuickName}
+            onSubmitEditing={handleQuickAdd}
+            returnKeyType="done"
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity
+            style={[styles.quickAddBtn, !quickName.trim() && { opacity: 0.4 }]}
+            onPress={handleQuickAdd}
+            disabled={!quickName.trim()}
+          >
+            <Text style={styles.quickAddBtnText}>+</Text>
           </TouchableOpacity>
-        )}
+        </View>
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
             <Text style={styles.buttonSecondaryText}>Mandar comprados para a geladeira</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
-          style={styles.button}
+          style={styles.buttonSecondary}
           onPress={() => navigation.navigate('AddShoppingItem', { householdId, listId })}
         >
-          <Text style={styles.buttonText}>+ Adicionar item</Text>
+          <Text style={styles.buttonSecondaryText}>Adicionar com quantidade/unidade</Text>
         </TouchableOpacity>
       </View>
-
-      <MarketModeModal
-        visible={showMarketMode}
-        onClose={() => setShowMarketMode(false)}
-        householdId={householdId}
-        listId={listId}
-        listName={listName}
-      />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -362,10 +388,17 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   buttonSecondary: { borderRadius: 14, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent + '12' },
   buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
-  marketBtn: {
-    backgroundColor: Colors.success, borderRadius: 14, padding: 16, alignItems: 'center',
+  quickAddRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  quickAddInput: {
+    flex: 1, backgroundColor: Colors.card, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
+    color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
-  marketBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  quickAddBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
+  },
+  quickAddBtnText: { color: '#fff', fontSize: 24, fontWeight: '700', lineHeight: 28 },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {
