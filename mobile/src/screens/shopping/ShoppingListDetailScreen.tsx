@@ -15,6 +15,8 @@ import {
 import { useKeepAwake } from 'expo-keep-awake';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
+import { filterItems } from '../../constants/commonItems';
+import { Unit } from '../../types';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
@@ -31,6 +33,8 @@ function KeepAwakeWhileFocused() {
   useKeepAwake();
   return null;
 }
+
+const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
@@ -50,6 +54,10 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [showSendModal, setShowSendModal] = useState(false);
   const addItem = useAddListItem(householdId, listId);
   const [quickName, setQuickName] = useState('');
+  const [addModal, setAddModal] = useState(false);
+  const [addQty, setAddQty] = useState('1');
+  const [addUnit, setAddUnit] = useState<Unit>('un');
+  const suggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
 
@@ -89,11 +97,32 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     toggleItem.mutate({ itemId: item.id, checked: !item.checked });
   }
 
-  function handleQuickAdd() {
+  function openAddModal(name?: string) {
+    const value = (name ?? quickName).trim();
+    if (!value) return;
+    if (name) setQuickName(name);
+    setAddQty('1');
+    setAddUnit('un');
+    setAddModal(true);
+  }
+
+  function confirmAdd() {
     const name = quickName.trim();
+    const qty = parseFloat(addQty.replace(',', '.'));
     if (!name) return;
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert('Erro', 'Quantidade inválida.');
+      return;
+    }
+    addItem.mutate({ name, quantity: qty, unit: addUnit });
     setQuickName('');
-    addItem.mutate({ name, quantity: 1, unit: 'un' });
+    setAddModal(false);
+  }
+
+  function stepQty(delta: number) {
+    const current = parseFloat(addQty.replace(',', '.'));
+    const next = Math.max(1, (isNaN(current) ? 1 : current) + delta);
+    setAddQty(String(next));
   }
 
   function handleClearChecked() {
@@ -303,20 +332,30 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       </Modal>
 
       <View style={styles.footer}>
+        {suggestions.length > 0 && (
+          <View style={styles.suggestionsRow}>
+            {suggestions.map((s) => (
+              <TouchableOpacity key={s} style={styles.suggestionChip} onPress={() => openAddModal(s)}>
+                <Text style={styles.suggestionChipText}>{s}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
         <View style={styles.quickAddRow}>
           <TextInput
             style={styles.quickAddInput}
-            placeholder="Adição rápida (1 un) — digite e dê enter"
+            placeholder="Adicionar item..."
             placeholderTextColor={Colors.textSecondary}
             value={quickName}
             onChangeText={setQuickName}
-            onSubmitEditing={handleQuickAdd}
+            onSubmitEditing={() => openAddModal()}
             returnKeyType="done"
             blurOnSubmit={false}
+            autoCorrect={false}
           />
           <TouchableOpacity
             style={[styles.quickAddBtn, !quickName.trim() && { opacity: 0.4 }]}
-            onPress={handleQuickAdd}
+            onPress={() => openAddModal()}
             disabled={!quickName.trim()}
           >
             <Text style={styles.quickAddBtnText}>+</Text>
@@ -327,13 +366,58 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
             <Text style={styles.buttonSecondaryText}>Mandar comprados para a geladeira</Text>
           </TouchableOpacity>
         )}
-        <TouchableOpacity
-          style={styles.buttonSecondary}
-          onPress={() => navigation.navigate('AddShoppingItem', { householdId, listId })}
-        >
-          <Text style={styles.buttonSecondaryText}>Adicionar com quantidade/unidade</Text>
-        </TouchableOpacity>
       </View>
+
+      {/* Bottom sheet: quantidade e unidade do item novo */}
+      <Modal visible={addModal} transparent animationType="slide" onRequestClose={() => setAddModal(false)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setAddModal(false)} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>{quickName.trim()}</Text>
+
+              <Text style={styles.sheetLabel}>Quantidade</Text>
+              <View style={styles.qtyRow}>
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => stepQty(-1)}>
+                  <Text style={styles.qtyBtnText}>−</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.qtyInput}
+                  value={addQty}
+                  onChangeText={setAddQty}
+                  keyboardType="decimal-pad"
+                  textAlign="center"
+                  selectTextOnFocus
+                />
+                <TouchableOpacity style={styles.qtyBtn} onPress={() => stepQty(1)}>
+                  <Text style={styles.qtyBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.sheetLabel}>Unidade</Text>
+              <View style={styles.unitRow}>
+                {UNITS.map((u) => (
+                  <TouchableOpacity
+                    key={u}
+                    style={[styles.unitChip, addUnit === u && styles.unitChipActive]}
+                    onPress={() => setAddUnit(u)}
+                  >
+                    <Text style={[styles.unitChipText, addUnit === u && styles.unitChipTextActive]}>{u}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.button} onPress={confirmAdd} disabled={addItem.isPending}>
+                {addItem.isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.buttonText}>Adicionar à lista</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -388,6 +472,12 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   buttonSecondary: { borderRadius: 14, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent + '12' },
   buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
+  suggestionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
+  suggestionChip: {
+    backgroundColor: Colors.accent + '14', borderRadius: 14,
+    paddingHorizontal: 12, paddingVertical: 6,
+  },
+  suggestionChipText: { color: Colors.accent, fontSize: 13, fontWeight: '600' },
   quickAddRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   quickAddInput: {
     flex: 1, backgroundColor: Colors.card, borderRadius: 12,
@@ -399,6 +489,48 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center',
   },
   quickAddBtnText: { color: '#fff', fontSize: 24, fontWeight: '700', lineHeight: 28 },
+
+  // Bottom sheet de quantidade/unidade
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
+  sheetBackdrop: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  sheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28,
+    gap: 8,
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.separator,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  sheetTitle: { fontSize: 21, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
+  sheetLabel: {
+    fontSize: 12, fontWeight: '600', color: Colors.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8,
+  },
+  qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  qtyBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  qtyBtnText: { fontSize: 24, fontWeight: '600', color: Colors.textPrimary, lineHeight: 28 },
+  qtyInput: {
+    flex: 1, backgroundColor: Colors.card, borderRadius: 12,
+    paddingVertical: 12, fontSize: 22, fontWeight: '700',
+    color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+  },
+  unitRow: { flexDirection: 'row', gap: 8 },
+  unitChip: {
+    paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18,
+    backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
+  },
+  unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  unitChipText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  unitChipTextActive: { color: '#fff' },
   headerButton: { paddingHorizontal: 4 },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {

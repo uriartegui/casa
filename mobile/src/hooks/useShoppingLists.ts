@@ -66,6 +66,7 @@ export function useListItems(householdId: string | null, listId: string | null) 
 
 export function useAddListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
+  const queryKey = ['shopping-list-items', householdId, listId];
   return useMutation({
     mutationFn: async (data: { name: string; quantity?: number; unit?: string }) => {
       const res = await api.post<ShoppingItem>(
@@ -74,8 +75,26 @@ export function useAddListItem(householdId: string, listId: string) {
       );
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+    // Item aparece na lista imediatamente; o registro temporário é
+    // substituído pelo real quando o servidor responde.
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+      const temp = {
+        id: `temp-${Date.now()}`,
+        name: data.name,
+        quantity: data.quantity ?? 1,
+        unit: data.unit ?? 'un',
+        checked: false,
+      } as ShoppingItem;
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => [...(old ?? []), temp]);
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
