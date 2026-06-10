@@ -3,7 +3,7 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Share,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -11,6 +11,7 @@ import { RouteProp } from '@react-navigation/native';
 import {
   useListItems, useToggleListItem, useRemoveListItem, useAddListItem,
   useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
+  useShoppingSuggestions, ShoppingSuggestion,
 } from '../../hooks/useShoppingLists';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useAddFridgeItem } from '../../hooks/useFridge';
@@ -70,8 +71,11 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addQty, setAddQty] = useState('1');
   const [addUnit, setAddUnit] = useState<Unit>('un');
   const [addCategory, setAddCategory] = useState<ShoppingCategory | null>(null);
-  const suggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
+  const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
+  const [showUsualModal, setShowUsualModal] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+  const { data: usualSuggestions } = useShoppingSuggestions(householdId);
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -131,6 +135,46 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     addItem.mutate({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
     setQuickName('');
     setAddModal(false);
+  }
+
+  async function handleShareList() {
+    const pendingLines = pending.map((item) => `☐ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
+    const boughtLines = bought.map((item) => `✓ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
+    const message = [
+      `Lista: ${listName}`,
+      pendingLines.length > 0 ? '\nA comprar:\n' + pendingLines.join('\n') : '',
+      boughtLines.length > 0 ? '\nComprados:\n' + boughtLines.join('\n') : '',
+    ].filter(Boolean).join('\n');
+    await Share.share({ message });
+  }
+
+  function openUsualModal() {
+    const existing = new Set((items ?? []).map((item) => item.name.trim().toLowerCase()));
+    const initial = new Set(
+      (usualSuggestions ?? [])
+        .filter((item) => !existing.has(item.name.trim().toLowerCase()))
+        .slice(0, 8)
+        .map((item) => item.name),
+    );
+    setSelectedSuggestions(initial);
+    setShowUsualModal(true);
+  }
+
+  async function confirmUsualItems() {
+    const selected = (usualSuggestions ?? []).filter((item) => selectedSuggestions.has(item.name));
+    try {
+      for (const item of selected) {
+        await addItem.mutateAsync({
+          name: item.name,
+          quantity: 1,
+          unit: item.unit ?? 'un',
+          category: item.category ?? undefined,
+        });
+      }
+      setShowUsualModal(false);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível adicionar os itens recorrentes.');
+    }
   }
 
   function stepQty(delta: number) {
@@ -219,12 +263,17 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   useEffect(() => {
     navigation.setOptions({
       headerRight: () => (
-        <TouchableOpacity onPress={handleDeleteList} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
-          <Text style={styles.headerButtonText}>Excluir</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleShareList} style={styles.headerButton}>
+            <Text style={styles.headerShareText}>Compartilhar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDeleteList} style={styles.headerButton}>
+            <Text style={styles.headerButtonText}>Excluir</Text>
+          </TouchableOpacity>
+        </View>
       ),
     });
-  }, [handleDeleteList]);
+  }, [handleDeleteList, pending, bought, listName]);
 
   function renderItem({ item }: { item: ShoppingItem }) {
     return (
@@ -361,10 +410,68 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
       </Modal>
 
+      <Modal visible={showUsualModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowUsualModal(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Os de sempre</Text>
+            <TouchableOpacity onPress={() => setShowUsualModal(false)}>
+              <Text style={styles.modalClose}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modalSubtitle}>Escolha os itens recorrentes para adicionar nesta lista:</Text>
+          <ScrollView contentContainerStyle={styles.usualList}>
+            {(usualSuggestions ?? []).map((item: ShoppingSuggestion) => {
+              const selected = selectedSuggestions.has(item.name);
+              const alreadyInList = (items ?? []).some((current) => current.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+              return (
+                <TouchableOpacity
+                  key={item.name}
+                  style={[styles.usualItem, selected && styles.usualItemSelected, alreadyInList && styles.usualItemDisabled]}
+                  disabled={alreadyInList}
+                  onPress={() => {
+                    setSelectedSuggestions((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(item.name)) next.delete(item.name);
+                      else next.add(item.name);
+                      return next;
+                    });
+                  }}
+                >
+                  <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
+                    {selected && <Text style={styles.modalCheckmark}>✓</Text>}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalItemName}>{item.name}</Text>
+                    <Text style={styles.modalItemQty}>
+                      {alreadyInList ? 'Já está na lista' : `${item.count} vezes no histórico`}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity
+            style={[styles.button, { margin: 16, marginTop: 8 }, selectedSuggestions.size === 0 && { opacity: 0.45 }]}
+            disabled={selectedSuggestions.size === 0 || addItem.isPending}
+            onPress={confirmUsualItems}
+          >
+            {addItem.isPending
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.buttonText}>Adicionar {selectedSuggestions.size} itens</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
       <View style={styles.footer}>
-        {suggestions.length > 0 && (
+        {(usualSuggestions?.length ?? 0) > 0 && (
+          <TouchableOpacity style={styles.usualButton} onPress={openUsualModal}>
+            <Text style={styles.usualButtonText}>Os de sempre</Text>
+          </TouchableOpacity>
+        )}
+        {quickSuggestions.length > 0 && (
           <View style={styles.suggestionsRow}>
-            {suggestions.map((s) => (
+            {quickSuggestions.map((s) => (
               <TouchableOpacity key={s} style={styles.suggestionChip} onPress={() => openAddModal(s)}>
                 <Text style={styles.suggestionChipText}>{s}</Text>
               </TouchableOpacity>
@@ -575,7 +682,9 @@ const styles = StyleSheet.create({
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   unitChipText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerButton: { paddingHorizontal: 4 },
+  headerShareText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {
     alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 6,
@@ -590,6 +699,19 @@ const styles = StyleSheet.create({
   modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
   modalSubtitle: { fontSize: 13, color: Colors.textSecondary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
   modalItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, gap: 12 },
+  usualList: { paddingHorizontal: 16, paddingBottom: 16 },
+  usualItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: Colors.separator, gap: 12 },
+  usualItemSelected: { backgroundColor: Colors.accent + '08' },
+  usualItemDisabled: { opacity: 0.45 },
+  usualButton: {
+    borderRadius: 14,
+    padding: 12,
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+  },
+  usualButtonText: { color: Colors.textPrimary, fontSize: 15, fontWeight: '700' },
   modalCheckbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center' },
   modalCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   modalCheckmark: { color: '#fff', fontSize: 12, fontWeight: '700' },

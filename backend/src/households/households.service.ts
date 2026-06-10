@@ -320,6 +320,28 @@ export class HouseholdsService {
     return saved;
   }
 
+  async consumeFridgeItem(
+    householdId: string,
+    itemId: string,
+    userId: string,
+    amount: number,
+  ): Promise<FridgeItem | { removed: true }> {
+    await this.assertMember(householdId, userId);
+    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
+    if (!item) throw new NotFoundException('Item não encontrado');
+
+    const next = Math.max(0, Number(item.quantity) - amount);
+    if (next <= 0) {
+      await this.removeFridgeItem(householdId, itemId, userId);
+      return { removed: true };
+    }
+
+    item.quantity = next;
+    const saved = await this.fridgeRepo.save(item);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
   async removeFridgeItem(
     householdId: string,
     itemId: string,
@@ -436,6 +458,32 @@ export class HouseholdsService {
       .getRawMany<{ listId: string; count: string }>();
     const countMap = Object.fromEntries(counts.map((c) => [c.listId, Number(c.count)]));
     return lists.map((l) => Object.assign(l, { itemCount: countMap[l.id] ?? 0 }));
+  }
+
+  async getShoppingSuggestions(householdId: string, userId: string) {
+    await this.assertMember(householdId, userId);
+    const rows = await this.shoppingRepo
+      .createQueryBuilder('item')
+      .withDeleted()
+      .select('LOWER(TRIM(item.name))', 'key')
+      .addSelect('MIN(item.name)', 'name')
+      .addSelect('MAX(item.unit)', 'unit')
+      .addSelect('MAX(item.category)', 'category')
+      .addSelect('COUNT(*)', 'count')
+      .where('item.householdId = :householdId', { householdId })
+      .andWhere('item.name IS NOT NULL')
+      .groupBy('LOWER(TRIM(item.name))')
+      .orderBy('COUNT(*)', 'DESC')
+      .addOrderBy('MAX(item.createdAt)', 'DESC')
+      .limit(12)
+      .getRawMany<{ name: string; unit: string | null; category: string | null; count: string }>();
+
+    return rows.map((row) => ({
+      name: row.name,
+      unit: row.unit ?? 'un',
+      category: row.category,
+      count: Number(row.count),
+    }));
   }
 
   async createShoppingList(householdId: string, userId: string, dto: CreateShoppingListDto): Promise<ShoppingList> {

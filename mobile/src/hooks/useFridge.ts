@@ -86,6 +86,24 @@ export function useUpdateFridgeItem(householdId: string) {
   });
 }
 
+export function useConsumeFridgeItem(householdId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ itemId, amount = 1 }: { itemId: string; amount?: number }) => {
+      const response = await api.post<FridgeItem | { removed: true }>(
+        `/households/${householdId}/fridge/${itemId}/consume`,
+        { amount },
+      );
+      return response.data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId, variables.itemId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
+    },
+  });
+}
+
 export function useRemoveFridgeItem(householdId: string) {
   const queryClient = useQueryClient();
   return useMutation({

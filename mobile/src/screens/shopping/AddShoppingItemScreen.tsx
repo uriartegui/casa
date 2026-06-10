@@ -2,9 +2,10 @@ import React, { useState, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert, ScrollView,
-  TouchableWithoutFeedback, Keyboard,
+  TouchableWithoutFeedback, Keyboard, Modal,
 } from 'react-native';
-import { filterItems } from '../../constants/commonItems';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { filterItems, categoryFor } from '../../constants/commonItems';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddListItem } from '../../hooks/useShoppingLists';
@@ -34,7 +35,44 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
   const suggestions = useMemo(() => filterItems(name), [name]);
   const [quantity, setQuantity] = useState(prefillQuantity ? String(prefillQuantity) : '1');
   const [unit, setUnit] = useState<Unit>((prefillUnit as Unit) ?? 'un');
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanned, setScanned] = useState(false);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const addItem = useAddListItem(householdId, listId ?? '');
+
+  async function openScanner() {
+    if (!cameraPermission?.granted) {
+      const permission = await requestCameraPermission();
+      if (!permission.granted) {
+        Alert.alert('Câmera', 'Permita o acesso à câmera para escanear códigos de barras.');
+        return;
+      }
+    }
+    setScanned(false);
+    setScannerOpen(true);
+  }
+
+  async function handleBarcodeScanned(result: BarcodeScanningResult) {
+    if (scanned) return;
+    setScanned(true);
+    try {
+      const response = await fetch(
+        `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(result.data)}.json?fields=product_name,product_name_pt,quantity`,
+      );
+      const data = await response.json();
+      const productName = data?.product?.product_name_pt || data?.product?.product_name;
+      if (productName) {
+        setName(productName);
+        setScannerOpen(false);
+        return;
+      }
+      Alert.alert('Produto não encontrado', 'Não encontrei esse código. Preencha o nome manualmente.');
+      setScannerOpen(false);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível consultar o produto agora.');
+      setScannerOpen(false);
+    }
+  }
 
   async function handleAdd() {
     if (!name.trim()) {
@@ -47,7 +85,13 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit });
+      const trimmedName = name.trim();
+      await addItem.mutateAsync({
+        name: trimmedName,
+        quantity: qty,
+        unit,
+        category: categoryFor(trimmedName) ?? undefined,
+      });
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível adicionar o item.');
@@ -62,6 +106,9 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Nome do item</Text>
+        <TouchableOpacity style={styles.scanButton} onPress={openScanner}>
+          <Text style={styles.scanButtonText}>Escanear código de barras</Text>
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Ex: Leite"
@@ -119,6 +166,25 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
           }
         </TouchableOpacity>
       </ScrollView>
+      <Modal visible={scannerOpen} animationType="slide" onRequestClose={() => setScannerOpen(false)}>
+        <View style={styles.scannerContainer}>
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            barcodeScannerSettings={{
+              barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e'],
+            }}
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+          />
+          <View style={styles.scannerOverlay}>
+            <View style={styles.scanFrame} />
+            <Text style={styles.scannerText}>Aponte para o código de barras</Text>
+            <TouchableOpacity style={styles.closeScannerButton} onPress={() => setScannerOpen(false)}>
+              <Text style={styles.closeScannerText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -137,6 +203,16 @@ const styles = StyleSheet.create({
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   unitChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
+  scanButton: {
+    alignSelf: 'flex-start',
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: Colors.accent + '14',
+    borderWidth: 1,
+    borderColor: Colors.accent + '40',
+  },
+  scanButtonText: { fontSize: 13, color: Colors.accent, fontWeight: '700' },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   suggestions: {
@@ -148,4 +224,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: Colors.separator,
   },
   suggestionText: { fontSize: 15, color: Colors.textPrimary },
+  scannerContainer: { flex: 1, backgroundColor: '#000' },
+  camera: { flex: 1 },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  scanFrame: {
+    width: 250,
+    height: 150,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: 'transparent',
+  },
+  scannerText: { color: '#fff', fontSize: 15, fontWeight: '700', marginTop: 18 },
+  closeScannerButton: {
+    position: 'absolute',
+    bottom: 44,
+    left: 24,
+    right: 24,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center',
+    backgroundColor: Colors.card,
+  },
+  closeScannerText: { color: Colors.textPrimary, fontSize: 16, fontWeight: '700' },
 });
