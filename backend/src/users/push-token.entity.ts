@@ -22,6 +22,13 @@ export class PushToken {
   @Column({ type: 'text', unique: true })
   token: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  platform: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  @Index()
+  deviceId: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

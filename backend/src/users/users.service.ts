@@ -22,6 +22,7 @@ import { Storage } from '../households/storage.entity';
 import { RefreshToken } from '../auth/refresh-token.entity';
 import { SmsOtp } from '../auth/sms-otp.entity';
 import { PushToken } from './push-token.entity';
+import { RemovePushTokenDto, UpdatePushTokenDto } from './dto/update-push-token.dto';
 
 @Injectable()
 export class UsersService {
@@ -64,19 +65,28 @@ export class UsersService {
     await this.usersRepo.update(userId, { password: hashedPassword });
   }
 
-  async updatePushToken(userId: string, pushToken: string): Promise<void> {
+  async updatePushToken(userId: string, dto: UpdatePushTokenDto): Promise<void> {
+    if (dto.deviceId) {
+      await this.pushTokensRepo.delete({ deviceId: dto.deviceId });
+    }
+
     await this.pushTokensRepo.upsert(
-      { userId, token: pushToken },
+      {
+        userId,
+        token: dto.pushToken,
+        platform: dto.platform ?? null,
+        deviceId: dto.deviceId ?? null,
+      },
       ['token'],
     );
-    await this.usersRepo.update(userId, { pushToken });
   }
 
-  async removePushToken(userId: string, pushToken: string): Promise<void> {
-    await this.pushTokensRepo.delete({ userId, token: pushToken });
-    const remaining = await this.pushTokensRepo.findOne({ where: { userId } });
-    if (!remaining) {
-      await this.usersRepo.update(userId, { pushToken: null });
+  async removePushToken(userId: string, dto: RemovePushTokenDto): Promise<void> {
+    if (dto.pushToken) {
+      await this.pushTokensRepo.delete({ userId, token: dto.pushToken });
+    }
+    if (dto.deviceId) {
+      await this.pushTokensRepo.delete({ userId, deviceId: dto.deviceId });
     }
   }
 

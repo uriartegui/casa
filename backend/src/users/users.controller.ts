@@ -12,7 +12,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
-import { UpdatePushTokenDto } from './dto/update-push-token.dto';
+import { RemovePushTokenDto, UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('users')
@@ -34,13 +34,13 @@ export class UsersController {
 
   @Patch('me/push-token')
   async updatePushToken(@Request() req: any, @Body() dto: UpdatePushTokenDto) {
-    await this.usersService.updatePushToken(req.user.id, dto.pushToken);
+    await this.usersService.updatePushToken(req.user.id, dto);
     return { ok: true };
   }
 
   @Delete('me/push-token')
-  async removePushToken(@Request() req: any, @Body() dto: UpdatePushTokenDto) {
-    await this.usersService.removePushToken(req.user.id, dto.pushToken);
+  async removePushToken(@Request() req: any, @Body() dto: RemovePushTokenDto) {
+    await this.usersService.removePushToken(req.user.id, dto);
     return { ok: true };
   }
 
