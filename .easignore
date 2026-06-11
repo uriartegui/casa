@@ -1,0 +1,29 @@
+# ATENCAO: quando .easignore existe, o EAS ignora o .gitignore e usa SO este arquivo.
+# Entao precisa listar tanto o que o build nao usa quanto o que o .gitignore ja excluia.
+
+# Nao usado pelo build mobile
+backend/
+docs/
+store-assets/
+.github/
+*.md
+
+# Gerados / dependencias (o EAS instala e faz prebuild na nuvem)
+node_modules/
+mobile/android/
+mobile/ios/
+mobile/.expo/
+mobile/dist/
+
+# Credenciais — NUNCA subir (o EAS ja tem o keystore nos servidores dele)
+mobile/credentials.json
+mobile/credentials/
+*.jks
+*.keystore
+*.p8
+*.p12
+*.mobileprovision
+.env*
+
+# Git
+.git/

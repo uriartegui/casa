@@ -112,7 +112,14 @@ function Draw-SoftShadow($g, [single]$x, [single]$y, [single]$w, [single]$h, [si
 function Save-Png($bmp, [string]$path) {
     $dir = Split-Path $path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Force $dir | Out-Null }
-    $bmp.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    # Achata para 24-bit sem canal alfa — a App Store rejeita PNG com transparencia
+    $flat = New-Object System.Drawing.Bitmap($bmp.Width, $bmp.Height, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+    $fg = [System.Drawing.Graphics]::FromImage($flat)
+    $fg.Clear([System.Drawing.Color]::White)
+    $fg.DrawImage($bmp, 0, 0, $bmp.Width, $bmp.Height)
+    $fg.Dispose()
+    $flat.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)
+    $flat.Dispose()
     Write-Host "ok: $path"
 }
 

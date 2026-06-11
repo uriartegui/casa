@@ -59,7 +59,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   }
 
   function handleDelete(list: ShoppingList) {
-    Alert.alert('Excluir lista', `Excluir "${list.name}"? Todos os itens serÃ£o removidos.`, [
+    Alert.alert('Excluir lista', `Excluir "${list.name}"? Todos os itens serão removidos.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
@@ -150,7 +150,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
                     <Text style={styles.activityText}>{renderActivityText(e)}</Text>
                     <Text style={styles.activityTime}>
                       {formatBrDate(e.createdAt)}
-                      {' Â· '}
+                      {' - '}
                       {formatBrTime(e.createdAt)}
                     </Text>
                   </View>
@@ -200,7 +200,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
             onPress={() => updateList.mutate({ listId: item.id, name: item.name, place: item.place ?? undefined, category: item.category ?? undefined, urgent: !item.urgent })}
           >
             <Text style={[styles.urgentChipText, item.urgent && styles.urgentChipTextActive]}>
-              ðŸš¨ Urgente
+              Urgente
             </Text>
           </TouchableOpacity>
           <View style={styles.badge}>
@@ -210,8 +210,8 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           </View>
         </View>
         <View style={styles.cardMeta}>
-          {item.place ? <Text style={styles.metaChip}>ðŸ“ {item.place}</Text> : null}
-          {item.category ? <Text style={styles.metaChip}>ðŸ· {item.category}</Text> : null}
+          {item.place ? <Text style={styles.metaChip}>{item.place}</Text> : null}
+          {item.category ? <Text style={styles.metaChip}>{item.category}</Text> : null}
           <Text style={[styles.metaChip, { marginLeft: 'auto' }]}>{formatBrShortDate(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
@@ -237,7 +237,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Nenhuma lista ainda</Text>
-              <Text style={styles.emptySubtitle}>Crie uma lista para comeÃ§ar</Text>
+              <Text style={styles.emptySubtitle}>Crie uma lista para começar</Text>
             </View>
           }
         />

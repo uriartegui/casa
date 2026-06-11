@@ -295,7 +295,7 @@ export default function FridgeScreen({ navigation }: Props) {
                     <Text style={styles.activityText}>{renderActivityText(it)}</Text>
                     <Text style={styles.activityTime}>
                       {formatBrDate(it.createdAt)}
-                      {' · '}
+                      {' - '}
                       {formatBrTime(it.createdAt)}
                     </Text>
                   </View>
@@ -312,7 +312,7 @@ export default function FridgeScreen({ navigation }: Props) {
     try {
       await removeItem.mutateAsync({ itemId: item.id, toShoppingListName });
     } catch {
-      Alert.alert('Erro', 'NÃ£o foi possÃ­vel remover o item.');
+      Alert.alert('Erro', 'Nao foi possivel remover o item.');
     }
   }
 
@@ -324,7 +324,7 @@ export default function FridgeScreen({ navigation }: Props) {
     }
     Alert.alert(
       'Escolher lista',
-      'Adicionar Ã  qual lista?',
+      'Adicionar a qual lista?',
       [
         ...lists.map((l) => ({
           text: l.name,
@@ -340,7 +340,7 @@ export default function FridgeScreen({ navigation }: Props) {
               queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
               queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
             } catch {
-              showToast('Item removido, mas erro ao adicionar Ã  lista', 'error');
+              showToast('Item removido, mas erro ao adicionar a lista', 'error');
             }
           },
         })),
@@ -597,7 +597,7 @@ export default function FridgeScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.sectionLabel}>
-              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} Â· {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
+              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} - {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
             </Text>
           }
           ListEmptyComponent={
