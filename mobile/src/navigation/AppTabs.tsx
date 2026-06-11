@@ -36,7 +36,7 @@ export type HouseholdStackParamList = {
 export type FridgeStackParamList = {
   Fridge: undefined;
   AddFridgeItem: { householdId: string; storageId?: string };
-  FridgeItemDetail: { item: import('../types').FridgeItem; householdId: string };
+  FridgeItemDetail: { itemId: string; householdId: string };
   CreateStorage: { householdId: string };
 };
 

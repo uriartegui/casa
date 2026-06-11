@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView, Alert,
@@ -24,20 +24,32 @@ type Props = {
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
+type DirtyFields = {
+  name: boolean;
+  quantity: boolean;
+  unit: boolean;
+  expirationDate: boolean;
+  category: boolean;
+};
+
+const cleanDirtyFields: DirtyFields = {
+  name: false,
+  quantity: false,
+  unit: false,
+  expirationDate: false,
+  category: false,
+};
 
 export default function FridgeItemDetailScreen({ navigation, route }: Props) {
-  const { item: initialItem, householdId } = route.params;
-  const { data: freshItem } = useFridgeItem(householdId, initialItem.id);
-  const item = freshItem ?? initialItem;
-  const isEditingRef = useRef(false);
-  const [name, setName] = useState(initialItem.name);
-  const [quantity, setQuantity] = useState(String(initialItem.quantity));
-  const [unit, setUnit] = useState<Unit>((initialItem.unit as Unit) ?? 'un');
-  const [expirationDate, setExpirationDate] = useState<Date | null>(
-    initialItem.expirationDate ? new Date(initialItem.expirationDate + 'T00:00:00') : null
-  );
-  const [category, setCategory] = useState<string | null>(initialItem.category ?? null);
-  const { data: categories } = useCategories(householdId, item.storageId ?? item.storage?.id ?? null);
+  const { itemId, householdId } = route.params;
+  const { data: item, isLoading, isError, refetch } = useFridgeItem(householdId, itemId);
+  const [dirtyFields, setDirtyFields] = useState<DirtyFields>(cleanDirtyFields);
+  const [name, setName] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [unit, setUnit] = useState<Unit>('un');
+  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
+  const { data: categories } = useCategories(householdId, item?.storageId ?? item?.storage?.id ?? null);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
   const { data: shoppingLists } = useShoppingLists(householdId);
@@ -45,19 +57,30 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!freshItem || isEditingRef.current) return;
-    setName(freshItem.name);
-    setQuantity(String(freshItem.quantity));
-    setUnit((freshItem.unit as Unit) ?? 'un');
-    setExpirationDate(freshItem.expirationDate ? new Date(freshItem.expirationDate + 'T00:00:00') : null);
-    setCategory(freshItem.category ?? null);
-  }, [freshItem]);
+    if (!item) return;
+    setName((current) => (dirtyFields.name ? current : item.name));
+    setQuantity((current) => (dirtyFields.quantity ? current : String(item.quantity)));
+    setUnit((current) => (dirtyFields.unit ? current : ((item.unit as Unit) ?? 'un')));
+    setExpirationDate((current) => (
+      dirtyFields.expirationDate
+        ? current
+        : item.expirationDate
+          ? new Date(item.expirationDate + 'T00:00:00')
+          : null
+    ));
+    setCategory((current) => (dirtyFields.category ? current : item.category ?? null));
+  }, [item, dirtyFields]);
 
-  function markEditing() {
-    isEditingRef.current = true;
+  function markEditing(field: keyof DirtyFields) {
+    setDirtyFields((current) => ({ ...current, [field]: true }));
   }
 
   async function handleSave() {
+    if (!item) {
+      Alert.alert('Erro', 'Item ainda nao carregado.');
+      return;
+    }
+
     if (!name.trim()) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
@@ -69,7 +92,27 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     try {
       const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : null;
-      await updateItem.mutateAsync({ itemId: item.id, name: name.trim(), quantity: qty, unit, expirationDate: expStr, category: category ?? undefined });
+      const payload: {
+        itemId: string;
+        name?: string;
+        quantity?: number;
+        unit?: string;
+        expirationDate?: string | null;
+        category?: string | null;
+      } = { itemId: item.id };
+
+      if (name.trim() !== item.name) payload.name = name.trim();
+      if (qty !== Number(item.quantity)) payload.quantity = qty;
+      if (unit !== item.unit) payload.unit = unit;
+      if (expStr !== (item.expirationDate ?? null)) payload.expirationDate = expStr;
+      if ((category ?? null) !== (item.category ?? null)) payload.category = category;
+
+      if (Object.keys(payload).length === 1) {
+        navigation.goBack();
+        return;
+      }
+
+      await updateItem.mutateAsync(payload);
       navigation.goBack();
     } catch {
       Alert.alert('Erro', 'Não foi possível salvar as alterações.');
@@ -77,6 +120,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   }
 
   async function doRemoveAndAdd(listId: string, listName: string) {
+    if (!item) return;
+
     try {
       await removeItem.mutateAsync({ itemId: item.id, toShoppingListName: listName });
     } catch {
@@ -115,6 +160,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   }
 
   function handleRemove() {
+    if (!item) return;
+
     Alert.alert(
       `Remover "${item.name}"`,
       'O que deseja fazer?',
@@ -137,6 +184,26 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     );
   }
 
+  if (isLoading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={Colors.accent} />
+      </View>
+    );
+  }
+
+  if (isError || !item) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.emptyTitle}>Item nao encontrado</Text>
+        <Text style={styles.emptySubtitle}>Ele pode ter sido removido por outro membro da casa.</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+          <Text style={styles.retryButtonText}>Tentar novamente</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -147,7 +214,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.input}
           value={name}
-          onChangeText={(value) => { markEditing(); setName(value); }}
+          onChangeText={(value) => { markEditing('name'); setName(value); }}
           returnKeyType="next"
           placeholderTextColor={Colors.textSecondary}
           autoCorrect={false}
@@ -158,7 +225,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.input}
           value={quantity}
-          onChangeText={(value) => { markEditing(); setQuantity(value); }}
+          onChangeText={(value) => { markEditing('quantity'); setQuantity(value); }}
           keyboardType="decimal-pad"
           returnKeyType="done"
           placeholderTextColor={Colors.textSecondary}
@@ -170,7 +237,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
             <TouchableOpacity
               key={u}
               style={[styles.unitChip, unit === u && styles.unitChipActive]}
-              onPress={() => { markEditing(); setUnit(u); }}
+              onPress={() => { markEditing('unit'); setUnit(u); }}
             >
               <Text style={[styles.unitChipText, unit === u && styles.unitChipTextActive]}>{u}</Text>
             </TouchableOpacity>
@@ -183,7 +250,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
             <TouchableOpacity
               key={c.id}
               style={[styles.unitChip, category === c.label && styles.unitChipActive]}
-              onPress={() => { markEditing(); setCategory(category === c.label ? null : c.label); }}
+              onPress={() => { markEditing('category'); setCategory(category === c.label ? null : c.label); }}
             >
               <Text style={[styles.unitChipText, category === c.label && styles.unitChipTextActive]}>
                 {c.emoji} {c.label}
@@ -193,7 +260,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
-        <DateField value={expirationDate} onChange={(value) => { markEditing(); setExpirationDate(value); }} />
+        <DateField value={expirationDate} onChange={(value) => { markEditing('expirationDate'); setExpirationDate(value); }} />
         <TouchableOpacity style={styles.button} onPress={handleSave} disabled={updateItem.isPending}>
           {updateItem.isPending
             ? <ActivityIndicator color="#fff" />
@@ -211,7 +278,12 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 10, padding: 24 },
   content: { padding: 24, gap: 10 },
+  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
+  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  retryButton: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginTop: 6 },
+  retryButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,

@@ -20,10 +20,10 @@ export class UpdateFridgeItemDto {
   @ApiPropertyOptional({ example: '2026-05-01' })
   @IsOptional()
   @IsDateString()
-  expirationDate?: string;
+  expirationDate?: string | null;
 
   @ApiPropertyOptional({ example: 'Laticínios' })
   @IsOptional()
   @IsString()
-  category?: string;
+  category?: string | null;
 }

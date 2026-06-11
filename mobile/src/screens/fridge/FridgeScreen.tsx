@@ -334,7 +334,7 @@ export default function FridgeScreen({ navigation }: Props) {
       <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
         <TouchableOpacity
           style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }]}
-          onPress={() => navigation.navigate('FridgeItemDetail', { item, householdId: effectiveId! })}
+          onPress={() => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! })}
           activeOpacity={0.7}
         >
           <View style={styles.itemInfo}>
