@@ -31,6 +31,7 @@ import { useSelectedHousehold } from './src/context/SelectedHouseholdContext';
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
+import { api } from './src/services/api';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const navigationRef = createNavigationContainerRef<any>();
@@ -53,6 +54,10 @@ type PushData = {
   type?: string;
   householdId?: string;
   itemId?: string;
+  itemName?: string;
+  quantity?: number;
+  unit?: string;
+  category?: string;
 };
 
 function NotificationResponseHandler() {
@@ -86,6 +91,23 @@ function NotificationResponseHandler() {
 
     const data = response.notification.request.content.data as PushData;
 
+    if (response.actionIdentifier === 'add-to-list') {
+      if (data.type !== 'fridge-empty' || !data.householdId || !data.itemName) return;
+
+      api.post(`/households/${data.householdId}/shopping-items/restock`, {
+        name: data.itemName,
+        quantity: data.quantity ?? 1,
+        unit: data.unit ?? 'un',
+        category: data.category,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['shopping-lists', data.householdId] });
+        queryClient.invalidateQueries({ queryKey: ['shopping-activity', data.householdId] });
+      }).catch((err) => {
+        console.warn('[Push action] Nao foi possivel adicionar item a lista:', err?.message ?? err);
+      });
+      return;
+    }
+
     if (data.type === 'expiration' && data.householdId && data.itemId) {
       navigateToExpirationItem(data.householdId, data.itemId);
     }
@@ -109,6 +131,13 @@ function NotificationResponseHandler() {
 function App() {
   useEffect(() => {
     Notifications.requestPermissionsAsync();
+    Notifications.setNotificationCategoryAsync('fridge-empty', [
+      {
+        identifier: 'add-to-list',
+        buttonTitle: 'Adicionar a lista',
+        options: { opensAppToForeground: true },
+      },
+    ]);
   }, []);
 
   return (

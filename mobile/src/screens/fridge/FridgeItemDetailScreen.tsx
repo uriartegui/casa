@@ -162,26 +162,22 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   function handleRemove() {
     if (!item) return;
 
-    Alert.alert(
-      `Remover "${item.name}"`,
-      'O que deseja fazer?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Remover + Lista', onPress: handlePickList },
-        {
-          text: 'Só remover',
-          style: 'destructive' as const,
-          onPress: async () => {
-            try {
-              await removeItem.mutateAsync({ itemId: item.id });
-              navigation.goBack();
-            } catch {
-              Alert.alert('Erro', 'Não foi possível remover o item.');
-            }
-          },
+    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item da geladeira.', [
+      {
+        text: 'Somente excluir',
+        style: 'destructive' as const,
+        onPress: async () => {
+          try {
+            await removeItem.mutateAsync({ itemId: item.id });
+            navigation.goBack();
+          } catch {
+            Alert.alert('Erro', 'Nao foi possivel remover o item.');
+          }
         },
-      ],
-    );
+      },
+      { text: 'Excluir e mandar para lista', onPress: handlePickList },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   }
 
   if (isLoading) {

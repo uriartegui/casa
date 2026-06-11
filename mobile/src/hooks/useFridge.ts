@@ -82,6 +82,7 @@ export function useUpdateFridgeItem(householdId: string) {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
       queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId, variables.itemId] });
+      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
     },
   });
 }
@@ -103,7 +104,7 @@ export function useRemoveFridgeItem(householdId: string) {
 export interface FridgeActivityEntry {
   id: string;
   householdId: string;
-  action: 'added' | 'removed';
+  action: 'added' | 'removed' | 'updated';
   itemName: string;
   quantity: number;
   unit: string;
@@ -111,6 +112,9 @@ export interface FridgeActivityEntry {
   userName: string;
   fromShoppingListName?: string | null;
   toShoppingListName?: string | null;
+  storageName?: string | null;
+  storageEmoji?: string | null;
+  details?: string | null;
   createdAt: string;
 }
 

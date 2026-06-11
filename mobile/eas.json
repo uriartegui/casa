@@ -1,4 +1,4 @@
-{
+﻿{
   "cli": {
     "version": ">= 12.0.0",
     "appVersionSource": "local"
@@ -8,7 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://casa-api-4fq0.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://colmeiaapp.duckdns.org"
       }
     },
     "preview": {
@@ -17,7 +17,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://casa-api-4fq0.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://colmeiaapp.duckdns.org"
       }
     },
     "production": {
@@ -29,7 +29,7 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://casa-api-4fq0.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://colmeiaapp.duckdns.org"
       }
     }
   }

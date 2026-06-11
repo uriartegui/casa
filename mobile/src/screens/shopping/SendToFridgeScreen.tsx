@@ -48,7 +48,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         expirationDate: expStr,
         fromShoppingListName: listName,
       });
-      await removeFromList.mutateAsync(itemId);
+      await removeFromList.mutateAsync({ itemId, reason: 'sent_to_fridge' });
       navigation.goBack();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? e?.message ?? 'Erro desconhecido';

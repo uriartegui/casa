@@ -3,7 +3,6 @@ import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl, Modal, Alert, TextInput,
 } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
@@ -178,6 +177,82 @@ export default function FridgeScreen({ navigation }: Props) {
     return rows;
   }, [sections]);
 
+  function getActivityColor(it: FridgeActivityEntry) {
+    if (it.action === 'updated') return '#3B82F6';
+    if (it.action === 'removed' && it.toShoppingListName) return Colors.accent;
+    if (it.action === 'removed') return Colors.destructive;
+    if (it.fromShoppingListName) return '#8B5CF6';
+    return Colors.success;
+  }
+
+  function getStorageLabel(it: FridgeActivityEntry) {
+    if (!it.storageName) return null;
+    return `${it.storageEmoji ? `${it.storageEmoji} ` : ''}${it.storageName}`;
+  }
+
+  function renderActivityText(it: FridgeActivityEntry) {
+    const storageLabel = getStorageLabel(it);
+    const userName = it.userName ?? 'Alguem';
+
+    if (it.action === 'updated') {
+      return (
+        <>
+          <Text style={styles.activityName}>{userName}</Text>
+          {' editou '}
+          <Text style={styles.activityItem}>{it.itemName}</Text>
+          {storageLabel ? <> em <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
+          {it.details ? <> ({it.details})</> : null}
+        </>
+      );
+    }
+
+    if (it.action === 'removed' && it.toShoppingListName) {
+      return (
+        <>
+          <Text style={styles.activityName}>{userName}</Text>
+          {' removeu '}
+          <Text style={styles.activityItem}>{it.itemName}</Text>
+          {storageLabel ? <> de <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
+          {' e mandou para a lista '}
+          <Text style={styles.activityListName}>{it.toShoppingListName}</Text>
+        </>
+      );
+    }
+
+    if (it.action === 'removed') {
+      return (
+        <>
+          <Text style={styles.activityName}>{userName}</Text>
+          {' removeu '}
+          <Text style={styles.activityItem}>{it.itemName}</Text>
+          {storageLabel ? <> de <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
+        </>
+      );
+    }
+
+    if (it.fromShoppingListName) {
+      return (
+        <>
+          <Text style={styles.activityName}>{userName}</Text>
+          {' mandou '}
+          <Text style={styles.activityItem}>{it.itemName}</Text>
+          {' da lista '}
+          <Text style={styles.activityListName}>{it.fromShoppingListName}</Text>
+          {storageLabel ? <> para <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Text style={styles.activityName}>{userName}</Text>
+        {' adicionou '}
+        <Text style={styles.activityItem}>{it.itemName}</Text>
+        {storageLabel ? <> em <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
+      </>
+    );
+  }
+
   function renderLogModal() {
     const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
     const filtered = (activityLog ?? [])
@@ -215,24 +290,9 @@ export default function FridgeScreen({ navigation }: Props) {
               contentContainerStyle={styles.modalList}
               renderItem={({ item: it }: { item: FridgeActivityEntry }) => (
                 <View style={styles.activityRow}>
-                  <View style={[styles.activityDot, {
-                    backgroundColor:
-                      it.action === 'removed' && !it.toShoppingListName ? Colors.destructive :
-                      it.action === 'removed' && it.toShoppingListName  ? Colors.accent :
-                      Colors.success,
-                  }]} />
+                  <View style={[styles.activityDot, { backgroundColor: getActivityColor(it) }]} />
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>
-                      <Text style={styles.activityName}>{it.userName ?? 'Alguém'}</Text>
-                      {it.action === 'removed'
-                        ? it.toShoppingListName
-                          ? <> removeu <Text style={styles.activityItem}>{it.itemName}</Text>{' e mandou para lista de compras '}<Text style={styles.activityListName}>{it.toShoppingListName}</Text></>
-                          : <> removeu <Text style={styles.activityItem}>{it.itemName}</Text></>
-                        : it.fromShoppingListName
-                          ? <> mandou <Text style={styles.activityItem}>{it.itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{it.fromShoppingListName}</Text></>
-                          : <> adicionou <Text style={styles.activityItem}>{it.itemName}</Text></>
-                      }
-                    </Text>
+                    <Text style={styles.activityText}>{renderActivityText(it)}</Text>
                     <Text style={styles.activityTime}>
                       {formatBrDate(it.createdAt)}
                       {' · '}
@@ -252,7 +312,7 @@ export default function FridgeScreen({ navigation }: Props) {
     try {
       await removeItem.mutateAsync({ itemId: item.id, toShoppingListName });
     } catch {
-      Alert.alert('Erro', 'Não foi possível remover o item.');
+      Alert.alert('Erro', 'NÃ£o foi possÃ­vel remover o item.');
     }
   }
 
@@ -264,7 +324,7 @@ export default function FridgeScreen({ navigation }: Props) {
     }
     Alert.alert(
       'Escolher lista',
-      'Adicionar à qual lista?',
+      'Adicionar Ã  qual lista?',
       [
         ...lists.map((l) => ({
           text: l.name,
@@ -280,7 +340,7 @@ export default function FridgeScreen({ navigation }: Props) {
               queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
               queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
             } catch {
-              showToast('Item removido, mas erro ao adicionar à lista', 'error');
+              showToast('Item removido, mas erro ao adicionar Ã  lista', 'error');
             }
           },
         })),
@@ -289,22 +349,12 @@ export default function FridgeScreen({ navigation }: Props) {
     );
   }
 
-  function renderRightActions(item: FridgeItem) {
-    return (
-      <TouchableOpacity
-        style={styles.deleteAction}
-        onPress={() =>
-          Alert.alert(`Remover "${item.name}"`, 'O que deseja fazer?', [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Remover + Lista', onPress: () => handlePickListAndRemove(item) },
-            { text: 'Só remover', style: 'destructive', onPress: () => doRemove(item) },
-          ])
-        }
-      >
-        <Text style={styles.deleteActionText}>🗑️</Text>
-        <Text style={styles.deleteActionLabel}>Remover</Text>
-      </TouchableOpacity>
-    );
+  function confirmItemFinished(item: FridgeItem) {
+    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item da geladeira.', [
+      { text: 'Somente excluir', style: 'destructive', onPress: () => doRemove(item) },
+      { text: 'Excluir e mandar para lista', onPress: () => handlePickListAndRemove(item) },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   }
 
   function renderItem({ item }: { item: FridgeItem }) {
@@ -330,7 +380,6 @@ export default function FridgeScreen({ navigation }: Props) {
         : Colors.success;
 
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item)} overshootRight={false}>
         <TouchableOpacity
           style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }]}
           onPress={() => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! })}
@@ -352,9 +401,19 @@ export default function FridgeScreen({ navigation }: Props) {
             <View style={styles.quantityBadge}>
               <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.finishedButton}
+              onPress={(event) => {
+                event.stopPropagation();
+                confirmItemFinished(item);
+              }}
+              activeOpacity={0.7}
+              accessibilityLabel={`${item.name} acabou`}
+            >
+              <Text style={styles.finishedButtonText}>X</Text>
+            </TouchableOpacity>
           </View>
         </TouchableOpacity>
-      </Swipeable>
     );
   }
 
@@ -538,7 +597,7 @@ export default function FridgeScreen({ navigation }: Props) {
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.sectionLabel}>
-              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} · {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
+              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Geladeira'} Â· {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
             </Text>
           }
           ListEmptyComponent={
@@ -663,14 +722,15 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1, gap: 2 },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
   itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  finishedButton: {
+    minWidth: 28,
+    minHeight: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  finishedButtonText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600', lineHeight: 18 },
   expBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   expBadgeText: { fontSize: 11, fontWeight: '700' },
-  deleteAction: {
-    backgroundColor: Colors.destructive, justifyContent: 'center', alignItems: 'center',
-    width: 80, marginBottom: 8, borderRadius: 10, gap: 2,
-  },
-  deleteActionText: { fontSize: 20 },
-  deleteActionLabel: { fontSize: 11, color: '#fff', fontWeight: '600' },
   categoryPickerWrapper: {
     height: 48,
     backgroundColor: Colors.card,
@@ -722,6 +782,7 @@ const styles = StyleSheet.create({
   activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   activityName: { fontWeight: '600' },
   activityListName: { fontWeight: '600', color: Colors.accent },
+  activityStorage: { fontWeight: '600', color: '#3B82F6' },
   activityItem: { fontStyle: 'italic' },
   activityTime: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });

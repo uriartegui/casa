@@ -59,7 +59,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   }
 
   function handleDelete(list: ShoppingList) {
-    Alert.alert('Excluir lista', `Excluir "${list.name}"? Todos os itens serão removidos.`, [
+    Alert.alert('Excluir lista', `Excluir "${list.name}"? Todos os itens serÃ£o removidos.`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir',
@@ -73,6 +73,35 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     if (filterPeriod === '7d') return Date.now() - 7 * 24 * 60 * 60 * 1000;
     if (filterPeriod === '30d') return Date.now() - 30 * 24 * 60 * 60 * 1000;
     return null;
+  }
+
+  function getActivityColor(event: ShoppingActivityEvent) {
+    const action = event.action ?? event.type;
+    if (action === 'sent_to_fridge') return '#8B5CF6';
+    if (action === 'removed') return Colors.destructive;
+    if (action === 'checked') return Colors.success;
+    if (action === 'unchecked') return '#F59E0B';
+    return Colors.accent;
+  }
+
+  function renderActivityText(event: ShoppingActivityEvent) {
+    const action = event.action ?? event.type;
+    const itemName = event.itemName ?? event.name ?? 'item';
+    const userName = event.userName ?? event.createdBy?.name ?? 'Alguem';
+
+    if (action === 'sent_to_fridge') {
+      return <><Text style={styles.activityName}>{userName}</Text>{' mandou '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text>{' para a geladeira'}</>;
+    }
+
+    if (action === 'removed') {
+      return <><Text style={styles.activityName}>{userName}</Text>{' removeu '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
+    }
+
+    if (action === 'checked' || action === 'unchecked') {
+      return <><Text style={styles.activityName}>{userName}</Text>{action === 'checked' ? ' marcou ' : ' desmarcou '}<Text style={styles.activityItem}>{itemName}</Text>{' na lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
+    }
+
+    return <><Text style={styles.activityName}>{userName}</Text>{' adicionou '}<Text style={styles.activityItem}>{itemName}</Text>{' na lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
   }
 
   function renderActivityModal() {
@@ -107,7 +136,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
 
           {sorted.length === 0 ? (
             <View style={styles.modalEmpty}>
-              <Text style={styles.modalEmptyText}>Nenhuma atividade neste período.</Text>
+              <Text style={styles.modalEmptyText}>Nenhuma atividade neste periodo.</Text>
             </View>
           ) : (
             <FlatList
@@ -116,19 +145,12 @@ export default function ShoppingListsScreen({ navigation }: Props) {
               contentContainerStyle={styles.modalList}
               renderItem={({ item: e }) => (
                 <View style={styles.activityRow}>
-                  <View style={[styles.activityDot, e.type === 'sent_to_fridge' && styles.activityDotFridge]} />
+                  <View style={[styles.activityDot, { backgroundColor: getActivityColor(e) }]} />
                   <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>
-                      <Text style={styles.activityName}>{e.createdBy?.name ?? 'Alguém'}</Text>
-                      {e.type === 'sent_to_fridge'
-                        ? <>{' mandou para geladeira da lista '}<Text style={styles.activityListName}>{e.listName}</Text>{': '}</>
-                        : <>{' adicionou na lista '}<Text style={styles.activityListName}>{e.listName}</Text>{': '}</>
-                      }
-                      <Text style={styles.activityItem}>{e.name}</Text>
-                    </Text>
+                    <Text style={styles.activityText}>{renderActivityText(e)}</Text>
                     <Text style={styles.activityTime}>
                       {formatBrDate(e.createdAt)}
-                      {' · '}
+                      {' Â· '}
                       {formatBrTime(e.createdAt)}
                     </Text>
                   </View>
@@ -178,7 +200,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
             onPress={() => updateList.mutate({ listId: item.id, name: item.name, place: item.place ?? undefined, category: item.category ?? undefined, urgent: !item.urgent })}
           >
             <Text style={[styles.urgentChipText, item.urgent && styles.urgentChipTextActive]}>
-              🚨 Urgente
+              ðŸš¨ Urgente
             </Text>
           </TouchableOpacity>
           <View style={styles.badge}>
@@ -188,8 +210,8 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           </View>
         </View>
         <View style={styles.cardMeta}>
-          {item.place ? <Text style={styles.metaChip}>📍 {item.place}</Text> : null}
-          {item.category ? <Text style={styles.metaChip}>🏷 {item.category}</Text> : null}
+          {item.place ? <Text style={styles.metaChip}>ðŸ“ {item.place}</Text> : null}
+          {item.category ? <Text style={styles.metaChip}>ðŸ· {item.category}</Text> : null}
           <Text style={[styles.metaChip, { marginLeft: 'auto' }]}>{formatBrShortDate(item.createdAt)}</Text>
         </View>
       </TouchableOpacity>
@@ -215,7 +237,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Nenhuma lista ainda</Text>
-              <Text style={styles.emptySubtitle}>Crie uma lista para começar</Text>
+              <Text style={styles.emptySubtitle}>Crie uma lista para comeÃ§ar</Text>
             </View>
           }
         />
@@ -290,7 +312,6 @@ const styles = StyleSheet.create({
   modalList: { padding: 16, gap: 4 },
   activityRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.separator },
   activityDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent, marginTop: 5, flexShrink: 0 },
-  activityDotFridge: { backgroundColor: Colors.success },
   activityContent: { flex: 1, gap: 2 },
   activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   activityName: { fontWeight: '600' },

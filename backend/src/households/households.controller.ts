@@ -289,8 +289,8 @@ export class HouseholdsController {
 
   @Delete(':id/shopping-lists/:listId/items/:itemId')
   @ApiOperation({ summary: 'Remover item da lista' })
-  removeListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Request() req) {
-    return this.householdsService.removeListItem(id, listId, itemId, req.user.id);
+  removeListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Request() req, @Query('reason') reason?: string) {
+    return this.householdsService.removeListItem(id, listId, itemId, req.user.id, reason === 'sent_to_fridge' ? 'sent_to_fridge' : 'removed');
   }
 
 }

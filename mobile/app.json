@@ -14,7 +14,7 @@
       "backgroundColor": "#FFF8EE"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.guiuriarte.colmeia",
       "appleTeamId": "89M8K9745R",
       "buildNumber": "2",

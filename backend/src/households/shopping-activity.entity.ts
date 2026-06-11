@@ -5,19 +5,25 @@ import {
   CreateDateColumn,
 } from 'typeorm';
 
-@Entity('fridge_activity')
-export class FridgeActivity {
+@Entity('shopping_activity')
+export class ShoppingActivity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column()
   householdId: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  shoppingListId: string | null;
+
   @Column()
-  action: 'added' | 'removed' | 'updated';
+  action: 'added' | 'removed' | 'checked' | 'unchecked' | 'sent_to_fridge';
 
   @Column()
   itemName: string;
+
+  @Column({ nullable: true })
+  listName: string;
 
   @Column({ type: 'decimal', nullable: true })
   quantity: number;
@@ -30,21 +36,6 @@ export class FridgeActivity {
 
   @Column({ nullable: true })
   userName: string;
-
-  @Column({ nullable: true })
-  fromShoppingListName: string;
-
-  @Column({ nullable: true })
-  toShoppingListName: string;
-
-  @Column({ nullable: true })
-  storageName: string;
-
-  @Column({ nullable: true })
-  storageEmoji: string;
-
-  @Column({ nullable: true, type: 'text' })
-  details: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

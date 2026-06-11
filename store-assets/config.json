@@ -1,0 +1,30 @@
+{
+  "brand": {
+    "iconSource": "../mobile/assets/icon.png",
+    "bgTop": "#FFF9EF",
+    "bgBottom": "#FFE3AC",
+    "honey": "#F5A623",
+    "honeyLight": "#FFD27A",
+    "honeyPale": "#FFE9B8",
+    "textDark": "#4A3008",
+    "textSoft": "#7A5A22",
+    "hexAlpha": 26
+  },
+  "featureGraphic": {
+    "title": "Colmeia",
+    "tagline": "A casa compartilhada, organizada",
+    "features": "Geladeira  ·  Compras  ·  Validades"
+  },
+  "captions": [
+    { "file": "01-home", "title": "Toda a casa em um só lugar", "subtitle": "Geladeira, compras e quem mora com você" },
+    { "file": "02-fridge", "title": "Saiba o que tem na geladeira", "subtitle": "Quantidades e validades sempre atualizadas" },
+    { "file": "03-expiry", "title": "Nada vence sem avisar", "subtitle": "Notificações antes da validade" },
+    { "file": "04-shopping", "title": "Lista de compras em tempo real", "subtitle": "Todo mundo vê e marca junto" },
+    { "file": "05-send-to-fridge", "title": "Da lista direto para a geladeira", "subtitle": "Comprou? Vira estoque em um toque" },
+    { "file": "06-household", "title": "Convide quem mora com você", "subtitle": "Uma colmeia para a sua casa" }
+  ],
+  "targets": [
+    { "name": "play-phone", "width": 1080, "height": 1920, "outDir": "play/screenshots", "rawDir": "raw" },
+    { "name": "appstore-iphone-69", "width": 1320, "height": 2868, "outDir": "appstore/iphone-6.9", "rawDir": "raw" }
+  ]
+}

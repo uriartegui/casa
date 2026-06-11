@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, MoreThan, LessThan, Not, IsNull } from 'typeorm';
+import { DataSource, Repository, MoreThan, LessThan } from 'typeorm';
 import { randomInt } from 'crypto';
 import { EventsGateway } from '../events/events.gateway';
 import { Household } from './household.entity';
@@ -14,6 +14,7 @@ import { HouseholdMember } from './household-member.entity';
 import { HouseholdInvite } from './household-invite.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { FridgeActivity } from './fridge-activity.entity';
+import { ShoppingActivity } from './shopping-activity.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
@@ -49,6 +50,8 @@ export class HouseholdsService {
     private inviteRepo: Repository<HouseholdInvite>,
     @InjectRepository(FridgeActivity)
     private fridgeActivityRepo: Repository<FridgeActivity>,
+    @InjectRepository(ShoppingActivity)
+    private shoppingActivityRepo: Repository<ShoppingActivity>,
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
     private dataSource: DataSource,
@@ -287,6 +290,9 @@ export class HouseholdsService {
       relations: ['user'],
     });
     const userName = member?.user?.name ?? 'Alguém';
+    const storage = saved.storageId
+      ? await this.storageRepo.findOne({ where: { id: saved.storageId, householdId } })
+      : null;
 
     this.fridgeActivityRepo.save({
       householdId,
@@ -296,8 +302,10 @@ export class HouseholdsService {
       unit: saved.unit,
       userId,
       userName,
+      storageName: storage?.name ?? null,
+      storageEmoji: storage?.emoji ?? null,
       fromShoppingListName: (data as any).fromShoppingListName ?? null,
-    }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+    } as any).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
 
     return saved;
   }
@@ -309,11 +317,34 @@ export class HouseholdsService {
     dto: UpdateFridgeItemDto,
   ): Promise<FridgeItem> {
     await this.assertMember(householdId, userId);
-    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
+    const item = await this.fridgeRepo.findOne({
+      where: { id: itemId, householdId },
+      relations: ['storage'],
+    });
     if (!item) throw new NotFoundException('Item não encontrado');
+    const changedFields = this.getFridgeChangedFields(item, dto);
+
     Object.assign(item, dto);
     const saved = await this.fridgeRepo.save(item);
     this.eventsGateway.emitHouseholdUpdate(householdId);
+
+    if (changedFields.length > 0) {
+      const member = await this.membersRepo.findOne({ where: { userId, householdId }, relations: ['user'] });
+      const userName = member?.user?.name ?? 'Alguém';
+      this.fridgeActivityRepo.save({
+        householdId,
+        action: 'updated',
+        itemName: saved.name,
+        quantity: saved.quantity,
+        unit: saved.unit,
+        userId,
+        userName,
+        storageName: item.storage?.name ?? null,
+        storageEmoji: item.storage?.emoji ?? null,
+        details: changedFields.join(', '),
+      } as any).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+    }
+
     return saved;
   }
 
@@ -324,7 +355,10 @@ export class HouseholdsService {
     toShoppingListName?: string,
   ): Promise<void> {
     await this.assertMember(householdId, userId);
-    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
+    const item = await this.fridgeRepo.findOne({
+      where: { id: itemId, householdId },
+      relations: ['storage'],
+    });
     if (item) {
       const member = await this.membersRepo.findOne({ where: { userId, householdId }, relations: ['user'] });
       const userName = member?.user?.name ?? 'Alguém';
@@ -336,8 +370,10 @@ export class HouseholdsService {
         unit: item.unit,
         userId,
         userName,
+        storageName: item.storage?.name ?? null,
+        storageEmoji: item.storage?.emoji ?? null,
         toShoppingListName: toShoppingListName ?? undefined,
-      }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+      } as any).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
     }
     await this.fridgeRepo.delete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
@@ -392,6 +428,7 @@ export class HouseholdsService {
     try {
       await queryRunner.manager.delete(FridgeItem, { householdId });
       await queryRunner.manager.delete(FridgeActivity, { householdId });
+      await queryRunner.manager.delete(ShoppingActivity, { householdId });
       await queryRunner.manager.delete(ShoppingItem, { householdId });
       await queryRunner.manager.delete(ShoppingList, { householdId });
       await queryRunner.manager.delete(HouseholdCategory, { householdId });
@@ -416,6 +453,35 @@ export class HouseholdsService {
       where: { householdId, userId },
     });
     if (!member) throw new ForbiddenException('Sem acesso a esta casa');
+  }
+
+  private getFridgeChangedFields(item: FridgeItem, dto: UpdateFridgeItemDto): string[] {
+    const changed: string[] = [];
+
+    if (dto.name !== undefined && dto.name !== item.name) changed.push('nome');
+    if (dto.quantity !== undefined && Number(dto.quantity) !== Number(item.quantity)) changed.push('quantidade');
+    if (dto.unit !== undefined && dto.unit !== item.unit) changed.push('unidade');
+    if (dto.category !== undefined && (dto.category ?? null) !== (item.category ?? null)) changed.push('categoria');
+
+    if (dto.expirationDate !== undefined) {
+      const currentDate = item.expirationDate ? new Date(item.expirationDate).toISOString().slice(0, 10) : null;
+      if ((dto.expirationDate ?? null) !== currentDate) changed.push('validade');
+    }
+
+    return changed;
+  }
+
+  private async getHouseholdUserName(householdId: string, userId: string): Promise<string> {
+    const member = await this.membersRepo.findOne({
+      where: { userId, householdId },
+      relations: ['user'],
+    });
+    return member?.user?.name ?? 'Alguém';
+  }
+
+  private logShoppingActivity(data: Partial<ShoppingActivity>) {
+    this.shoppingActivityRepo.save(data as ShoppingActivity)
+      .catch((err) => this.logger.error('[ShoppingActivity] save error: ' + err?.message));
   }
 
   // Shopping Lists
@@ -493,11 +559,18 @@ export class HouseholdsService {
     const saved = await this.shoppingRepo.save(item) as ShoppingItem;
     this.eventsGateway.emitHouseholdUpdate(householdId);
 
-    const member = await this.membersRepo.findOne({
-      where: { userId, householdId },
-      relations: ['user'],
+    const userName = await this.getHouseholdUserName(householdId, userId);
+    this.logShoppingActivity({
+      householdId,
+      shoppingListId: list.id,
+      action: 'added',
+      itemName: saved.name,
+      listName: list.name,
+      quantity: saved.quantity,
+      unit: saved.unit,
+      userId,
+      userName,
     });
-    const userName = member?.user?.name ?? 'Alguém';
     this.notificationsService
       .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
       .catch(() => {});
@@ -507,65 +580,89 @@ export class HouseholdsService {
 
   async toggleListItem(householdId: string, listId: string, itemId: string, userId: string, dto: { checked?: boolean }): Promise<ShoppingItem> {
     await this.assertMember(householdId, userId);
-    const item = await this.shoppingRepo.findOne({ where: { id: itemId, shoppingListId: listId, householdId } });
+    const item = await this.shoppingRepo.findOne({
+      where: { id: itemId, shoppingListId: listId, householdId },
+      relations: ['shoppingList'],
+    });
     if (!item) throw new NotFoundException('Item não encontrado');
+    const previousChecked = item.checked;
     if (dto.checked !== undefined) item.checked = dto.checked;
     const saved = await this.shoppingRepo.save(item);
     this.eventsGateway.emitHouseholdUpdate(householdId);
+    if (dto.checked !== undefined && dto.checked !== previousChecked) {
+      const userName = await this.getHouseholdUserName(householdId, userId);
+      this.logShoppingActivity({
+        householdId,
+        shoppingListId: listId,
+        action: dto.checked ? 'checked' : 'unchecked',
+        itemName: saved.name,
+        listName: item.shoppingList?.name ?? 'lista',
+        quantity: saved.quantity,
+        unit: saved.unit,
+        userId,
+        userName,
+      });
+    }
     return saved;
   }
 
-  async removeListItem(householdId: string, listId: string, itemId: string, userId: string): Promise<void> {
+  async removeListItem(householdId: string, listId: string, itemId: string, userId: string, reason: 'removed' | 'sent_to_fridge' = 'removed'): Promise<void> {
     await this.assertMember(householdId, userId);
+    const item = await this.shoppingRepo.findOne({
+      where: { id: itemId, shoppingListId: listId, householdId },
+      relations: ['shoppingList'],
+    });
+    if (item) {
+      const userName = await this.getHouseholdUserName(householdId, userId);
+      this.logShoppingActivity({
+        householdId,
+        shoppingListId: listId,
+        action: reason,
+        itemName: item.name,
+        listName: item.shoppingList?.name ?? 'lista',
+        quantity: item.quantity,
+        unit: item.unit,
+        userId,
+        userName,
+      });
+    }
     await this.shoppingRepo.softDelete({ id: itemId, shoppingListId: listId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   async clearCheckedListItems(householdId: string, listId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
+    const items = await this.shoppingRepo.find({
+      where: { shoppingListId: listId, householdId, checked: true },
+      relations: ['shoppingList'],
+    });
+    if (items.length > 0) {
+      const userName = await this.getHouseholdUserName(householdId, userId);
+      items.forEach((item) => {
+        this.logShoppingActivity({
+          householdId,
+          shoppingListId: listId,
+          action: 'removed',
+          itemName: item.name,
+          listName: item.shoppingList?.name ?? 'lista',
+          quantity: item.quantity,
+          unit: item.unit,
+          userId,
+          userName,
+        });
+      });
+    }
     await this.shoppingRepo.softDelete({ shoppingListId: listId, householdId, checked: true });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   async getShoppingActivity(householdId: string, userId: string) {
     await this.assertMember(householdId, userId);
-
-    const [shoppingItems, fridgeItems] = await Promise.all([
-      this.shoppingRepo.find({
-        where: { householdId },
-        relations: ['createdBy', 'shoppingList'],
-        withDeleted: true,
-        order: { createdAt: 'DESC' },
-        take: 40,
-      }),
-      this.fridgeRepo.find({
-        where: { householdId, fromShoppingListName: Not(IsNull()) },
-        relations: ['createdBy'],
-        order: { createdAt: 'DESC' },
-        take: 40,
-      }),
-    ]);
-
-    return [
-      ...shoppingItems.map((i) => ({
-        id: `shop_${i.id}`,
-        type: 'added' as const,
-        name: i.name,
-        listName: i.shoppingList?.name ?? 'lista',
-        createdBy: i.createdBy,
-        createdAt: i.createdAt,
-      })),
-      ...fridgeItems.map((i) => ({
-        id: `fridge_${i.id}`,
-        type: 'sent_to_fridge' as const,
-        name: i.name,
-        listName: i.fromShoppingListName!,
-        createdBy: i.createdBy,
-        createdAt: i.createdAt,
-      })),
-    ]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 50);
+    return this.shoppingActivityRepo.find({
+      where: { householdId },
+      order: { createdAt: 'DESC' },
+      take: 50,
+    });
   }
 
   async getFridgeActivity(householdId: string, userId: string) {

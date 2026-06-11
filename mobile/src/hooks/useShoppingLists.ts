@@ -127,6 +127,7 @@ export function useToggleListItem(householdId: string, listId: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -134,8 +135,11 @@ export function useToggleListItem(householdId: string, listId: string) {
 export function useRemoveListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (itemId: string) => {
-      await api.delete(`/households/${householdId}/shopping-lists/${listId}/items/${itemId}`);
+    mutationFn: async (input: string | { itemId: string; reason?: 'removed' | 'sent_to_fridge' }) => {
+      const itemId = typeof input === 'string' ? input : input.itemId;
+      const reason = typeof input === 'string' ? undefined : input.reason;
+      const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+      await api.delete(`/households/${householdId}/shopping-lists/${listId}/items/${itemId}${params}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
@@ -153,6 +157,8 @@ export function useClearCheckedListItems(householdId: string, listId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }

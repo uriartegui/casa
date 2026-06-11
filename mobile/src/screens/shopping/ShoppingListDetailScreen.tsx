@@ -5,7 +5,6 @@ import {
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
   KeyboardAvoidingView, Platform, ScrollView, Share,
 } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import {
@@ -156,18 +155,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     ]);
   }
 
-  const handleDelete = useCallback((itemId: string) => {
-    Alert.alert('Remover item', 'Tem certeza?', [
-      { text: 'Cancelar', style: 'cancel' },
+  const handleDelete = useCallback((itemId: string, itemName?: string) => {
+    Alert.alert(itemName ? `Remover "${itemName}" da lista?` : 'Remover item da lista?', 'Voce esta excluindo este item da lista.', [
       { text: 'Remover', style: 'destructive', onPress: () => removeItem.mutate(itemId) },
+      { text: 'Cancelar', style: 'cancel' },
     ]);
   }, [removeItem]);
-
-  const renderRightActions = useCallback((itemId: string) => (
-    <TouchableOpacity style={styles.deleteAction} onPress={() => handleDelete(itemId)}>
-      <Text style={styles.deleteActionText}>Remover</Text>
-    </TouchableOpacity>
-  ), [handleDelete]);
 
   const pending = items?.filter((i) => !i.checked) ?? [];
   const bought = items?.filter((i) => i.checked) ?? [];
@@ -242,19 +235,28 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   function renderItem({ item }: { item: ShoppingItem }) {
     return (
-      <Swipeable renderRightActions={() => renderRightActions(item.id)} overshootRight={false}>
-        <TouchableOpacity style={styles.itemRow} onPress={() => handleToggle(item)} activeOpacity={0.7}>
-          <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-            {item.checked && <Text style={styles.checkmark}>✓</Text>}
-          </View>
-          <View style={styles.itemInfo}>
-            <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>{item.name}</Text>
-          </View>
-          <Text style={[styles.itemQty, item.checked && styles.itemQtyChecked]}>
-            {item.quantity} {item.unit ?? ''}
-          </Text>
+      <TouchableOpacity style={styles.itemRow} onPress={() => handleToggle(item)} activeOpacity={0.7}>
+        <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
+          {item.checked && <Text style={styles.checkmark}>✓</Text>}
+        </View>
+        <View style={styles.itemInfo}>
+          <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>{item.name}</Text>
+        </View>
+        <Text style={[styles.itemQty, item.checked && styles.itemQtyChecked]}>
+          {item.quantity} {item.unit ?? ''}
+        </Text>
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={(event) => {
+            event.stopPropagation();
+            handleDelete(item.id, item.name);
+          }}
+          activeOpacity={0.7}
+          accessibilityLabel={`Remover ${item.name}`}
+        >
+          <Text style={styles.removeButtonText}>X</Text>
         </TouchableOpacity>
-      </Swipeable>
+      </TouchableOpacity>
     );
   }
 
@@ -530,13 +532,16 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1 },
   itemName: { fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
   itemNameChecked: { color: Colors.textSecondary, textDecorationLine: 'line-through' },
-  itemQty: { fontSize: 13, color: Colors.textSecondary },
+  itemQty: { fontSize: 13, color: Colors.textSecondary, flexShrink: 0 },
   itemQtyChecked: { color: Colors.border },
-  deleteAction: {
-    backgroundColor: Colors.destructive, justifyContent: 'center', alignItems: 'center',
-    width: 80, borderRadius: 10, marginHorizontal: 4, marginBottom: 2,
+  removeButton: {
+    minWidth: 24,
+    minHeight: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  deleteActionText: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  removeButtonText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600', lineHeight: 18 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
