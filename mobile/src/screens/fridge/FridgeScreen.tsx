@@ -348,7 +348,6 @@ export default function FridgeScreen({ navigation }: Props) {
             <TouchableOpacity
               style={styles.consumeButton}
               onPress={() => consumeItem.mutate({ itemId: item.id })}
-              disabled={consumeItem.isPending}
             >
               <Text style={styles.consumeButtonText}>-1</Text>
             </TouchableOpacity>

@@ -96,7 +96,22 @@ export function useConsumeFridgeItem(householdId: string) {
       );
       return response.data;
     },
-    onSuccess: (_data, variables) => {
+    // Baixa imediata na UI: decrementa (ou some com) o item em todos os
+    // caches da geladeira e reverte se o servidor falhar.
+    onMutate: async ({ itemId, amount = 1 }) => {
+      await queryClient.cancelQueries({ queryKey: ['fridge', householdId] });
+      const previous = queryClient.getQueriesData<FridgeItem[]>({ queryKey: ['fridge', householdId] });
+      queryClient.setQueriesData<FridgeItem[]>({ queryKey: ['fridge', householdId] }, (old) =>
+        old
+          ?.map((i) => (i.id === itemId ? { ...i, quantity: Number(i.quantity) - amount } : i))
+          .filter((i) => i.id !== itemId || Number(i.quantity) > 0),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
       queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId, variables.itemId] });
       queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
