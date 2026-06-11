@@ -86,39 +86,6 @@ export function useUpdateFridgeItem(householdId: string) {
   });
 }
 
-export function useConsumeFridgeItem(householdId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ itemId, amount = 1 }: { itemId: string; amount?: number }) => {
-      const response = await api.post<FridgeItem | { removed: true }>(
-        `/households/${householdId}/fridge/${itemId}/consume`,
-        { amount },
-      );
-      return response.data;
-    },
-    // Baixa imediata na UI: decrementa (ou some com) o item em todos os
-    // caches da geladeira e reverte se o servidor falhar.
-    onMutate: async ({ itemId, amount = 1 }) => {
-      await queryClient.cancelQueries({ queryKey: ['fridge', householdId] });
-      const previous = queryClient.getQueriesData<FridgeItem[]>({ queryKey: ['fridge', householdId] });
-      queryClient.setQueriesData<FridgeItem[]>({ queryKey: ['fridge', householdId] }, (old) =>
-        old
-          ?.map((i) => (i.id === itemId ? { ...i, quantity: Number(i.quantity) - amount } : i))
-          .filter((i) => i.id !== itemId || Number(i.quantity) > 0),
-      );
-      return { previous };
-    },
-    onError: (_err, _vars, context) => {
-      context?.previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
-    },
-    onSettled: (_data, _err, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['fridge', householdId] });
-      queryClient.invalidateQueries({ queryKey: ['fridge-item', householdId, variables.itemId] });
-      queryClient.invalidateQueries({ queryKey: ['fridge-activity', householdId] });
-    },
-  });
-}
-
 export function useRemoveFridgeItem(householdId: string) {
   const queryClient = useQueryClient();
   return useMutation({

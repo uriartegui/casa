@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge, useRemoveFridgeItem, useFridgeActivity, FridgeActivityEntry, useConsumeFridgeItem } from '../../hooks/useFridge';
+import { useFridge, useRemoveFridgeItem, useFridgeActivity, FridgeActivityEntry } from '../../hooks/useFridge';
 import { useStorages, useDeleteStorage, useUpdateStorage } from '../../hooks/useStorages';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { api } from '../../services/api';
@@ -47,7 +47,6 @@ export default function FridgeScreen({ navigation }: Props) {
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
-  const consumeItem = useConsumeFridgeItem(effectiveId ?? '');
   const { data: shoppingLists } = useShoppingLists(effectiveId);
   const { data: activityLog, refetch: refetchActivity } = useFridgeActivity(effectiveId);
   const queryClient = useQueryClient();
@@ -276,7 +275,7 @@ export default function FridgeScreen({ navigation }: Props) {
                 name: item.name,
                 quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
                 unit: item.unit ?? 'un',
-                source: 'fridge-empty',
+                category: item.category ?? undefined,
               });
               queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
               queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
@@ -345,12 +344,6 @@ export default function FridgeScreen({ navigation }: Props) {
             {!item.expirationDate && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
           </View>
           <View style={styles.itemRight}>
-            <TouchableOpacity
-              style={styles.consumeButton}
-              onPress={() => consumeItem.mutate({ itemId: item.id })}
-            >
-              <Text style={styles.consumeButtonText}>-1</Text>
-            </TouchableOpacity>
             {exp && badgeBg && (
               <View style={[styles.expBadge, { backgroundColor: badgeBg }]}>
                 <Text style={[styles.expBadgeText, { color: badgeText }]}>{exp.text}</Text>
@@ -670,17 +663,6 @@ const styles = StyleSheet.create({
   itemInfo: { flex: 1, gap: 2 },
   itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
   itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  consumeButton: {
-    minWidth: 38,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: Colors.accent + '18',
-    borderWidth: 1,
-    borderColor: Colors.accent + '55',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  consumeButtonText: { fontSize: 13, fontWeight: '800', color: Colors.accent },
   expBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   expBadgeText: { fontSize: 11, fontWeight: '700' },
   deleteAction: {

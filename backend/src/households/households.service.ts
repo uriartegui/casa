@@ -287,9 +287,6 @@ export class HouseholdsService {
       relations: ['user'],
     });
     const userName = member?.user?.name ?? 'Alguém';
-    this.notificationsService
-      .notifyHouseholdMembers(householdId, userId, '🧊 Item adicionado na geladeira', `${userName} adicionou ${saved.name}`)
-      .catch(() => {});
 
     this.fridgeActivityRepo.save({
       householdId,
@@ -320,28 +317,6 @@ export class HouseholdsService {
     return saved;
   }
 
-  async consumeFridgeItem(
-    householdId: string,
-    itemId: string,
-    userId: string,
-    amount: number,
-  ): Promise<FridgeItem | { removed: true }> {
-    await this.assertMember(householdId, userId);
-    const item = await this.fridgeRepo.findOne({ where: { id: itemId, householdId } });
-    if (!item) throw new NotFoundException('Item não encontrado');
-
-    const next = Math.max(0, Number(item.quantity) - amount);
-    if (next <= 0) {
-      await this.removeFridgeItem(householdId, itemId, userId);
-      return { removed: true };
-    }
-
-    item.quantity = next;
-    const saved = await this.fridgeRepo.save(item);
-    this.eventsGateway.emitHouseholdUpdate(householdId);
-    return saved;
-  }
-
   async removeFridgeItem(
     householdId: string,
     itemId: string,
@@ -363,29 +338,6 @@ export class HouseholdsService {
         userName,
         toShoppingListName: toShoppingListName ?? undefined,
       }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
-
-      const title = toShoppingListName
-        ? 'Item voltou para a lista'
-        : 'Item acabou na geladeira';
-      const body = toShoppingListName
-        ? `${userName} acabou com ${item.name} e mandou para "${toShoppingListName}"`
-        : `${item.name} acabou. Quer colocar na lista?`;
-      const options = toShoppingListName
-        ? undefined
-        : {
-            categoryId: 'fridge-empty',
-            data: {
-              type: 'fridge-empty',
-              householdId,
-              itemName: item.name,
-              quantity: Number(item.quantity) || 1,
-              unit: item.unit ?? 'un',
-              category: item.category ?? undefined,
-            },
-          };
-      this.notificationsService
-        .notifyAllMembers(householdId, title, body, options)
-        .catch(() => {});
     }
     await this.fridgeRepo.delete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
@@ -546,40 +498,10 @@ export class HouseholdsService {
       relations: ['user'],
     });
     const userName = member?.user?.name ?? 'Alguém';
-    if (dto.source !== 'fridge-empty') {
-      this.notificationsService
-        .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
-        .catch(() => {});
-    }
+    this.notificationsService
+      .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
+      .catch(() => {});
 
-    return saved;
-  }
-
-  async restockItemFromNotification(
-    householdId: string,
-    userId: string,
-    dto: AddListItemDto,
-  ): Promise<ShoppingItem> {
-    await this.assertMember(householdId, userId);
-    const list = await this.getOrCreateRestockList(householdId, userId);
-    return this.addListItem(householdId, list.id, userId, dto);
-  }
-
-  private async getOrCreateRestockList(householdId: string, userId: string): Promise<ShoppingList> {
-    const existing = await this.shoppingListsRepo.findOne({
-      where: { householdId, name: 'Reposição' },
-    });
-    if (existing) return existing;
-
-    const list = this.shoppingListsRepo.create({
-      householdId,
-      createdById: userId,
-      name: 'Reposição',
-      place: null,
-      category: null,
-    });
-    const saved = await this.shoppingListsRepo.save(list);
-    this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
   }
 

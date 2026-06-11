@@ -25,7 +25,6 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
-import { ConsumeFridgeItemDto } from './dto/consume-fridge-item.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -213,17 +212,6 @@ export class HouseholdsController {
     return this.householdsService.updateFridgeItem(id, itemId, req.user.id, dto);
   }
 
-  @Post(':id/fridge/:itemId/consume')
-  @ApiOperation({ summary: 'Consumir quantidade de um item da geladeira' })
-  consumeItem(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Body() dto: ConsumeFridgeItemDto,
-    @Request() req,
-  ) {
-    return this.householdsService.consumeFridgeItem(id, itemId, req.user.id, dto.amount ?? 1);
-  }
-
   @Delete(':id/fridge/:itemId')
   @ApiOperation({ summary: 'Remover item da geladeira' })
   removeItem(
@@ -285,12 +273,6 @@ export class HouseholdsController {
   @ApiOperation({ summary: 'Adicionar item à lista' })
   addListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: AddListItemDto, @Request() req) {
     return this.householdsService.addListItem(id, listId, req.user.id, dto);
-  }
-
-  @Post(':id/shopping-items/restock')
-  @ApiOperation({ summary: 'Adicionar item de reposicao a partir de uma notificacao' })
-  restockFromNotification(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AddListItemDto, @Request() req) {
-    return this.householdsService.restockItemFromNotification(id, req.user.id, dto);
   }
 
   @Patch(':id/shopping-lists/:listId/items/:itemId')
