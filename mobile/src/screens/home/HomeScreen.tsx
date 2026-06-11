@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -26,13 +26,6 @@ export default function HomeScreen() {
   const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
-
-  useEffect(() => {
-    if (isSelectedHouseholdReady && !selectedHouseholdId && households && households.length > 0) {
-      setSelectedHouseholdId(households[0].id);
-    }
-  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
-
 
   const household = households?.find((h) => h.id === effectiveId);
   const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);

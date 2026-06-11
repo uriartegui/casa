@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useJoinHousehold } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
@@ -17,6 +18,7 @@ type Props = {
 export default function JoinHouseholdScreen({ navigation, route }: Props) {
   const [code, setCode] = useState(route.params?.initialCode ?? '');
   const joinHousehold = useJoinHousehold();
+  const { setSelectedHouseholdId } = useSelectedHousehold();
 
   async function handleJoin() {
     if (!code.trim()) {
@@ -25,6 +27,7 @@ export default function JoinHouseholdScreen({ navigation, route }: Props) {
     }
     try {
       const household = await joinHousehold.mutateAsync(code.trim());
+      setSelectedHouseholdId(household.id);
       navigation.replace('HouseholdDetail', { householdId: household.id, householdName: household.name });
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';

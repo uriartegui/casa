@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { Household } from '../types';
 
 const SELECTED_HOUSEHOLD_KEY = '@casa:selected-household-id';
 
@@ -47,4 +48,22 @@ export function SelectedHouseholdProvider({ children }: { children: React.ReactN
 
 export function useSelectedHousehold() {
   return useContext(SelectedHouseholdContext);
+}
+
+export function useSelectedHouseholdSync(households: Household[] | undefined) {
+  const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
+
+  useEffect(() => {
+    if (!isSelectedHouseholdReady || !households) return;
+
+    if (households.length === 0) {
+      if (selectedHouseholdId) setSelectedHouseholdId(null);
+      return;
+    }
+
+    const selectedStillExists = households.some((household) => household.id === selectedHouseholdId);
+    if (!selectedHouseholdId || !selectedStillExists) {
+      setSelectedHouseholdId(households[0].id);
+    }
+  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
 }

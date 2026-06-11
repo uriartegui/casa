@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSelectedHouseholdSync } from '../context/SelectedHouseholdContext';
 import { useHouseholds } from '../hooks/useHouseholds';
 import { useHouseholdSync } from '../hooks/useHouseholdSync';
 import AuthStack from './AuthStack';
@@ -14,6 +15,7 @@ function AppGate() {
   const { data: households, isLoading } = useHouseholds();
   const [setupHouseholdId, setSetupHouseholdId] = useState<string | null>(null);
   useHouseholdSync(households);
+  useSelectedHouseholdSync(households);
 
   if (isLoading) {
     return (

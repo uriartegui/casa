@@ -129,17 +129,6 @@ export default function FridgeScreen({ navigation }: Props) {
   }, [navigation, households, effectiveId]);
 
   useEffect(() => {
-    if (!isSelectedHouseholdReady) return;
-    if (!households) return;
-    const valid = households.find((h) => h.id === selectedHouseholdId);
-    if (selectedHouseholdId && !valid) {
-      setSelectedHouseholdId(null);
-    } else if (!selectedHouseholdId && households[0]) {
-      setSelectedHouseholdId(households[0].id);
-    }
-  }, [households, isSelectedHouseholdReady, selectedHouseholdId, setSelectedHouseholdId]);
-
-  useEffect(() => {
     setSelectedStorageId(null);
     setSelectedCategory(null);
   }, [effectiveId]);
