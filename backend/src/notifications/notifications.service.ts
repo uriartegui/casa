@@ -10,6 +10,9 @@ export type PushNotificationOptions = {
   categoryId?: string;
 };
 
+const NOTIFICATION_CHANNEL_ID = 'colmeia';
+const NOTIFICATION_SOUND = 'colmeia_chime.wav';
+
 @Injectable()
 export class NotificationsService {
   private expo = new Expo();
@@ -36,7 +39,8 @@ export class NotificationsService {
         to: token,
         title,
         body,
-        sound: 'default' as const,
+        sound: NOTIFICATION_SOUND,
+        channelId: NOTIFICATION_CHANNEL_ID,
         data: options.data,
         categoryId: options.categoryId,
       }));

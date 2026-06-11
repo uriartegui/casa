@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { api } from '../services/api';
 
 const PROJECT_ID = '1bbc4256-057a-4b26-895a-9ba95934e86c';
+const NOTIFICATION_SOUND = 'colmeia_chime.wav';
 
 type PushTokenResult =
   | { ok: true; token: string }
@@ -16,9 +17,10 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+    await Notifications.setNotificationChannelAsync('colmeia', {
+      name: 'Colmeia',
       importance: Notifications.AndroidImportance.MAX,
+      sound: NOTIFICATION_SOUND,
       vibrationPattern: [0, 250, 250, 250],
     });
   }
