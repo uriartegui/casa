@@ -39,13 +39,7 @@
     "plugins": [
       "@react-native-community/datetimepicker",
       "expo-secure-store",
-      "expo-font",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Permita que o Colmeia use a câmera para escanear códigos de barras."
-        }
-      ]
+      "expo-font"
     ],
     "owner": "guiuriarte19",
     "extra": {

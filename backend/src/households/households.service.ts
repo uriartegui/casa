@@ -363,6 +363,29 @@ export class HouseholdsService {
         userName,
         toShoppingListName: toShoppingListName ?? undefined,
       }).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+
+      const title = toShoppingListName
+        ? 'Item voltou para a lista'
+        : 'Item acabou na geladeira';
+      const body = toShoppingListName
+        ? `${userName} acabou com ${item.name} e mandou para "${toShoppingListName}"`
+        : `${item.name} acabou. Quer colocar na lista?`;
+      const options = toShoppingListName
+        ? undefined
+        : {
+            categoryId: 'fridge-empty',
+            data: {
+              type: 'fridge-empty',
+              householdId,
+              itemName: item.name,
+              quantity: Number(item.quantity) || 1,
+              unit: item.unit ?? 'un',
+              category: item.category ?? undefined,
+            },
+          };
+      this.notificationsService
+        .notifyAllMembers(householdId, title, body, options)
+        .catch(() => {});
     }
     await this.fridgeRepo.delete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
@@ -460,32 +483,6 @@ export class HouseholdsService {
     return lists.map((l) => Object.assign(l, { itemCount: countMap[l.id] ?? 0 }));
   }
 
-  async getShoppingSuggestions(householdId: string, userId: string) {
-    await this.assertMember(householdId, userId);
-    const rows = await this.shoppingRepo
-      .createQueryBuilder('item')
-      .withDeleted()
-      .select('LOWER(TRIM(item.name))', 'key')
-      .addSelect('MIN(item.name)', 'name')
-      .addSelect('MAX(item.unit)', 'unit')
-      .addSelect('MAX(item.category)', 'category')
-      .addSelect('COUNT(*)', 'count')
-      .where('item.householdId = :householdId', { householdId })
-      .andWhere('item.name IS NOT NULL')
-      .groupBy('LOWER(TRIM(item.name))')
-      .orderBy('COUNT(*)', 'DESC')
-      .addOrderBy('MAX(item.createdAt)', 'DESC')
-      .limit(12)
-      .getRawMany<{ name: string; unit: string | null; category: string | null; count: string }>();
-
-    return rows.map((row) => ({
-      name: row.name,
-      unit: row.unit ?? 'un',
-      category: row.category,
-      count: Number(row.count),
-    }));
-  }
-
   async createShoppingList(householdId: string, userId: string, dto: CreateShoppingListDto): Promise<ShoppingList> {
     await this.assertMember(householdId, userId);
     const list = this.shoppingListsRepo.create({
@@ -549,10 +546,40 @@ export class HouseholdsService {
       relations: ['user'],
     });
     const userName = member?.user?.name ?? 'Alguém';
-    this.notificationsService
-      .notifyHouseholdMembers(householdId, userId, '🛒 Item adicionado na lista', `${userName} adicionou ${saved.name} em "${list.name}"`)
-      .catch(() => {});
+    if (dto.source !== 'fridge-empty') {
+      this.notificationsService
+        .notifyHouseholdMembers(householdId, userId, 'Item adicionado na lista', `${userName} adicionou ${saved.name} em "${list.name}"`)
+        .catch(() => {});
+    }
 
+    return saved;
+  }
+
+  async restockItemFromNotification(
+    householdId: string,
+    userId: string,
+    dto: AddListItemDto,
+  ): Promise<ShoppingItem> {
+    await this.assertMember(householdId, userId);
+    const list = await this.getOrCreateRestockList(householdId, userId);
+    return this.addListItem(householdId, list.id, userId, dto);
+  }
+
+  private async getOrCreateRestockList(householdId: string, userId: string): Promise<ShoppingList> {
+    const existing = await this.shoppingListsRepo.findOne({
+      where: { householdId, name: 'Reposição' },
+    });
+    if (existing) return existing;
+
+    const list = this.shoppingListsRepo.create({
+      householdId,
+      createdById: userId,
+      name: 'Reposição',
+      place: null,
+      category: null,
+    });
+    const saved = await this.shoppingListsRepo.save(list);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
     return saved;
   }
 

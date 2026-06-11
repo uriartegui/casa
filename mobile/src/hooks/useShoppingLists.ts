@@ -64,24 +64,6 @@ export function useListItems(householdId: string | null, listId: string | null) 
   });
 }
 
-export interface ShoppingSuggestion {
-  name: string;
-  unit: string;
-  category?: string | null;
-  count: number;
-}
-
-export function useShoppingSuggestions(householdId: string | null) {
-  return useQuery({
-    queryKey: ['shopping-suggestions', householdId],
-    queryFn: async () => {
-      const res = await api.get<ShoppingSuggestion[]>(`/households/${householdId}/shopping-suggestions`);
-      return res.data;
-    },
-    enabled: !!householdId,
-  });
-}
-
 export function useAddListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
   const queryKey = ['shopping-list-items', householdId, listId];

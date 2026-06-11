@@ -287,6 +287,7 @@ export default function FridgeScreen({ navigation }: Props) {
                 name: item.name,
                 quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
                 unit: item.unit ?? 'un',
+                source: 'fridge-empty',
               });
               queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
               queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });

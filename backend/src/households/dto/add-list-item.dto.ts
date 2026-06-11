@@ -20,4 +20,9 @@ export class AddListItemDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({ example: 'fridge-empty' })
+  @IsOptional()
+  @IsString()
+  source?: string;
 }

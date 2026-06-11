@@ -5,6 +5,11 @@ import Expo, { ExpoPushMessage } from 'expo-server-sdk';
 import { HouseholdMember } from '../households/household-member.entity';
 import { PushToken } from '../users/push-token.entity';
 
+export type PushNotificationOptions = {
+  data?: Record<string, unknown>;
+  categoryId?: string;
+};
+
 @Injectable()
 export class NotificationsService {
   private expo = new Expo();
@@ -17,24 +22,37 @@ export class NotificationsService {
     private pushTokensRepo: Repository<PushToken>,
   ) {}
 
-  private async getPushMessages(userIds: string[], title: string, body: string): Promise<ExpoPushMessage[]> {
+  private async getPushMessages(
+    userIds: string[],
+    title: string,
+    body: string,
+    options: PushNotificationOptions = {},
+  ): Promise<ExpoPushMessage[]> {
     const tokens = await this.pushTokensRepo.find({ where: { userId: In(userIds) } });
     const uniqueTokens = Array.from(new Set(tokens.map((t) => t.token)));
     return uniqueTokens
       .filter((token) => Expo.isExpoPushToken(token))
-      .map((token) => ({ to: token, title, body, sound: 'default' as const }));
+      .map((token) => ({
+        to: token,
+        title,
+        body,
+        sound: 'default' as const,
+        data: options.data,
+        categoryId: options.categoryId,
+      }));
   }
 
   async notifyAllMembers(
     householdId: string,
     title: string,
     body: string,
+    options?: PushNotificationOptions,
   ): Promise<void> {
     const members = await this.membersRepo.find({ where: { householdId } });
     const userIds = members.map((m) => m.userId);
     if (userIds.length === 0) return;
 
-    const messages = await this.getPushMessages(userIds, title, body);
+    const messages = await this.getPushMessages(userIds, title, body, options);
 
     if (messages.length === 0) {
       this.logger.log(`[${householdId}] Nenhum token válido`);
@@ -60,6 +78,7 @@ export class NotificationsService {
     excludeUserId: string,
     title: string,
     body: string,
+    options?: PushNotificationOptions,
   ): Promise<void> {
     const members = await this.membersRepo.find({ where: { householdId } });
     const otherUserIds = members
@@ -68,7 +87,7 @@ export class NotificationsService {
 
     if (otherUserIds.length === 0) return;
 
-    const messages = await this.getPushMessages(otherUserIds, title, body);
+    const messages = await this.getPushMessages(otherUserIds, title, body, options);
 
     if (messages.length === 0) {
       this.logger.log(`[${householdId}] Nenhum token válido para notificar`);

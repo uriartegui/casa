@@ -261,6 +261,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
@@ -294,8 +295,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: Colors.separator,
   },
   suggestionText: { fontSize: 15, color: Colors.textPrimary },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  button: {
+    backgroundColor: Colors.accent,
+    borderRadius: 10,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+  },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 20, textAlign: 'center' },
 
   // Modal
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },

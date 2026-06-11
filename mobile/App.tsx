@@ -30,6 +30,7 @@ import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContex
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
+import { api } from './src/services/api';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const linking: LinkingOptions<any> = {
@@ -48,6 +49,42 @@ const linking: LinkingOptions<any> = {
 function App() {
   useEffect(() => {
     Notifications.requestPermissionsAsync();
+    Notifications.setNotificationCategoryAsync('fridge-empty', [
+      {
+        identifier: 'add-to-list',
+        buttonTitle: 'Adicionar à lista',
+        options: { opensAppToForeground: true },
+      },
+    ]);
+
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      if (response.actionIdentifier !== 'add-to-list') return;
+
+      const data = response.notification.request.content.data as {
+        type?: string;
+        householdId?: string;
+        itemName?: string;
+        quantity?: number;
+        unit?: string;
+        category?: string;
+      };
+
+      if (data.type !== 'fridge-empty' || !data.householdId || !data.itemName) return;
+
+      api.post(`/households/${data.householdId}/shopping-items/restock`, {
+        name: data.itemName,
+        quantity: data.quantity ?? 1,
+        unit: data.unit ?? 'un',
+        category: data.category,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['shopping-lists', data.householdId] });
+        queryClient.invalidateQueries({ queryKey: ['shopping-activity', data.householdId] });
+      }).catch((err) => {
+        console.warn('[Push action] Não foi possível adicionar item à lista:', err?.message ?? err);
+      });
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (

@@ -255,12 +255,6 @@ export class HouseholdsController {
     return this.householdsService.getShoppingLists(id, req.user.id);
   }
 
-  @Get(':id/shopping-suggestions')
-  @ApiOperation({ summary: 'Itens recorrentes para listas de compras' })
-  getShoppingSuggestions(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
-    return this.householdsService.getShoppingSuggestions(id, req.user.id);
-  }
-
   @Post(':id/shopping-lists')
   @ApiOperation({ summary: 'Criar lista de compras' })
   createShoppingList(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateShoppingListDto, @Request() req) {
@@ -291,6 +285,12 @@ export class HouseholdsController {
   @ApiOperation({ summary: 'Adicionar item à lista' })
   addListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: AddListItemDto, @Request() req) {
     return this.householdsService.addListItem(id, listId, req.user.id, dto);
+  }
+
+  @Post(':id/shopping-items/restock')
+  @ApiOperation({ summary: 'Adicionar item de reposicao a partir de uma notificacao' })
+  restockFromNotification(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AddListItemDto, @Request() req) {
+    return this.householdsService.restockItemFromNotification(id, req.user.id, dto);
   }
 
   @Patch(':id/shopping-lists/:listId/items/:itemId')
