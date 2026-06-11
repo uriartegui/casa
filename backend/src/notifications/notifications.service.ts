@@ -39,7 +39,7 @@ export class NotificationsService {
         to: token,
         title,
         body,
-        sound: NOTIFICATION_SOUND,
+        sound: { name: NOTIFICATION_SOUND },
         channelId: NOTIFICATION_CHANNEL_ID,
         data: options.data,
         categoryId: options.categoryId,
