@@ -1,74 +1,69 @@
-// Categorias na ordem típica dos corredores de mercado — usada também
-// para ordenar as seções da lista de compras.
-export const SHOPPING_CATEGORIES = [
-  'Hortifrúti',
-  'Carnes',
-  'Laticínios',
-  'Padaria',
-  'Mercearia',
-  'Bebidas',
-  'Congelados',
-  'Limpeza',
-  'Higiene',
-  'Outros',
-] as const;
-
-export type ShoppingCategory = (typeof SHOPPING_CATEGORIES)[number];
-
-const ITEMS_BY_CATEGORY: Record<ShoppingCategory, string[]> = {
+// Itens conhecidos agrupados pelos rótulos das categorias padrão da casa
+// (criadas no backend ao criar a household) — assim a categoria sugerida
+// no bottom sheet bate com as opções que o usuário vê no picker.
+const ITEMS_BY_CATEGORY: Record<string, string[]> = {
   'Laticínios': [
     'Leite', 'Leite integral', 'Leite desnatado', 'Iogurte', 'Queijo', 'Queijo mussarela',
     'Queijo prato', 'Requeijão', 'Manteiga', 'Margarina', 'Creme de leite', 'Nata',
   ],
-  'Carnes': [
+  'Carnes & Ovos': [
     'Frango', 'Peito de frango', 'Coxa de frango', 'Carne moída', 'Carne bovina',
     'Picanha', 'Alcatra', 'Patinho', 'Linguiça', 'Salsicha', 'Bacon', 'Presunto',
-    'Peixe', 'Salmão', 'Tilápia', 'Atum', 'Camarão',
+    'Peixe', 'Salmão', 'Tilápia', 'Atum', 'Camarão', 'Ovos',
   ],
-  'Hortifrúti': [
+  'Verduras/Legumes': [
     'Alface', 'Tomate', 'Cebola', 'Alho', 'Batata', 'Batata-doce', 'Cenoura',
     'Brócolis', 'Couve', 'Espinafre', 'Pepino', 'Abobrinha', 'Berinjela',
     'Pimentão', 'Milho', 'Ervilha', 'Beterraba', 'Chuchu', 'Mandioca',
+  ],
+  'Frutas': [
     'Banana', 'Maçã', 'Laranja', 'Limão', 'Mamão', 'Melão', 'Melancia',
     'Uva', 'Morango', 'Abacaxi', 'Manga', 'Abacate',
   ],
-  'Padaria': [
-    'Pão de forma', 'Pão francês', 'Bolo', 'Torrada',
+  'Grãos & Cereais': [
+    'Arroz', 'Feijão', 'Feijão preto', 'Aveia', 'Granola',
   ],
-  'Mercearia': [
-    'Arroz', 'Feijão', 'Feijão preto', 'Macarrão', 'Farinha de trigo', 'Fubá',
-    'Aveia', 'Granola', 'Tapioca',
-    'Ovos', 'Azeite', 'Óleo', 'Vinagre', 'Molho de tomate', 'Extrato de tomate',
-    'Sal', 'Açúcar', 'Mel', 'Café', 'Achocolatado',
+  'Massas & Farinhas': [
+    'Macarrão', 'Farinha de trigo', 'Fubá', 'Tapioca',
+  ],
+  'Molhos & Condimentos': [
+    'Azeite', 'Óleo', 'Vinagre', 'Molho de tomate', 'Extrato de tomate',
+  ],
+  'Temperos': [
+    'Sal',
   ],
   'Bebidas': [
     'Água', 'Suco de laranja', 'Suco de uva', 'Refrigerante', 'Cerveja',
   ],
-  'Congelados': [
+  'Pratos prontos': [
     'Pizza congelada', 'Lasanha', 'Nuggets', 'Hambúrguer',
   ],
-  'Limpeza': [
-    'Detergente', 'Sabão em pó', 'Amaciante', 'Desinfetante', 'Esponja',
-  ],
-  'Higiene': [
-    'Papel higiênico', 'Sabonete', 'Shampoo', 'Condicionador', 'Pasta de dente',
-  ],
-  'Outros': [],
 };
 
-export const COMMON_ITEMS = Object.values(ITEMS_BY_CATEGORY).flat();
+// Itens comuns sem categoria padrão correspondente (mercearia seca,
+// padaria, limpeza e higiene) — entram nas sugestões sem pré-seleção.
+const UNCATEGORIZED_ITEMS = [
+  'Pão de forma', 'Pão francês', 'Açúcar', 'Mel', 'Café', 'Achocolatado',
+  'Detergente', 'Sabão em pó', 'Amaciante', 'Desinfetante', 'Esponja',
+  'Papel higiênico', 'Sabonete', 'Shampoo', 'Condicionador', 'Pasta de dente',
+];
+
+export const COMMON_ITEMS = [
+  ...Object.values(ITEMS_BY_CATEGORY).flat(),
+  ...UNCATEGORIZED_ITEMS,
+];
 
 function normalize(text: string): string {
   return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-const CATEGORY_BY_ITEM = new Map<string, ShoppingCategory>(
-  (Object.entries(ITEMS_BY_CATEGORY) as [ShoppingCategory, string[]][])
+const CATEGORY_BY_ITEM = new Map<string, string>(
+  Object.entries(ITEMS_BY_CATEGORY)
     .flatMap(([category, items]) => items.map((item) => [normalize(item), category] as const)),
 );
 
-/** Sugere a categoria de mercado para um nome de item, se for um item conhecido. */
-export function categoryFor(name: string): ShoppingCategory | null {
+/** Sugere a categoria (rótulo padrão da casa) para um item conhecido. */
+export function categoryFor(name: string): string | null {
   return CATEGORY_BY_ITEM.get(normalize(name)) ?? null;
 }
 

@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import * as Sentry from '@sentry/react-native';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 
 Sentry.init({
@@ -19,7 +19,7 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { createNavigationContainerRef, NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -27,10 +27,14 @@ import { StatusBar } from 'expo-status-bar';
 import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
 import { AuthProvider } from './src/context/AuthContext';
 import { SelectedHouseholdProvider } from './src/context/SelectedHouseholdContext';
+import { useSelectedHousehold } from './src/context/SelectedHouseholdContext';
 import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { api } from './src/services/api';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const navigationRef = createNavigationContainerRef<any>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const linking: LinkingOptions<any> = {
@@ -46,29 +50,48 @@ const linking: LinkingOptions<any> = {
   },
 };
 
-function App() {
-  useEffect(() => {
-    Notifications.requestPermissionsAsync();
-    Notifications.setNotificationCategoryAsync('fridge-empty', [
-      {
-        identifier: 'add-to-list',
-        buttonTitle: 'Adicionar à lista',
-        options: { opensAppToForeground: true },
-      },
-    ]);
+type PushData = {
+  type?: string;
+  householdId?: string;
+  itemId?: string;
+  itemName?: string;
+  quantity?: number;
+  unit?: string;
+  category?: string;
+};
 
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      if (response.actionIdentifier !== 'add-to-list') return;
+function NotificationResponseHandler() {
+  const { setSelectedHouseholdId } = useSelectedHousehold();
+  const pendingExpirationRef = useRef<{ householdId: string; itemId: string } | null>(null);
 
-      const data = response.notification.request.content.data as {
-        type?: string;
-        householdId?: string;
-        itemName?: string;
-        quantity?: number;
-        unit?: string;
-        category?: string;
-      };
+  function navigateToExpirationItem(householdId: string, itemId: string) {
+    setSelectedHouseholdId(householdId);
 
+    if (!navigationRef.isReady()) {
+      pendingExpirationRef.current = { householdId, itemId };
+      return;
+    }
+
+    navigationRef.navigate('GeladeirTab', {
+      screen: 'FridgeItemDetail',
+      params: { householdId, itemId },
+    });
+  }
+
+  function flushPendingExpiration() {
+    const pending = pendingExpirationRef.current;
+    if (!pending || !navigationRef.isReady()) return;
+
+    pendingExpirationRef.current = null;
+    navigateToExpirationItem(pending.householdId, pending.itemId);
+  }
+
+  function handleNotificationResponse(response: Notifications.NotificationResponse | null) {
+    if (!response) return;
+
+    const data = response.notification.request.content.data as PushData;
+
+    if (response.actionIdentifier === 'add-to-list') {
       if (data.type !== 'fridge-empty' || !data.householdId || !data.itemName) return;
 
       api.post(`/households/${data.householdId}/shopping-items/restock`, {
@@ -80,11 +103,41 @@ function App() {
         queryClient.invalidateQueries({ queryKey: ['shopping-lists', data.householdId] });
         queryClient.invalidateQueries({ queryKey: ['shopping-activity', data.householdId] });
       }).catch((err) => {
-        console.warn('[Push action] Não foi possível adicionar item à lista:', err?.message ?? err);
+        console.warn('[Push action] Nao foi possivel adicionar item a lista:', err?.message ?? err);
       });
-    });
+      return;
+    }
+
+    if (data.type === 'expiration' && data.householdId && data.itemId) {
+      navigateToExpirationItem(data.householdId, data.itemId);
+    }
+  }
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+    Notifications.getLastNotificationResponseAsync().then(handleNotificationResponse).catch(() => {});
 
     return () => subscription.remove();
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(flushPendingExpiration, 0);
+    return () => clearTimeout(timeout);
+  });
+
+  return null;
+}
+
+function App() {
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+    Notifications.setNotificationCategoryAsync('fridge-empty', [
+      {
+        identifier: 'add-to-list',
+        buttonTitle: 'Adicionar à lista',
+        options: { opensAppToForeground: true },
+      },
+    ]);
   }, []);
 
   return (
@@ -94,7 +147,8 @@ function App() {
           <AuthProvider>
             <SelectedHouseholdProvider>
               <ToastProvider>
-                <NavigationContainer linking={linking}>
+                <NotificationResponseHandler />
+                <NavigationContainer ref={navigationRef} linking={linking}>
                   <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                     <View style={{ flex: 1 }}>
                       <StatusBar style="auto" />

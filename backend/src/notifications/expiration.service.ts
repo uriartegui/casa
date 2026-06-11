@@ -124,28 +124,30 @@ export class ExpirationService {
   private async notifyAlerts(alerts: ExpirationAlert[]): Promise<void> {
     if (alerts.length === 0) return;
 
-    const byHousehold = new Map<string, ExpirationAlert[]>();
     for (const alert of alerts) {
-      const list = byHousehold.get(alert.item.householdId) ?? [];
-      list.push(alert);
-      byHousehold.set(alert.item.householdId, list);
-    }
+      const householdId = alert.item.householdId;
+      this.logger.log(`[${householdId}] Enviando alerta: "${alert.body}"`);
 
-    for (const [householdId, hAlerts] of byHousehold) {
-      const body = hAlerts.map((alert) => alert.body).join('\n');
-      this.logger.log(`[${householdId}] Enviando alerta: "${body}"`);
-
-      await this.notificationsService.notifyAllMembers(householdId, 'Geladeira', body);
-
-      await this.notificationLogsRepo.save(
-        hAlerts.map((alert) =>
-          this.notificationLogsRepo.create({
+      await this.notificationsService.notifyAllMembers(
+        householdId,
+        'Validade na geladeira',
+        alert.body,
+        {
+          data: {
             type: 'expiration',
             householdId,
             itemId: alert.item.id,
-            dedupeKey: alert.dedupeKey,
-          }),
-        ),
+          },
+        },
+      );
+
+      await this.notificationLogsRepo.save(
+        this.notificationLogsRepo.create({
+          type: 'expiration',
+          householdId,
+          itemId: alert.item.id,
+          dedupeKey: alert.dedupeKey,
+        }),
       );
     }
   }
