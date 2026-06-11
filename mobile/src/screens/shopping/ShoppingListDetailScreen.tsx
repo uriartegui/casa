@@ -14,10 +14,9 @@ import {
 } from '../../hooks/useShoppingLists';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useAddFridgeItem } from '../../hooks/useFridge';
+import { useHouseholdCategoryGroups } from '../../hooks/useCategories';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
-import {
-  filterItems, categoryFor, SHOPPING_CATEGORIES, ShoppingCategory,
-} from '../../constants/commonItems';
+import { filterItems, categoryFor } from '../../constants/commonItems';
 import { Unit } from '../../types';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -42,12 +41,6 @@ function compareNames(a: ShoppingItem, b: ShoppingItem) {
   return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
 }
 
-// Categorias desconhecidas caem junto de "Outros", no fim.
-function categoryRank(category: string) {
-  const idx = SHOPPING_CATEGORIES.indexOf(category as ShoppingCategory);
-  return idx === -1 ? SHOPPING_CATEGORIES.length - 1 : idx;
-}
-
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
   const [urgent, setUrgent] = useState(listUrgent);
@@ -69,7 +62,10 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addModal, setAddModal] = useState(false);
   const [addQty, setAddQty] = useState('1');
   const [addUnit, setAddUnit] = useState<Unit>('un');
-  const [addCategory, setAddCategory] = useState<ShoppingCategory | null>(null);
+  const [addCategory, setAddCategory] = useState<string | null>(null);
+  const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
+  const categoryOrder = categoryGroups.flatMap((group) => group.categories.map((category) => category.label));
+  const availableCategories = categoryGroups.flatMap((group) => group.categories);
   const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
@@ -116,7 +112,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     if (name) setQuickName(name);
     setAddQty('1');
     setAddUnit('un');
-    setAddCategory(categoryFor(value));
+    const suggested = categoryFor(value);
+    const matchingCategory = availableCategories.find((category) => category.label === suggested);
+    setAddCategory(matchingCategory?.label ?? null);
     setAddModal(true);
   }
 
@@ -273,7 +271,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const pendingSections = onlyUncategorized
     ? [{ title: `A COMPRAR (${pending.length})`, data: [...pending].sort(compareNames), isPending: true }]
     : [...pendingByCategory.entries()]
-        .sort((a, b) => categoryRank(a[0]) - categoryRank(b[0]) || a[0].localeCompare(b[0], 'pt-BR'))
+        .sort((a, b) => {
+          const rankA = categoryOrder.indexOf(a[0]);
+          const rankB = categoryOrder.indexOf(b[0]);
+          return (rankA === -1 ? categoryOrder.length : rankA) - (rankB === -1 ? categoryOrder.length : rankB)
+            || a[0].localeCompare(b[0], 'pt-BR');
+        })
         .map(([cat, data]) => ({ title: `${cat} (${data.length})`, data: data.sort(compareNames), isPending: true }));
 
   const sections = [
@@ -455,15 +458,26 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               </View>
 
               <Text style={styles.sheetLabel}>Categoria</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
-                {SHOPPING_CATEGORIES.map((c) => (
-                  <TouchableOpacity
-                    key={c}
-                    style={[styles.unitChip, addCategory === c && styles.unitChipActive]}
-                    onPress={() => setAddCategory(addCategory === c ? null : c)}
-                  >
-                    <Text style={[styles.unitChipText, addCategory === c && styles.unitChipTextActive]}>{c}</Text>
-                  </TouchableOpacity>
+              <ScrollView style={styles.categoryPicker} contentContainerStyle={styles.categoryPickerContent}>
+                {categoryGroups.map((group) => (
+                  group.categories.length > 0 && (
+                    <View key={group.storageId} style={styles.categoryGroup}>
+                      <Text style={styles.categoryGroupTitle}>{group.storageEmoji} {group.storageName}</Text>
+                      <View style={styles.categoryChips}>
+                        {group.categories.map((category) => (
+                          <TouchableOpacity
+                            key={category.id}
+                            style={[styles.unitChip, addCategory === category.label && styles.unitChipActive]}
+                            onPress={() => setAddCategory(addCategory === category.label ? null : category.label)}
+                          >
+                            <Text style={[styles.unitChipText, addCategory === category.label && styles.unitChipTextActive]}>
+                              {category.emoji} {category.label}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  )
                 ))}
               </ScrollView>
 
@@ -590,7 +604,11 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
   unitRow: { flexDirection: 'row', gap: 8 },
-  categoryRow: { flexDirection: 'row', gap: 8, paddingRight: 12 },
+  categoryPicker: { maxHeight: 190 },
+  categoryPickerContent: { gap: 10, paddingBottom: 4 },
+  categoryGroup: { gap: 6 },
+  categoryGroupTitle: { fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
+  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   unitChip: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18,
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,

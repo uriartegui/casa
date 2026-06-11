@@ -41,6 +41,7 @@ export interface Storage {
 export interface HouseholdCategory {
   id: string;
   householdId: string;
+  storageId: string;
   label: string;
   emoji: string;
 }

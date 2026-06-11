@@ -548,7 +548,7 @@ export class HouseholdsService {
     const userName = member?.user?.name ?? 'Alguém';
     if (dto.source !== 'fridge-empty') {
       this.notificationsService
-        .notifyHouseholdMembers(householdId, userId, 'Item adicionado na lista', `${userName} adicionou ${saved.name} em "${list.name}"`)
+        .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
         .catch(() => {});
     }
 
