@@ -46,7 +46,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepo.findOne({
       where: { email },
-      select: { id: true, email: true, name: true, password: true, pushToken: true },
+      select: { id: true, email: true, name: true, password: true },
     });
   }
 
@@ -57,7 +57,7 @@ export class UsersService {
   async findByPhone(phone: string): Promise<User | null> {
     return this.usersRepo.findOne({
       where: { phone },
-      select: { id: true, email: true, name: true, password: true, pushToken: true },
+      select: { id: true, email: true, name: true, password: true },
     });
   }
 
@@ -182,7 +182,6 @@ export class UsersService {
           name: 'Usuário removido',
           phone: `deleted:${userId}`,
           email: null,
-          pushToken: null,
           password: await bcrypt.hash(randomUUID(), 10),
         },
       );

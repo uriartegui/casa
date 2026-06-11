@@ -21,9 +21,6 @@ export class User {
   @Column({ select: false })
   password: string;
 
-  @Column({ nullable: true, type: 'text' })
-  pushToken: string | null;
-
   @Column({ type: 'varchar', unique: true })
   phone: string;
 
