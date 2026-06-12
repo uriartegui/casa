@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Modal, TextInput,
@@ -13,14 +13,40 @@ type Props = {
   route: RouteProp<HouseholdStackParamList, 'ManageStorages'>;
 };
 
+const DEFAULT_STORAGE_ORDER = ['Geladeira', 'Freezer', 'Despensa', 'Limpeza', 'Banheiro', 'Lavanderia'];
+
+const DEFAULT_STORAGE_RANK = new Map(
+  DEFAULT_STORAGE_ORDER.map((name, index) => [name.toLowerCase(), index]),
+);
+
 export default function ManageStoragesScreen({ route }: Props) {
   const { householdId } = route.params;
   const { data: storages, isLoading } = useStorages(householdId, { includeHidden: true });
   const updateStorage = useUpdateStorage(householdId);
   const [editing, setEditing] = useState<Storage | null>(null);
   const [name, setName] = useState('');
+  const storageOrderRef = useRef<Record<string, number>>({});
+  const nextCustomOrderRef = useRef(DEFAULT_STORAGE_ORDER.length);
 
   const visibleCount = (storages ?? []).filter((storage) => !storage.hidden).length;
+  const orderedStorages = useMemo(() => {
+    const list = storages ?? [];
+
+    list.forEach((storage) => {
+      if (storageOrderRef.current[storage.id] !== undefined) return;
+
+      const defaultRank = DEFAULT_STORAGE_RANK.get(storage.name.toLowerCase());
+      storageOrderRef.current[storage.id] = defaultRank ?? nextCustomOrderRef.current++;
+    });
+
+    return [...list].sort((a, b) => {
+      const orderA = storageOrderRef.current[a.id] ?? Number.MAX_SAFE_INTEGER;
+      const orderB = storageOrderRef.current[b.id] ?? Number.MAX_SAFE_INTEGER;
+
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name, 'pt-BR');
+    });
+  }, [storages]);
 
   function openRename(storage: Storage) {
     setEditing(storage);
@@ -68,7 +94,7 @@ export default function ManageStoragesScreen({ route }: Props) {
         Estoques ocultos somem da aba Estoque, mas seus itens e categorias continuam salvos.
       </Text>
 
-      {(storages ?? []).map((storage) => (
+      {orderedStorages.map((storage) => (
         <View key={storage.id} style={[styles.row, storage.hidden && styles.rowHidden]}>
           <View style={styles.info}>
             <Text style={styles.storageName}>{storage.emoji} {storage.name}</Text>
