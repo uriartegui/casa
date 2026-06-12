@@ -2,11 +2,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { Storage } from '../types';
 
-export function useStorages(householdId: string | null) {
+export function useStorages(householdId: string | null, options?: { includeHidden?: boolean }) {
+  const includeHidden = options?.includeHidden ?? false;
   return useQuery({
-    queryKey: ['storages', householdId],
+    queryKey: ['storages', householdId, includeHidden],
     queryFn: async () => {
-      const response = await api.get<Storage[]>(`/households/${householdId}/storages`);
+      const params = includeHidden ? '?includeHidden=true' : '';
+      const response = await api.get<Storage[]>(`/households/${householdId}/storages${params}`);
       return response.data;
     },
     enabled: !!householdId,
@@ -50,6 +52,7 @@ interface UpdateStoragePayload {
   storageId: string;
   name?: string;
   emoji?: string;
+  hidden?: boolean;
 }
 
 export function useUpdateStorage(householdId: string) {

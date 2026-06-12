@@ -113,7 +113,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         <TouchableOpacity style={styles.button} onPress={handleSend} disabled={isPending}>
           {isPending
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonText}>Adicionar à geladeira</Text>
+            : <Text style={styles.buttonText}>Adicionar ao estoque</Text>
           }
         </TouchableOpacity>
       </ScrollView>

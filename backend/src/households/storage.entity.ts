@@ -11,8 +11,11 @@ export class Storage {
   @Column()
   name: string;
 
-  @Column({ default: '🧊' })
+  @Column({ default: '\u{1F4E6}' })
   emoji: string;
+
+  @Column({ default: false })
+  hidden: boolean;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

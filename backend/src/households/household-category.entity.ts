@@ -14,7 +14,7 @@ export class HouseholdCategory {
   @Column()
   label: string;
 
-  @Column({ default: '📦' })
+  @Column({ default: '\u{1F4E6}' })
   emoji: string;
 
   @CreateDateColumn({ type: 'timestamptz' })

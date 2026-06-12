@@ -1,51 +1,73 @@
-// Itens conhecidos agrupados pelos rótulos das categorias padrão da casa
-// (criadas no backend ao criar a household) — assim a categoria sugerida
-// no bottom sheet bate com as opções que o usuário vê no picker.
+// Itens conhecidos agrupados pelos rotulos das categorias padrao da casa.
+// Assim a categoria sugerida bate com as opcoes cadastradas no backend.
 const ITEMS_BY_CATEGORY: Record<string, string[]> = {
-  'Laticínios': [
+  Laticinios: [
     'Leite', 'Leite integral', 'Leite desnatado', 'Iogurte', 'Queijo', 'Queijo mussarela',
-    'Queijo prato', 'Requeijão', 'Manteiga', 'Margarina', 'Creme de leite', 'Nata',
+    'Queijo prato', 'Requeijao', 'Manteiga', 'Margarina', 'Creme de leite', 'Nata',
   ],
   'Carnes & Ovos': [
-    'Frango', 'Peito de frango', 'Coxa de frango', 'Carne moída', 'Carne bovina',
-    'Picanha', 'Alcatra', 'Patinho', 'Linguiça', 'Salsicha', 'Bacon', 'Presunto',
-    'Peixe', 'Salmão', 'Tilápia', 'Atum', 'Camarão', 'Ovos',
+    'Frango', 'Peito de frango', 'Coxa de frango', 'Carne moida', 'Carne bovina',
+    'Picanha', 'Alcatra', 'Patinho', 'Linguica', 'Salsicha', 'Bacon', 'Presunto',
+    'Peixe', 'Salmao', 'Tilapia', 'Atum', 'Camarao', 'Ovos',
   ],
   'Verduras/Legumes': [
     'Alface', 'Tomate', 'Cebola', 'Alho', 'Batata', 'Batata-doce', 'Cenoura',
-    'Brócolis', 'Couve', 'Espinafre', 'Pepino', 'Abobrinha', 'Berinjela',
-    'Pimentão', 'Milho', 'Ervilha', 'Beterraba', 'Chuchu', 'Mandioca',
+    'Brocolis', 'Couve', 'Espinafre', 'Pepino', 'Abobrinha', 'Berinjela',
+    'Pimentao', 'Milho', 'Ervilha', 'Beterraba', 'Chuchu', 'Mandioca',
   ],
-  'Frutas': [
-    'Banana', 'Maçã', 'Laranja', 'Limão', 'Mamão', 'Melão', 'Melancia',
+  Frutas: [
+    'Banana', 'Maca', 'Laranja', 'Limao', 'Mamao', 'Melao', 'Melancia',
     'Uva', 'Morango', 'Abacaxi', 'Manga', 'Abacate',
   ],
-  'Grãos & Cereais': [
-    'Arroz', 'Feijão', 'Feijão preto', 'Aveia', 'Granola',
+  'Graos & Cereais': [
+    'Arroz', 'Feijao', 'Feijao preto', 'Aveia', 'Granola',
   ],
   'Massas & Farinhas': [
-    'Macarrão', 'Farinha de trigo', 'Fubá', 'Tapioca',
+    'Macarrao', 'Farinha de trigo', 'Fuba', 'Tapioca',
   ],
   'Molhos & Condimentos': [
-    'Azeite', 'Óleo', 'Vinagre', 'Molho de tomate', 'Extrato de tomate',
+    'Azeite', 'Oleo', 'Vinagre', 'Molho de tomate', 'Extrato de tomate',
   ],
-  'Temperos': [
+  Temperos: [
     'Sal',
   ],
-  'Bebidas': [
-    'Água', 'Suco de laranja', 'Suco de uva', 'Refrigerante', 'Cerveja',
+  Bebidas: [
+    'Agua', 'Suco de laranja', 'Suco de uva', 'Refrigerante', 'Cerveja',
   ],
   'Pratos prontos': [
-    'Pizza congelada', 'Lasanha', 'Nuggets', 'Hambúrguer',
+    'Pizza congelada', 'Lasanha', 'Nuggets', 'Hamburguer',
+  ],
+  'Limpeza geral': [
+    'Detergente', 'Desinfetante', 'Alcool', 'Agua sanitaria', 'Multiuso',
+    'Limpador de vidro', 'Esponja', 'Pano de limpeza', 'Rodo', 'Vassoura',
+  ],
+  Cozinha: [
+    'Sabao de louca', 'Lava-loucas', 'Palha de aco', 'Papel toalha',
+  ],
+  'Lixo & Sacos': [
+    'Saco de lixo', 'Saco de lixo banheiro', 'Saco de lixo cozinha',
+  ],
+  'Higiene pessoal': [
+    'Sabonete', 'Pasta de dente', 'Escova de dente', 'Enxaguante bucal',
+    'Desodorante', 'Absorvente', 'Fio dental',
+  ],
+  'Papel & Algodao': [
+    'Papel higienico', 'Algodao', 'Cotonete', 'Lenco umedecido',
+  ],
+  Cabelo: [
+    'Shampoo', 'Condicionador', 'Creme de pentear', 'Mascara capilar',
+  ],
+  Roupas: [
+    'Sabao em po', 'Sabao liquido', 'Amaciante', 'Tira manchas',
+    'Alvejante', 'Prendedor de roupa',
+  ],
+  Passadoria: [
+    'Passa facil', 'Agua de passar',
   ],
 };
 
-// Itens comuns sem categoria padrão correspondente (mercearia seca,
-// padaria, limpeza e higiene) — entram nas sugestões sem pré-seleção.
 const UNCATEGORIZED_ITEMS = [
-  'Pão de forma', 'Pão francês', 'Açúcar', 'Mel', 'Café', 'Achocolatado',
-  'Detergente', 'Sabão em pó', 'Amaciante', 'Desinfetante', 'Esponja',
-  'Papel higiênico', 'Sabonete', 'Shampoo', 'Condicionador', 'Pasta de dente',
+  'Pao de forma', 'Pao frances', 'Acucar', 'Mel', 'Cafe', 'Achocolatado',
 ];
 
 export const COMMON_ITEMS = [
@@ -54,7 +76,7 @@ export const COMMON_ITEMS = [
 ];
 
 function normalize(text: string): string {
-  return text.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 const CATEGORY_BY_ITEM = new Map<string, string>(
@@ -62,7 +84,7 @@ const CATEGORY_BY_ITEM = new Map<string, string>(
     .flatMap(([category, items]) => items.map((item) => [normalize(item), category] as const)),
 );
 
-/** Sugere a categoria (rótulo padrão da casa) para um item conhecido. */
+/** Sugere a categoria padrao da casa para um item conhecido. */
 export function categoryFor(name: string): string | null {
   return CATEGORY_BY_ITEM.get(normalize(name)) ?? null;
 }

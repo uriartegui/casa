@@ -11,6 +11,7 @@ import InviteScreen from '../screens/households/InviteScreen';
 import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import MemberDetailScreen from '../screens/households/MemberDetailScreen';
 import ManageCategoriesScreen from '../screens/households/ManageCategoriesScreen';
+import ManageStoragesScreen from '../screens/households/ManageStoragesScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
@@ -31,6 +32,7 @@ export type HouseholdStackParamList = {
   JoinHousehold: { initialCode?: string } | undefined;
   MemberDetail: { householdId: string; memberId: string };
   ManageCategories: { householdId: string; householdName: string };
+  ManageStorages: { householdId: string; householdName: string };
 };
 
 export type FridgeStackParamList = {
@@ -96,7 +98,7 @@ function HomeNavigator() {
       <HomeStack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
       <HomeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <HomeStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
-      {/* Telas tipadas para o ShoppingStack, reutilizadas aqui com rotas de params compatíveis */}
+      {/* Telas tipadas para o ShoppingStack, reutilizadas aqui com rotas compativeis */}
       <HomeStack.Screen name="HomeShoppingListDetail" component={ShoppingListDetailScreen as unknown as React.ComponentType} options={({ route }) => ({ title: route.params.listName })} />
       <HomeStack.Screen name="HomeCreateShoppingList" component={CreateShoppingListScreen as unknown as React.ComponentType} options={{ title: 'Nova Lista', presentation: 'modal' }} />
     </HomeStack.Navigator>
@@ -110,9 +112,10 @@ function HouseholdNavigator() {
       <HouseholdStack.Screen name="CreateHousehold" component={CreateHouseholdScreen} options={{ title: 'Nova Casa', presentation: 'modal' }} />
       <HouseholdStack.Screen name="HouseholdDetail" component={HouseholdDetailScreen} options={({ route }) => ({ title: route.params.householdName })} />
       <HouseholdStack.Screen name="Invite" component={InviteScreen} options={{ title: 'Convidar' }} />
-      <HouseholdStack.Screen name="JoinHousehold" component={JoinHouseholdScreen} options={{ title: 'Entrar com Código' }} />
+      <HouseholdStack.Screen name="JoinHousehold" component={JoinHouseholdScreen} options={{ title: 'Entrar com Codigo' }} />
       <HouseholdStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Membro' }} />
-      <HouseholdStack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={({ route }) => ({ title: `Categorias — ${route.params.householdName}` })} />
+      <HouseholdStack.Screen name="ManageStorages" component={ManageStoragesScreen} options={({ route }) => ({ title: `Estoques - ${route.params.householdName}` })} />
+      <HouseholdStack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={({ route }) => ({ title: `Categorias - ${route.params.householdName}` })} />
     </HouseholdStack.Navigator>
   );
 }
@@ -143,9 +146,13 @@ function ShoppingNavigator() {
       <ShoppingStack.Screen name="ShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
       <ShoppingStack.Screen name="CreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
       <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
-      <ShoppingStack.Screen name="SendToFridge" component={SendToFridgeScreen} options={{ title: 'Adicionar à Geladeira', presentation: 'modal' }} />
+      <ShoppingStack.Screen name="SendToFridge" component={SendToFridgeScreen} options={{ title: 'Adicionar ao estoque', presentation: 'modal' }} />
     </ShoppingStack.Navigator>
   );
+}
+
+function TabIcon({ icon }: { icon: string }) {
+  return <Text style={{ fontSize: 20 }}>{icon}</Text>;
 }
 
 export default function AppTabs() {
@@ -164,13 +171,13 @@ export default function AppTabs() {
         options={{
           title: 'Home',
           headerShown: false,
-          tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏡</Text>,
+          tabBarIcon: () => <TabIcon icon={'\u{1F3E0}'} />,
         }}
       />
       <Tab.Screen
         name="GeladeirTab"
         component={FridgeNavigator}
-        options={{ title: 'Geladeira', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🧊</Text> }}
+        options={{ title: 'Estoque', tabBarIcon: () => <TabIcon icon={'\u{1F4E6}'} /> }}
         listeners={({ navigation }) => ({
           tabPress: () => navigation.navigate('GeladeirTab', { screen: 'Fridge' } as never),
         })}
@@ -178,7 +185,7 @@ export default function AppTabs() {
       <Tab.Screen
         name="ListaTab"
         component={ShoppingNavigator}
-        options={{ title: 'Lista', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🛒</Text> }}
+        options={{ title: 'Lista', tabBarIcon: () => <TabIcon icon={'\u{1F6D2}'} /> }}
         listeners={({ navigation }) => ({
           tabPress: () => navigation.navigate('ListaTab', { screen: 'ShoppingLists' } as never),
         })}
@@ -186,7 +193,7 @@ export default function AppTabs() {
       <Tab.Screen
         name="ColmeiaTab"
         component={HouseholdNavigator}
-        options={{ title: 'Casa', tabBarIcon: () => <Text style={{ fontSize: 20 }}>🏠</Text> }}
+        options={{ title: 'Casa', tabBarIcon: () => <TabIcon icon={'\u{1F3E1}'} /> }}
         listeners={({ navigation }) => ({
           tabPress: () => navigation.navigate('ColmeiaTab', { screen: 'HouseholdList' } as never),
         })}
@@ -194,7 +201,7 @@ export default function AppTabs() {
       <Tab.Screen
         name="PerfilTab"
         component={ProfileNavigator}
-        options={{ title: 'Perfil', tabBarIcon: () => <Text style={{ fontSize: 20 }}>👤</Text> }}
+        options={{ title: 'Perfil', tabBarIcon: () => <TabIcon icon={'\u{1F464}'} /> }}
       />
     </Tab.Navigator>
   );

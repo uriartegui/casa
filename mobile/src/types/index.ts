@@ -36,6 +36,7 @@ export interface Storage {
   householdId: string;
   name: string;
   emoji: string;
+  hidden: boolean;
 }
 
 export interface HouseholdCategory {

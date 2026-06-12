@@ -95,8 +95,12 @@ export class HouseholdsController {
 
   @Get(':id/storages')
   @ApiOperation({ summary: 'Listar compartimentos da casa' })
-  getStorages(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
-    return this.householdsService.getStorages(id, req.user.id);
+  getStorages(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('includeHidden') includeHidden: string | undefined,
+    @Request() req,
+  ) {
+    return this.householdsService.getStorages(id, req.user.id, includeHidden === 'true');
   }
 
   @Post(':id/storages')
@@ -166,13 +170,13 @@ export class HouseholdsController {
   // Fridge
 
   @Get(':id/fridge/categories')
-  @ApiOperation({ summary: 'Categorias de itens da geladeira' })
+  @ApiOperation({ summary: 'Categorias de itens do estoque' })
   getFridgeCategories(@Param('id', ParseUUIDPipe) id: string, @Query('storageId') storageId: string | undefined, @Request() req) {
     return this.householdsService.getFridgeCategories(id, req.user.id, storageId);
   }
 
   @Get(':id/fridge')
-  @ApiOperation({ summary: 'Ver itens da geladeira' })
+  @ApiOperation({ summary: 'Ver itens do estoque' })
   getFridge(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('storageId') storageId: string | undefined,
@@ -182,7 +186,7 @@ export class HouseholdsController {
   }
 
   @Get(':id/fridge/:itemId')
-  @ApiOperation({ summary: 'Ver item da geladeira' })
+  @ApiOperation({ summary: 'Ver item do estoque' })
   getFridgeItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -192,7 +196,7 @@ export class HouseholdsController {
   }
 
   @Post(':id/fridge')
-  @ApiOperation({ summary: 'Adicionar item na geladeira' })
+  @ApiOperation({ summary: 'Adicionar item no estoque' })
   addItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddFridgeItemDto,
@@ -202,7 +206,7 @@ export class HouseholdsController {
   }
 
   @Patch(':id/fridge/:itemId')
-  @ApiOperation({ summary: 'Editar item da geladeira' })
+  @ApiOperation({ summary: 'Editar item do estoque' })
   updateItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -213,7 +217,7 @@ export class HouseholdsController {
   }
 
   @Delete(':id/fridge/:itemId')
-  @ApiOperation({ summary: 'Remover item da geladeira' })
+  @ApiOperation({ summary: 'Remover item do estoque' })
   removeItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
@@ -224,7 +228,7 @@ export class HouseholdsController {
   }
 
   @Get(':id/fridge-activity')
-  @ApiOperation({ summary: 'Histórico de atividade da geladeira' })
+  @ApiOperation({ summary: 'Historico de atividade do estoque' })
   getFridgeActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.householdsService.getFridgeActivity(id, req.user.id);
   }

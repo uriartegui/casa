@@ -90,7 +90,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     const userName = event.userName ?? event.createdBy?.name ?? 'Alguem';
 
     if (action === 'sent_to_fridge') {
-      return <><Text style={styles.activityName}>{userName}</Text>{' mandou '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text>{' para a geladeira'}</>;
+      return <><Text style={styles.activityName}>{userName}</Text>{' mandou '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text>{' para o estoque'}</>;
     }
 
     if (action === 'removed') {

@@ -40,7 +40,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   if (!household) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>Casa não encontrada.</Text>
+        <Text style={styles.errorText}>Casa nao encontrada.</Text>
       </View>
     );
   }
@@ -48,7 +48,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   function handleDelete() {
     Alert.alert(
       `Excluir "${household!.name}"?`,
-      'Isso vai apagar todos os itens, membros e dados da casa. Essa ação não pode ser desfeita.',
+      'Isso vai apagar todos os itens, membros e dados da casa. Essa acao nao pode ser desfeita.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -61,7 +61,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
               navigation.popToTop();
               navigation.getParent()?.navigate('ColmeiaTab' as never);
             } catch (err: any) {
-              const msg = err?.response?.data?.message ?? 'Não foi possível excluir a casa.';
+              const msg = err?.response?.data?.message ?? 'Nao foi possivel excluir a casa.';
               Alert.alert('Erro', String(msg));
             }
           },
@@ -73,7 +73,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   function handleLeave() {
     Alert.alert(
       'Sair da casa?',
-      'Você perderá acesso a esta casa.',
+      'Voce perdera acesso a esta casa.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -85,7 +85,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
               setSelectedHouseholdId(null);
               navigation.getParent()?.navigate('ColmeiaTab' as never);
             } catch (err: any) {
-              const msg = err?.response?.data?.message ?? 'Não foi possível sair da casa.';
+              const msg = err?.response?.data?.message ?? 'Nao foi possivel sair da casa.';
               Alert.alert('Erro', String(msg));
             }
           },
@@ -112,7 +112,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
             <Text style={styles.roleAdmin}>Admin</Text>
           )}
         </View>
-        <Text style={styles.chevron}>›</Text>
+        <Text style={styles.chevron}>{'\u203A'}</Text>
       </TouchableOpacity>
     );
   }
@@ -145,6 +145,12 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
           onPress={() => navigation.navigate('ManageCategories', { householdId, householdName: household.name })}
         >
           <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Gerenciar categorias</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonSecondary]}
+          onPress={() => navigation.navigate('ManageStorages', { householdId, householdName: household.name })}
+        >
+          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Gerenciar estoques</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.leaveButton} onPress={handleLeave} disabled={leaveHousehold.isPending}>
           {leaveHousehold.isPending

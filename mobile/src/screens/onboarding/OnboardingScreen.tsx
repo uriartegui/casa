@@ -17,8 +17,8 @@ const slides = [
   {
     key: '2',
     emoji: '🧊',
-    title: 'Geladeira compartilhada',
-    subtitle: 'Adicione itens, controle vencimentos e saiba o que tem sem precisar abrir a geladeira.',
+    title: 'Casa organizada',
+    subtitle: 'Controle comida, limpeza, banheiro e outros itens da casa em um so lugar.',
   },
   {
     key: '3',

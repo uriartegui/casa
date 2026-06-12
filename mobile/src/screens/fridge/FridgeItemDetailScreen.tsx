@@ -162,7 +162,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   function handleRemove() {
     if (!item) return;
 
-    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item da geladeira.', [
+    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item do estoque.', [
       {
         text: 'Somente excluir',
         style: 'destructive' as const,

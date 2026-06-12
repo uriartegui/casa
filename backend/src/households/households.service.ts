@@ -67,31 +67,42 @@ export class HouseholdsService {
       role: 'admin',
     });
 
-    const [geladeira, freezer, despensa] = await this.storageRepo.save([
-      { householdId: saved.id, name: 'Geladeira', emoji: '🧊' },
-      { householdId: saved.id, name: 'Freezer', emoji: '❄️' },
-      { householdId: saved.id, name: 'Despensa', emoji: '🏠' },
+    const [geladeira, freezer, despensa, limpeza, banheiro, lavanderia] = await this.storageRepo.save([
+      { householdId: saved.id, name: 'Geladeira', emoji: '\u{1F9CA}' },
+      { householdId: saved.id, name: 'Freezer', emoji: '\u2744\uFE0F' },
+      { householdId: saved.id, name: 'Despensa', emoji: '\u{1F3E0}' },
+      { householdId: saved.id, name: 'Limpeza', emoji: '\u{1F9FD}' },
+      { householdId: saved.id, name: 'Banheiro', emoji: '\u{1F6C1}' },
+      { householdId: saved.id, name: 'Lavanderia', emoji: '\u{1F9FA}' },
     ]);
 
     await this.categoryRepo.save([
-      { householdId: saved.id, storageId: geladeira.id, label: 'Laticínios', emoji: '🥛' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Carnes & Ovos', emoji: '🍖' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Frutas', emoji: '🍎' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Verduras/Legumes', emoji: '🥦' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Bebidas', emoji: '🥤' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Molhos & Condimentos', emoji: '🧂' },
-      { householdId: saved.id, storageId: geladeira.id, label: 'Prontos/Restos', emoji: '🍽️' },
-      { householdId: saved.id, storageId: freezer.id, label: 'Carnes congeladas', emoji: '🥩' },
-      { householdId: saved.id, storageId: freezer.id, label: 'Vegetais congelados', emoji: '🥦' },
-      { householdId: saved.id, storageId: freezer.id, label: 'Pratos prontos', emoji: '🍕' },
-      { householdId: saved.id, storageId: freezer.id, label: 'Sobremesas', emoji: '🍦' },
-      { householdId: saved.id, storageId: freezer.id, label: 'Pães congelados', emoji: '🍞' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Grãos & Cereais', emoji: '🌾' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Enlatados/Conservas', emoji: '🥫' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Massas & Farinhas', emoji: '🍝' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Snacks & Biscoitos', emoji: '🍪' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Temperos', emoji: '🧂' },
-      { householdId: saved.id, storageId: despensa.id, label: 'Bebidas', emoji: '🧃' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Laticinios', emoji: '\u{1F95B}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Carnes & Ovos', emoji: '\u{1F356}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Frutas', emoji: '\u{1F34E}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Verduras/Legumes', emoji: '\u{1F966}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Bebidas', emoji: '\u{1F964}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Molhos & Condimentos', emoji: '\u{1F9C2}' },
+      { householdId: saved.id, storageId: geladeira.id, label: 'Prontos/Restos', emoji: '\u{1F37D}\uFE0F' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Carnes congeladas', emoji: '\u{1F969}' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Vegetais congelados', emoji: '\u{1F966}' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Pratos prontos', emoji: '\u{1F355}' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Sobremesas', emoji: '\u{1F366}' },
+      { householdId: saved.id, storageId: freezer.id, label: 'Paes congelados', emoji: '\u{1F35E}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Graos & Cereais', emoji: '\u{1F33E}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Enlatados/Conservas', emoji: '\u{1F96B}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Massas & Farinhas', emoji: '\u{1F35D}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Snacks & Biscoitos', emoji: '\u{1F36A}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Temperos', emoji: '\u{1F9C2}' },
+      { householdId: saved.id, storageId: despensa.id, label: 'Bebidas', emoji: '\u{1F9C3}' },
+      { householdId: saved.id, storageId: limpeza.id, label: 'Limpeza geral', emoji: '\u{1F9FD}' },
+      { householdId: saved.id, storageId: limpeza.id, label: 'Cozinha', emoji: '\u{1F37D}\uFE0F' },
+      { householdId: saved.id, storageId: limpeza.id, label: 'Lixo & Sacos', emoji: '\u{1F5D1}\uFE0F' },
+      { householdId: saved.id, storageId: banheiro.id, label: 'Higiene pessoal', emoji: '\u{1F9F4}' },
+      { householdId: saved.id, storageId: banheiro.id, label: 'Papel & Algodao', emoji: '\u{1F9FB}' },
+      { householdId: saved.id, storageId: banheiro.id, label: 'Cabelo', emoji: '\u{1F9F4}' },
+      { householdId: saved.id, storageId: lavanderia.id, label: 'Roupas', emoji: '\u{1F9FA}' },
+      { householdId: saved.id, storageId: lavanderia.id, label: 'Passadoria', emoji: '\u{1F455}' },
     ]);
 
     return saved;
@@ -145,7 +156,7 @@ export class HouseholdsService {
     });
     if (!exists) {
       await this.membersRepo.save({ userId, householdId: invite.householdId, role: 'member' });
-      // O convite NÃO é deletado aqui: o mesmo código pode ser usado por
+      // O convite nao e deletado aqui: o mesmo codigo pode ser usado por
       // várias pessoas até expirar (a tela promete "válido por 2 horas").
       this.eventsGateway.emitHouseholdUpdate(invite.householdId);
     }
@@ -155,10 +166,10 @@ export class HouseholdsService {
 
   // Storages
 
-  async getStorages(householdId: string, userId: string): Promise<Storage[]> {
+  async getStorages(householdId: string, userId: string, includeHidden = false): Promise<Storage[]> {
     await this.assertMember(householdId, userId);
     return this.storageRepo.find({
-      where: { householdId },
+      where: includeHidden ? { householdId } : { householdId, hidden: false },
       order: { createdAt: 'ASC' },
     });
   }
@@ -172,7 +183,7 @@ export class HouseholdsService {
     return this.storageRepo.save({
       householdId,
       name: dto.name,
-      emoji: dto.emoji ?? '🧊',
+      emoji: dto.emoji ?? '\u{1F4E6}',
     });
   }
 
@@ -200,9 +211,10 @@ export class HouseholdsService {
   ): Promise<Storage> {
     await this.assertMember(householdId, userId);
     const storage = await this.storageRepo.findOne({ where: { id: storageId, householdId } });
-    if (!storage) throw new NotFoundException('Compartimento não encontrado');
+    if (!storage) throw new NotFoundException('Compartimento nao encontrado');
     if (dto.name) storage.name = dto.name.trim();
     if (dto.emoji) storage.emoji = dto.emoji;
+    if (dto.hidden !== undefined) storage.hidden = dto.hidden;
     return this.storageRepo.save(storage);
   }
 

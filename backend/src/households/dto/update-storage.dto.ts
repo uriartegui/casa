@@ -1,4 +1,4 @@
-import { IsString, IsOptional, MinLength } from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class UpdateStorageDto {
   @IsOptional()
@@ -9,4 +9,8 @@ export class UpdateStorageDto {
   @IsOptional()
   @IsString()
   emoji?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  hidden?: boolean;
 }

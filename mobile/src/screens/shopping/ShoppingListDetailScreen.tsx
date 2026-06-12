@@ -176,7 +176,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         [
           { text: 'Cancelar', style: 'cancel' },
           {
-            text: 'Mandar tudo para geladeira',
+            text: 'Mandar tudo para estoque',
             onPress: () => {
               Promise.all(
                 pending.map((item) =>
@@ -341,7 +341,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       <Modal visible={showSendModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSendModal(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Mandar para geladeira</Text>
+            <Text style={styles.modalTitle}>Mandar para estoque</Text>
             <TouchableOpacity onPress={() => setShowSendModal(false)}>
               <Text style={styles.modalClose}>Cancelar</Text>
             </TouchableOpacity>
@@ -363,7 +363,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                 }}
               >
                 <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
-                  {selected && <Text style={styles.modalCheckmark}>✓</Text>}
+                  {selected && <Text style={styles.modalCheckmark}>{'\u2713'}</Text>}
                 </View>
                 <Text style={styles.modalItemName}>{item.name}</Text>
                 <Text style={styles.modalItemQty}>{item.quantity} {item.unit ?? ''}</Text>
@@ -376,7 +376,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
             onPress={confirmSendToFridge}
           >
             <Text style={styles.buttonText}>
-              🧊 Mandar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
+              {'\u{1F4E6}'} Mandar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -414,7 +414,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
-          <Text style={styles.buttonSecondaryText}>Mandar comprados para a geladeira</Text>
+          <Text style={styles.buttonSecondaryText}>Mandar comprados para o estoque</Text>
           </TouchableOpacity>
         )}
       </View>

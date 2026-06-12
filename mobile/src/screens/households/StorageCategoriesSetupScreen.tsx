@@ -133,7 +133,7 @@ function StorageSection({
 }
 
 export default function StorageCategoriesSetupScreen({ householdId, onDone }: Props) {
-  const { data: storages, isLoading } = useStorages(householdId);
+  const { data: storages, isLoading } = useStorages(householdId, { includeHidden: true });
 
   return (
     <View style={styles.container}>

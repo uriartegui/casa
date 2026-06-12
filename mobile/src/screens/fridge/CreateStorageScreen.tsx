@@ -48,7 +48,7 @@ export default function CreateStorageScreen({ navigation, route }: Props) {
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="Ex: Geladeira da cozinha, Adega..."
+          placeholder="Ex: Banheiro, Limpeza, Adega..."
           placeholderTextColor={Colors.textSecondary}
           autoFocus
           autoCapitalize="words"

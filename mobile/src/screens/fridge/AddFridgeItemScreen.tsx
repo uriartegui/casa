@@ -35,7 +35,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [category, setCategory] = useState<string | null>(null);
 
   // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
-  // escolhe um — item sem compartimento não aparece na aba Geladeira.
+  // escolhe um; item sem compartimento nao aparece no estoque.
   const { data: storages } = useStorages(householdId);
   const [pickedStorageId, setPickedStorageId] = useState<string | null>(routeStorageId ?? null);
   const storageId = pickedStorageId ?? storages?.[0]?.id ?? undefined;

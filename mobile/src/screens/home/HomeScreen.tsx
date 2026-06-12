@@ -110,7 +110,7 @@ export default function HomeScreen() {
 
         {household && (
           <Text style={styles.householdMeta}>
-            {fridgeItems?.length ?? 0} itens na geladeira
+            {fridgeItems?.length ?? 0} itens no estoque
             {'  ·  '}
             {shoppingLists?.length ?? 0} {shoppingLists?.length === 1 ? 'lista' : 'listas'} pendente{shoppingLists?.length !== 1 ? 's' : ''}
           </Text>
@@ -123,8 +123,8 @@ export default function HomeScreen() {
           onPress={() => effectiveId && navigation.navigate('AddFridgeItem', { householdId: effectiveId })}
           disabled={!effectiveId}
         >
-          <Text style={styles.quickBtnIcon}>🧊</Text>
-          <Text style={styles.quickBtnText}>+ Geladeira</Text>
+          <Text style={styles.quickBtnIcon}>{'\u{1F4E6}'}</Text>
+          <Text style={styles.quickBtnText}>+ Estoque</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -132,7 +132,7 @@ export default function HomeScreen() {
           onPress={() => effectiveId && navigation.navigate('HomeCreateShoppingList', { householdId: effectiveId })}
           disabled={!effectiveId}
         >
-          <Text style={styles.quickBtnIcon}>🛒</Text>
+          <Text style={styles.quickBtnIcon}>{'\u{1F6D2}'}</Text>
           <Text style={styles.quickBtnText}>+ Lista</Text>
         </TouchableOpacity>
       </View>
@@ -140,11 +140,11 @@ export default function HomeScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>🚨</Text>
+            <Text style={styles.cardTitleIcon}>{'\u{1F6A8}'}</Text>
             <Text style={styles.cardTitle}>Urgente</Text>
           </View>
           <TouchableOpacity onPress={goToListaTab}>
-            <Text style={styles.cardLink}>Ver lista →</Text>
+            <Text style={styles.cardLink}>Ver lista -&gt;</Text>
           </TouchableOpacity>
         </View>
 
@@ -170,7 +170,7 @@ export default function HomeScreen() {
               <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{list.name}</Text>
-                <Text style={styles.itemStorage}>🛒 Lista de compras</Text>
+                <Text style={styles.itemStorage}>{'\u{1F6D2}'} Lista de compras</Text>
               </View>
               {list.itemCount > 0 && <Text style={styles.itemQty}>{list.itemCount} itens</Text>}
             </TouchableOpacity>
@@ -181,11 +181,11 @@ export default function HomeScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>⚠️</Text>
+            <Text style={styles.cardTitleIcon}>{'\u26A0\uFE0F'}</Text>
             <Text style={styles.cardTitle}>Vencendo</Text>
           </View>
           <TouchableOpacity onPress={goToGeladeirTab}>
-            <Text style={styles.cardLink}>Ver geladeira →</Text>
+            <Text style={styles.cardLink}>Ver estoque -&gt;</Text>
           </TouchableOpacity>
         </View>
 
