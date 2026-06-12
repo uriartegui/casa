@@ -1,10 +1,11 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../services/api';
 
-const PROJECT_ID = '1bbc4256-057a-4b26-895a-9ba95934e86c';
+const PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 const NOTIFICATION_SOUND = 'colmeia_chime.wav';
 const DEVICE_ID_KEY = '@colmeia:push-device-id';
 
@@ -35,8 +36,13 @@ async function getPushDevicePayload() {
 
 export async function registerPushToken(): Promise<PushTokenResult> {
   if (!Device.isDevice && !__DEV__) {
-    console.log('[Push] Pulando: não é device físico e não está em __DEV__');
+    console.log('[Push] Pulando: nao e device fisico e nao esta em __DEV__');
     return { ok: false, reason: 'not-device' };
+  }
+
+  if (!PROJECT_ID) {
+    console.error('[Push] Project ID do EAS nao encontrado.');
+    return { ok: false, reason: 'token-error', detail: 'missing-project-id' };
   }
 
   if (Platform.OS === 'android') {
@@ -49,17 +55,17 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  console.log('[Push] Permissão atual:', existingStatus);
+  console.log('[Push] Permissao atual:', existingStatus);
 
   let finalStatus = existingStatus;
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
-    console.log('[Push] Permissão após request:', finalStatus);
+    console.log('[Push] Permissao apos request:', finalStatus);
   }
 
   if (finalStatus !== 'granted') {
-    console.warn('[Push] Permissão negada');
+    console.warn('[Push] Permissao negada');
     return { ok: false, reason: 'permission-denied' };
   }
 

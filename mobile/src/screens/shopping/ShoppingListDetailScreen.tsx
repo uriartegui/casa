@@ -289,7 +289,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {isFocused && <KeepAwakeWhileFocused />}
       {total > 0 && (
@@ -423,7 +423,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       <Modal visible={addModal} transparent animationType="slide" onRequestClose={() => setAddModal(false)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setAddModal(false)} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <View style={styles.sheet}>
               <View style={styles.sheetHandle} />
               <Text style={styles.sheetTitle}>{quickName.trim()}</Text>

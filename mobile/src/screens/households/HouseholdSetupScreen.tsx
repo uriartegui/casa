@@ -92,7 +92,7 @@ export default function HouseholdSetupScreen({ onHouseholdCreated }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.back} onPress={() => setMode('pick')}>
@@ -151,7 +151,7 @@ export default function HouseholdSetupScreen({ onHouseholdCreated }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingTop: 40, paddingBottom: 150 },
   emoji: { fontSize: 64, textAlign: 'center', marginBottom: 16 },
   title: { fontSize: 28, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center', marginBottom: 12 },
   subtitle: { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', lineHeight: 24, marginBottom: 40 },

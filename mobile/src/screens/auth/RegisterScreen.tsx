@@ -51,7 +51,7 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
@@ -119,7 +119,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 40 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: 40, paddingBottom: 150 },
 
   backBtn: { marginBottom: 32 },
   backText: { color: Colors.accent, fontSize: 16, fontWeight: '500' },

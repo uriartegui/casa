@@ -223,7 +223,7 @@ export default function ProfileScreen() {
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -243,7 +243,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
+            <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
               <View style={styles.card}>
                 <View style={styles.passwordRow}>
                   <Text style={styles.passwordRowLabel}>Senha atual</Text>
@@ -282,7 +282,7 @@ export default function ProfileScreen() {
               </View>
 
               <Text style={styles.modalHint}>A nova senha deve ter pelo menos 6 caracteres.</Text>
-            </View>
+            </ScrollView>
           </View>
         </KeyboardAvoidingView>
       </Modal>

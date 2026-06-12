@@ -61,7 +61,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.itemPreview}>
@@ -123,7 +123,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10 },
+  content: { padding: 24, gap: 10, paddingBottom: 140 },
   itemPreview: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,

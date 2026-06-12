@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
+  ScrollView,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCreateHousehold } from '../../hooks/useHouseholds';
@@ -35,9 +36,9 @@ export default function CreateHouseholdScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Nome da casa</Text>
         <TextInput
           style={styles.input}
@@ -56,14 +57,14 @@ export default function CreateHouseholdScreen({ navigation }: Props) {
             : <Text style={styles.buttonText}>Criar casa</Text>
           }
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flex: 1, padding: 24, gap: 12 },
+  content: { flexGrow: 1, padding: 24, gap: 12, paddingBottom: 120 },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,

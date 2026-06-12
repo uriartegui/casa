@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ScrollView, ActivityIndicator,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -39,7 +40,8 @@ export default function CreateStorageScreen({ navigation, route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionLabel}>NOME</Text>
       <View style={styles.card}>
         <TextInput
@@ -84,13 +86,14 @@ export default function CreateStorageScreen({ navigation, route }: Props) {
           : <Text style={styles.createBtnText}>Criar compartimento</Text>
         }
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingBottom: 48 },
+  content: { paddingBottom: 120 },
 
   sectionLabel: {
     fontSize: 12, fontWeight: '600', color: Colors.textSecondary,

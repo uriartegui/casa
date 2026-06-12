@@ -104,7 +104,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
           <Text style={styles.label}>Nome do item</Text>

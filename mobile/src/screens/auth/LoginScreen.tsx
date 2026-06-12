@@ -44,7 +44,7 @@ export default function LoginScreen({ navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
         contentContainerStyle={styles.content}
@@ -117,7 +117,7 @@ export default function LoginScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 48 },
+  content: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 28, paddingTop: 48, paddingBottom: 140 },
 
   logoSection: { alignItems: 'center', marginBottom: 48 },
   logoCircle: {

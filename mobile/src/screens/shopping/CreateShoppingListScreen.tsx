@@ -41,7 +41,7 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Nome da lista *</Text>
@@ -89,7 +89,7 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10 },
+  content: { padding: 24, gap: 10, paddingBottom: 140 },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
   input: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,

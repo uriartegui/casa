@@ -203,7 +203,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.label}>Nome do item</Text>
@@ -275,7 +275,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 10, padding: 24 },
-  content: { padding: 24, gap: 10 },
+  content: { padding: 24, gap: 10, paddingBottom: 140 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   retryButton: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginTop: 6 },
