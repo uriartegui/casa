@@ -19,6 +19,7 @@ import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
 import FridgeItemDetailScreen from '../screens/fridge/FridgeItemDetailScreen';
 import ShoppingListsScreen from '../screens/shopping/ShoppingListsScreen';
+import ShoppingActivityScreen from '../screens/shopping/ShoppingActivityScreen';
 import ShoppingListDetailScreen from '../screens/shopping/ShoppingListDetailScreen';
 import AddShoppingItemScreen from '../screens/shopping/AddShoppingItemScreen';
 import CreateShoppingListScreen from '../screens/shopping/CreateShoppingListScreen';
@@ -48,6 +49,7 @@ export type FridgeStackParamList = {
 
 export type ShoppingStackParamList = {
   ShoppingLists: undefined;
+  ShoppingActivity: { householdId: string };
   ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; listPlace?: string | null; listCategory?: string | null };
   CreateShoppingList: { householdId: string };
   AddShoppingItem: {
@@ -149,6 +151,7 @@ function ShoppingNavigator() {
   return (
     <ShoppingStack.Navigator screenOptions={stackScreenOptions}>
       <ShoppingStack.Screen name="ShoppingLists" component={ShoppingListsScreen} options={{ title: 'Listas de Compras' }} />
+      <ShoppingStack.Screen name="ShoppingActivity" component={ShoppingActivityScreen} options={{ title: 'Atividade da lista' }} />
       <ShoppingStack.Screen name="ShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
       <ShoppingStack.Screen name="CreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
       <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />

@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, RefreshControl, Alert, Modal,
+  StyleSheet, RefreshControl, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useShoppingLists, useDeleteShoppingList, useShoppingActivity, useUpdateShoppingList } from '../../hooks/useShoppingLists';
+import { useShoppingLists, useDeleteShoppingList, useUpdateShoppingList } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { formatBrShortDate } from '../../utils/dateUtils';
 import { ShoppingListCardSkeleton } from '../../components/Skeleton';
-import ActivityTimeline from '../../components/ActivityTimeline';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList } from '../../types';
@@ -25,16 +24,9 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
 
   const { data: lists, isLoading, refetch } = useShoppingLists(effectiveId);
-  const { data: activity, refetch: refetchActivity } = useShoppingActivity(effectiveId);
 
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
-  const [showActivity, setShowActivity] = useState(false);
-  const [activityPeriod, setActivityPeriod] = useState<'all' | '7d' | '30d'>('all');
-
-  React.useEffect(() => {
-    if (showActivity) refetchActivity();
-  }, [showActivity]);
 
   const household = households?.find((h) => h.id === effectiveId);
 
@@ -42,12 +34,15 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     navigation.setOptions({
       title: household?.name ?? 'Listas de Compras',
       headerRight: () => (
-        <TouchableOpacity onPress={() => setShowActivity(true)} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
+        <TouchableOpacity
+          onPress={() => effectiveId && navigation.navigate('ShoppingActivity', { householdId: effectiveId })}
+          style={{ paddingHorizontal: 16, alignSelf: 'center' }}
+        >
           <Text style={{ color: Colors.accent, fontSize: 15, fontWeight: '500' }}>Atividades</Text>
         </TouchableOpacity>
       ),
     });
-  }, [navigation, household]);
+  }, [navigation, household, effectiveId]);
   const deleteList = useDeleteShoppingList(effectiveId ?? '');
   const updateList = useUpdateShoppingList(effectiveId ?? '');
 
@@ -66,29 +61,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         onPress: () => deleteList.mutate(list.id),
       },
     ]);
-  }
-
-  function renderActivityModal() {
-    return (
-      <Modal visible={showActivity} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowActivity(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Atividade</Text>
-            <TouchableOpacity onPress={() => setShowActivity(false)}>
-              <Text style={styles.modalClose}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ActivityTimeline
-            shoppingEvents={activity}
-            scope="shopping"
-            period={activityPeriod}
-            onPeriodChange={setActivityPeriod}
-            showScopeFilter={false}
-          />
-        </View>
-      </Modal>
-    );
   }
 
   if (loadingHouseholds) {
@@ -154,9 +126,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      {renderActivityModal()}
-
-
       {isLoading ? (
         <View style={[styles.list, { gap: 12 }]}>
           {Array.from({ length: 4 }).map((_, i) => <ShoppingListCardSkeleton key={i} />)}
@@ -228,12 +197,4 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  // Modal
-  modalContainer: { flex: 1, backgroundColor: Colors.background },
-  modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 16, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator,
-  },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
 });
