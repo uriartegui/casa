@@ -52,6 +52,11 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   const removeFromList = useRemoveListItem(householdId, listId);
 
   async function handleSend() {
+    if (!selectedStorageId) {
+      Alert.alert('Escolha onde guardar', 'Selecione um estoque antes de continuar.');
+      return;
+    }
+
     const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
     try {
       await addToFridge.mutateAsync({
@@ -74,6 +79,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   }
 
   const isPending = addToFridge.isPending || removeFromList.isPending;
+  const canSend = !!selectedStorageId && !isPending;
 
   return (
     <KeyboardAvoidingView
@@ -89,6 +95,9 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         {storages && storages.length > 0 && (
           <>
             <Text style={styles.label}>Compartimento</Text>
+            {!selectedStorageId && (
+              <Text style={styles.helperText}>Escolha onde guardar este item.</Text>
+            )}
             <View style={styles.chipRow}>
               {storages.map((s) => (
                 <TouchableOpacity
@@ -127,10 +136,14 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         <Text style={styles.label}>Validade <Text style={styles.optional}>(opcional)</Text></Text>
         <DateField value={expirationDate} onChange={setExpirationDate} />
 
-        <TouchableOpacity style={styles.button} onPress={handleSend} disabled={isPending}>
+        <TouchableOpacity
+          style={[styles.button, !canSend && styles.buttonDisabled]}
+          onPress={handleSend}
+          disabled={!canSend}
+        >
           {isPending
             ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.buttonText}>Adicionar ao estoque</Text>
+            : <Text style={styles.buttonText}>{selectedStorageId ? 'Adicionar ao estoque' : 'Escolha um estoque'}</Text>
           }
         </TouchableOpacity>
       </ScrollView>
@@ -149,12 +162,14 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   itemQty: { fontSize: 14, color: Colors.textSecondary },
   label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
+  helperText: { fontSize: 13, color: Colors.textSecondary, marginTop: -2 },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   chipTextActive: { color: '#fff' },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
+  buttonDisabled: { opacity: 0.45 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   optional: { fontWeight: '400', textTransform: 'none', letterSpacing: 0 },
 });
