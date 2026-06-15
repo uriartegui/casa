@@ -319,6 +319,29 @@ export class HouseholdsService {
       fromShoppingListName: (data as any).fromShoppingListName ?? null,
     } as any).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
 
+    if ((data as any).fromShoppingListName) {
+      const storageName = storage?.name ?? 'estoque';
+      this.notificationsService
+        .notifyHouseholdMembers(
+          householdId,
+          userId,
+          'Estoque',
+          `${userName} guardou ${saved.name} em ${storageName}`,
+          {
+            data: {
+              type: 'shopping_item_sent_to_stock',
+              householdId,
+              itemId: saved.id,
+              itemName: saved.name,
+              storageId: saved.storageId,
+              storageName,
+              listName: (data as any).fromShoppingListName,
+            },
+          },
+        )
+        .catch(() => {});
+    }
+
     return saved;
   }
 

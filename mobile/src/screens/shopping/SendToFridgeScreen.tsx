@@ -7,8 +7,9 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
-import { useCategories } from '../../hooks/useCategories';
+import { useCategories, useHouseholdCategoryGroups } from '../../hooks/useCategories';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
+import { useToast } from '../../context/ToastContext';
 import DateField from '../../components/DateField';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
@@ -19,18 +20,34 @@ type Props = {
 };
 
 export default function SendToFridgeScreen({ navigation, route }: Props) {
-  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit, listName } = route.params;
+  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit, prefillCategory, listName } = route.params;
 
   const { data: storages } = useStorages(householdId);
+  const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
-  const [category, setCategory] = useState('');
+  const [category, setCategory] = useState(prefillCategory ?? '');
+  const [didApplyPrefill, setDidApplyPrefill] = useState(false);
   const { data: categories } = useCategories(householdId, selectedStorageId);
+  const { showToast } = useToast();
 
   React.useEffect(() => {
-    if (storages && storages.length > 0 && selectedStorageId === null) {
-      setSelectedStorageId(storages[0].id);
+    if (!storages || storages.length === 0 || selectedStorageId !== null) return;
+
+    const categoryStorage = prefillCategory
+      ? categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory))
+      : null;
+    setSelectedStorageId(categoryStorage?.storageId ?? storages[0].id);
+  }, [storages, selectedStorageId, categoryGroups, prefillCategory]);
+
+  React.useEffect(() => {
+    if (!prefillCategory || didApplyPrefill || !categoryGroups.length) return;
+    const categoryStorage = categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory));
+    if (categoryStorage) {
+      setSelectedStorageId(categoryStorage.storageId);
+      setCategory(prefillCategory);
+      setDidApplyPrefill(true);
     }
-  }, [storages, selectedStorageId]);
+  }, [prefillCategory, didApplyPrefill, categoryGroups]);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
   const addToFridge = useAddFridgeItem(householdId);
@@ -49,6 +66,8 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         fromShoppingListName: listName,
       });
       await removeFromList.mutateAsync({ itemId, reason: 'sent_to_fridge' });
+      const storageName = storages?.find((storage) => storage.id === selectedStorageId)?.name ?? 'estoque';
+      showToast(`${prefillName} guardado em ${storageName}`, 'success');
       navigation.goBack();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? e?.message ?? 'Erro desconhecido';

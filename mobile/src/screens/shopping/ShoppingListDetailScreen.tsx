@@ -80,6 +80,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       prefillName: next.name,
       prefillQuantity: Number(next.quantity),
       prefillUnit: next.unit ?? null,
+      prefillCategory: next.category ?? null,
       listName,
     });
   }, [isFocused, sendQueue]);
@@ -341,12 +342,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       <Modal visible={showSendModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSendModal(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Mandar para estoque</Text>
+            <Text style={styles.modalTitle}>Guardar no estoque</Text>
             <TouchableOpacity onPress={() => setShowSendModal(false)}>
               <Text style={styles.modalClose}>Cancelar</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.modalSubtitle}>Selecione os itens que deseja mandar:</Text>
+          <Text style={styles.modalSubtitle}>Escolha os comprados que voce quer guardar agora.</Text>
           {bought.map((item) => {
             const selected = selectedToSend.has(item.id);
             return (
@@ -376,7 +377,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
             onPress={confirmSendToFridge}
           >
             <Text style={styles.buttonText}>
-              {'\u{1F4E6}'} Mandar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
+              Guardar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -414,7 +415,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
-          <Text style={styles.buttonSecondaryText}>Mandar comprados para o estoque</Text>
+          <Text style={styles.buttonSecondaryText}>Guardar comprados</Text>
           </TouchableOpacity>
         )}
       </View>

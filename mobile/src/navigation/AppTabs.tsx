@@ -66,6 +66,7 @@ export type ShoppingStackParamList = {
     prefillName: string;
     prefillQuantity: number;
     prefillUnit: string | null;
+    prefillCategory?: string | null;
     listName: string;
   };
 };
@@ -155,7 +156,7 @@ function ShoppingNavigator() {
       <ShoppingStack.Screen name="ShoppingListDetail" component={ShoppingListDetailScreen} options={({ route }) => ({ title: route.params.listName })} />
       <ShoppingStack.Screen name="CreateShoppingList" component={CreateShoppingListScreen} options={{ title: 'Nova Lista', presentation: 'modal' }} />
       <ShoppingStack.Screen name="AddShoppingItem" component={AddShoppingItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
-      <ShoppingStack.Screen name="SendToFridge" component={SendToFridgeScreen} options={{ title: 'Adicionar ao estoque', presentation: 'modal' }} />
+      <ShoppingStack.Screen name="SendToFridge" component={SendToFridgeScreen} options={{ title: 'Guardar no estoque', presentation: 'modal' }} />
     </ShoppingStack.Navigator>
   );
 }
