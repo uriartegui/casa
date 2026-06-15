@@ -136,7 +136,7 @@ function FridgeNavigator() {
   return (
     <FridgeStack.Navigator screenOptions={stackScreenOptions}>
       <FridgeStack.Screen name="StorageOverview" component={StorageOverviewScreen} options={{ title: 'Estoque' }} />
-      <FridgeStack.Screen name="StorageActivity" component={StorageActivityScreen} options={{ title: 'Atividade' }} />
+      <FridgeStack.Screen name="StorageActivity" component={StorageActivityScreen} options={{ title: 'Atividade dos estoques' }} />
       <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={({ route }) => ({ title: `${route.params.storageEmoji} ${route.params.storageName}` })} />
       <FridgeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <FridgeStack.Screen name="FridgeItemDetail" component={FridgeItemDetailScreen} options={{ title: 'Detalhes', presentation: 'modal' }} />
