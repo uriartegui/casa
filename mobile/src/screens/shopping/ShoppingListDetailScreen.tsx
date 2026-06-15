@@ -63,6 +63,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addUnit, setAddUnit] = useState<Unit>('un');
   const [addStorageId, setAddStorageId] = useState<string | null>(null);
   const [addCategory, setAddCategory] = useState<string | null>(null);
+  const [showAddStorageOptions, setShowAddStorageOptions] = useState(false);
+  const [showAddCategoryOptions, setShowAddCategoryOptions] = useState(false);
   const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
   const categoryOrder = categoryGroups.flatMap((group) => group.categories.map((category) => category.label));
   const availableCategories = categoryGroups.flatMap((group) => group.categories);
@@ -117,6 +119,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     const matchingCategory = availableCategories.find((category) => category.label === suggested);
     setAddStorageId(matchingCategory?.storageId ?? null);
     setAddCategory(matchingCategory?.label ?? null);
+    setShowAddStorageOptions(false);
+    setShowAddCategoryOptions(false);
     setAddModal(true);
   }
 
@@ -173,6 +177,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       ? `Guardar ${bought[0].name}`
       : `Guardar ${bought.length} comprados`;
   const selectedAllBought = bought.length > 0 && selectedToSend.size === bought.length;
+  const selectedAddStorage = categoryGroups.find((group) => group.storageId === addStorageId);
 
   const handleDeleteList = useCallback(() => {
     const doDelete = () => deleteList.mutate(listId, { onSuccess: () => navigation.goBack() });
@@ -480,39 +485,80 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               </View>
 
               <Text style={styles.sheetLabel}>Estoque</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.storagePickerContent}
+              <TouchableOpacity
+                style={styles.selectRow}
+                onPress={() => {
+                  setShowAddStorageOptions((value) => !value);
+                  setShowAddCategoryOptions(false);
+                }}
               >
-                {categoryGroups.map((group) => (
-                  <TouchableOpacity
-                    key={group.storageId}
-                    style={[styles.unitChip, addStorageId === group.storageId && styles.unitChipActive]}
-                    onPress={() => {
-                      setAddStorageId(addStorageId === group.storageId ? null : group.storageId);
-                      setAddCategory(null);
-                    }}
-                  >
-                    <Text style={[styles.unitChipText, addStorageId === group.storageId && styles.unitChipTextActive]}>
-                      {group.storageEmoji} {group.storageName}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                <Text style={[styles.selectRowText, !addStorageId && styles.selectRowPlaceholder]}>
+                  {selectedAddStorage
+                    ? `${selectedAddStorage.storageEmoji} ${selectedAddStorage.storageName}`
+                    : 'Escolher estoque'}
+                </Text>
+                <Text style={styles.selectRowToggle}>{showAddStorageOptions ? '-' : '+'}</Text>
+                <Text style={styles.selectRowChevron}>›</Text>
+              </TouchableOpacity>
+
+              {showAddStorageOptions && (
+                <View style={styles.compactOptions}>
+                  {categoryGroups.map((group) => (
+                    <TouchableOpacity
+                      key={group.storageId}
+                      style={[styles.compactChip, addStorageId === group.storageId && styles.compactChipActive]}
+                      onPress={() => {
+                        setAddStorageId(group.storageId);
+                        setAddCategory(null);
+                        setShowAddStorageOptions(false);
+                        setShowAddCategoryOptions(true);
+                      }}
+                    >
+                      <Text style={[styles.compactChipText, addStorageId === group.storageId && styles.compactChipTextActive]}>
+                        {group.storageEmoji} {group.storageName}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               <Text style={styles.sheetLabel}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
-              {!addStorageId ? (
-                <Text style={styles.sheetHelper}>Escolha um estoque para ver as categorias.</Text>
-              ) : (
-                <View style={styles.categoryChips}>
-                  {(categoryGroups.find((group) => group.storageId === addStorageId)?.categories ?? []).map((category) => (
+              <TouchableOpacity
+                style={[styles.selectRow, !addStorageId && styles.selectRowDisabled]}
+                onPress={() => {
+                  if (!addStorageId) return;
+                  setShowAddCategoryOptions((value) => !value);
+                  setShowAddStorageOptions(false);
+                }}
+              >
+                <Text style={[styles.selectRowText, !addCategory && styles.selectRowPlaceholder]}>
+                  {addCategory ?? (addStorageId ? 'Escolher categoria' : 'Escolha um estoque primeiro')}
+                </Text>
+                <Text style={styles.selectRowToggle}>{showAddCategoryOptions ? '-' : '+'}</Text>
+                <Text style={styles.selectRowChevron}>›</Text>
+              </TouchableOpacity>
+
+              {showAddCategoryOptions && addStorageId && (
+                <View style={styles.compactOptions}>
+                  <TouchableOpacity
+                    style={[styles.compactChip, !addCategory && styles.compactChipActive]}
+                    onPress={() => {
+                      setAddCategory(null);
+                      setShowAddCategoryOptions(false);
+                    }}
+                  >
+                    <Text style={[styles.compactChipText, !addCategory && styles.compactChipTextActive]}>Sem categoria</Text>
+                  </TouchableOpacity>
+                  {(selectedAddStorage?.categories ?? []).map((category) => (
                     <TouchableOpacity
                       key={category.id}
-                      style={[styles.unitChip, addCategory === category.label && styles.unitChipActive]}
-                      onPress={() => setAddCategory(addCategory === category.label ? null : category.label)}
+                      style={[styles.compactChip, addCategory === category.label && styles.compactChipActive]}
+                      onPress={() => {
+                        setAddCategory(category.label);
+                        setShowAddCategoryOptions(false);
+                      }}
                     >
-                      <Text style={[styles.unitChipText, addCategory === category.label && styles.unitChipTextActive]}>
+                      <Text style={[styles.compactChipText, addCategory === category.label && styles.compactChipTextActive]}>
                         {category.emoji} {category.label}
                       </Text>
                     </TouchableOpacity>
@@ -634,7 +680,35 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8,
   },
   optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
-  sheetHelper: { fontSize: 13, color: Colors.textSecondary, marginTop: -2 },
+  selectRow: {
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectRowDisabled: { opacity: 0.65 },
+  selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
+  selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
+  selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
+  selectRowChevron: { width: 0, height: 0, opacity: 0 },
+  compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
+  compactChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+  },
+  compactChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  compactChipText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  compactChipTextActive: { color: '#fff' },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qtyBtn: {
     width: 48, height: 48, borderRadius: 24,
@@ -648,8 +722,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
   unitRow: { flexDirection: 'row', gap: 8 },
-  storagePickerContent: { gap: 8, paddingRight: 4 },
-  categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   unitChip: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18,
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
