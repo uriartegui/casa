@@ -61,6 +61,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addModal, setAddModal] = useState(false);
   const [addQty, setAddQty] = useState('1');
   const [addUnit, setAddUnit] = useState<Unit>('un');
+  const [addStorageId, setAddStorageId] = useState<string | null>(null);
   const [addCategory, setAddCategory] = useState<string | null>(null);
   const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
   const categoryOrder = categoryGroups.flatMap((group) => group.categories.map((category) => category.label));
@@ -114,6 +115,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     setAddUnit('un');
     const suggested = categoryFor(value);
     const matchingCategory = availableCategories.find((category) => category.label === suggested);
+    setAddStorageId(matchingCategory?.storageId ?? null);
     setAddCategory(matchingCategory?.label ?? null);
     setAddModal(true);
   }
@@ -477,29 +479,46 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                 ))}
               </View>
 
-              <Text style={styles.sheetLabel}>Categoria</Text>
-              <ScrollView style={styles.categoryPicker} contentContainerStyle={styles.categoryPickerContent}>
+              <Text style={styles.sheetLabel}>Estoque</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.storagePickerContent}
+              >
                 {categoryGroups.map((group) => (
-                  group.categories.length > 0 && (
-                    <View key={group.storageId} style={styles.categoryGroup}>
-                      <Text style={styles.categoryGroupTitle}>{group.storageEmoji} {group.storageName}</Text>
-                      <View style={styles.categoryChips}>
-                        {group.categories.map((category) => (
-                          <TouchableOpacity
-                            key={category.id}
-                            style={[styles.unitChip, addCategory === category.label && styles.unitChipActive]}
-                            onPress={() => setAddCategory(addCategory === category.label ? null : category.label)}
-                          >
-                            <Text style={[styles.unitChipText, addCategory === category.label && styles.unitChipTextActive]}>
-                              {category.emoji} {category.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  )
+                  <TouchableOpacity
+                    key={group.storageId}
+                    style={[styles.unitChip, addStorageId === group.storageId && styles.unitChipActive]}
+                    onPress={() => {
+                      setAddStorageId(addStorageId === group.storageId ? null : group.storageId);
+                      setAddCategory(null);
+                    }}
+                  >
+                    <Text style={[styles.unitChipText, addStorageId === group.storageId && styles.unitChipTextActive]}>
+                      {group.storageEmoji} {group.storageName}
+                    </Text>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
+
+              <Text style={styles.sheetLabel}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+              {!addStorageId ? (
+                <Text style={styles.sheetHelper}>Escolha um estoque para ver as categorias.</Text>
+              ) : (
+                <View style={styles.categoryChips}>
+                  {(categoryGroups.find((group) => group.storageId === addStorageId)?.categories ?? []).map((category) => (
+                    <TouchableOpacity
+                      key={category.id}
+                      style={[styles.unitChip, addCategory === category.label && styles.unitChipActive]}
+                      onPress={() => setAddCategory(addCategory === category.label ? null : category.label)}
+                    >
+                      <Text style={[styles.unitChipText, addCategory === category.label && styles.unitChipTextActive]}>
+                        {category.emoji} {category.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
 
               <TouchableOpacity style={styles.button} onPress={confirmAdd} disabled={addItem.isPending}>
                 {addItem.isPending
@@ -614,6 +633,8 @@ const styles = StyleSheet.create({
     fontSize: 12, fontWeight: '600', color: Colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8,
   },
+  optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
+  sheetHelper: { fontSize: 13, color: Colors.textSecondary, marginTop: -2 },
   qtyRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   qtyBtn: {
     width: 48, height: 48, borderRadius: 24,
@@ -627,10 +648,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
   unitRow: { flexDirection: 'row', gap: 8 },
-  categoryPicker: { maxHeight: 190 },
-  categoryPickerContent: { gap: 10, paddingBottom: 4 },
-  categoryGroup: { gap: 6 },
-  categoryGroupTitle: { fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
+  storagePickerContent: { gap: 8, paddingRight: 4 },
   categoryChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   unitChip: {
     paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18,
