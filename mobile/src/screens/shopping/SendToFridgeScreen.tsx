@@ -31,12 +31,10 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
   const { showToast } = useToast();
 
   React.useEffect(() => {
-    if (!storages || storages.length === 0 || selectedStorageId !== null) return;
+    if (!prefillCategory || !storages || storages.length === 0 || selectedStorageId !== null) return;
 
-    const categoryStorage = prefillCategory
-      ? categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory))
-      : null;
-    setSelectedStorageId(categoryStorage?.storageId ?? storages[0].id);
+    const categoryStorage = categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory));
+    if (categoryStorage) setSelectedStorageId(categoryStorage.storageId);
   }, [storages, selectedStorageId, categoryGroups, prefillCategory]);
 
   React.useEffect(() => {
