@@ -53,7 +53,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <Animated.View
           style={[
             styles.toast,
-            { backgroundColor: bgColor, bottom: insets.bottom + 88, opacity, transform: [{ translateY }] },
+            { backgroundColor: bgColor, bottom: insets.bottom + 146, opacity, transform: [{ translateY }] },
           ]}
         >
           <Text style={styles.text}>{toast.message}</Text>
@@ -66,11 +66,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   toast: {
     position: 'absolute',
-    left: 16,
-    right: 16,
-    borderRadius: 12,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
+    alignSelf: 'center',
+    maxWidth: 340,
+    minWidth: 240,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
     shadowColor: '#000',
     shadowOpacity: 0.18,
     shadowRadius: 10,
@@ -80,8 +81,9 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+    lineHeight: 18,
   },
 });
