@@ -724,20 +724,22 @@ export class HouseholdsService {
   async getReplenishmentSuggestions(householdId: string, userId: string) {
     await this.assertMember(householdId, userId);
 
-    const pendingItems = await this.shoppingRepo.find({
-      where: { householdId, checked: false },
+    const activeListItems = await this.shoppingRepo.find({
+      where: { householdId },
     });
     const stockItems = await this.fridgeRepo.find({
       where: { householdId },
     });
-    const recentShoppingActivity = await this.shoppingActivityRepo.find({
-      where: { householdId },
-      order: { createdAt: 'DESC' },
-      take: 250,
-    });
+    const historicalListItems = await this.shoppingRepo
+      .createQueryBuilder('item')
+      .withDeleted()
+      .where('item.householdId = :householdId', { householdId })
+      .orderBy('item.createdAt', 'DESC')
+      .take(250)
+      .getMany();
 
     const blockedNames = new Set(
-      [...pendingItems.map((item) => item.name), ...stockItems.map((item) => item.name)]
+      [...activeListItems.map((item) => item.name), ...stockItems.map((item) => item.name)]
         .map((name) => this.normalizeSuggestionName(name)),
     );
     const stats = new Map<string, {
@@ -748,30 +750,29 @@ export class HouseholdsService {
       unit: string | null;
     }>();
 
-    for (const event of recentShoppingActivity) {
-      if (!['added', 'checked', 'sent_to_fridge'].includes(event.action)) continue;
-      const key = this.normalizeSuggestionName(event.itemName);
+    for (const item of historicalListItems) {
+      const key = this.normalizeSuggestionName(item.name);
       if (!key || blockedNames.has(key)) continue;
 
       const current = stats.get(key);
-      const createdAt = event.createdAt instanceof Date ? event.createdAt : new Date(event.createdAt);
+      const createdAt = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
       if (!current) {
         stats.set(key, {
-          name: event.itemName,
+          name: item.name,
           count: 1,
           lastBoughtAt: createdAt,
-          quantity: event.quantity === null || event.quantity === undefined ? null : Number(event.quantity),
-          unit: event.unit ?? null,
+          quantity: item.quantity === null || item.quantity === undefined ? null : Number(item.quantity),
+          unit: item.unit ?? null,
         });
         continue;
       }
 
       current.count += 1;
       if (createdAt.getTime() > current.lastBoughtAt.getTime()) {
-        current.name = event.itemName;
+        current.name = item.name;
         current.lastBoughtAt = createdAt;
-        current.quantity = event.quantity === null || event.quantity === undefined ? current.quantity : Number(event.quantity);
-        current.unit = event.unit ?? current.unit;
+        current.quantity = item.quantity === null || item.quantity === undefined ? current.quantity : Number(item.quantity);
+        current.unit = item.unit ?? current.unit;
       }
     }
 

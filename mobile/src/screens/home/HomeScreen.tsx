@@ -204,10 +204,10 @@ export default function HomeScreen() {
               >
                 <View style={[styles.itemDot, { backgroundColor: Colors.accent }]} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>{suggestion.name}</Text>
-                  <Text style={styles.itemStorage}>
-                    Comprado {suggestion.count} vezes
-                  </Text>
+                <Text style={styles.itemName}>{suggestion.name}</Text>
+                <Text style={styles.itemStorage}>
+                  Apareceu em listas {suggestion.count} vezes
+                </Text>
                 </View>
                 <Text style={styles.itemQty}>+ lista</Text>
               </TouchableOpacity>
