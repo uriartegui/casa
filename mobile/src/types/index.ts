@@ -105,3 +105,15 @@ export interface ReplenishmentSuggestion {
   quantity: number;
   unit: string;
 }
+
+export interface HouseholdAttentionItem {
+  type: 'expiration' | 'urgent_list' | 'bought_waiting' | 'replenishment';
+  severity: 'danger' | 'warning' | 'info';
+  title: string;
+  subtitle: string;
+  targetId?: string;
+}
+
+export interface HouseholdAttention {
+  items: HouseholdAttentionItem[];
+}

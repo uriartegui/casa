@@ -1,26 +1,15 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
-import { useHouseholds } from '../../hooks/useHouseholds';
+import { useHouseholdAttention, useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge } from '../../hooks/useFridge';
-import { useShoppingLists, useReplenishmentSuggestions } from '../../hooks/useShoppingLists';
-import { useToast } from '../../context/ToastContext';
+import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 import { SkeletonLine } from '../../components/Skeleton';
-import { api } from '../../services/api';
-import { ReplenishmentSuggestion, ShoppingList } from '../../types';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -33,69 +22,14 @@ export default function HomeScreen() {
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
 
   const household = households?.find((h) => h.id === effectiveId);
-  const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);
-  const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
-  const { data: replenishmentSuggestions, isLoading: loadingSuggestions } = useReplenishmentSuggestions(effectiveId);
-  const queryClient = useQueryClient();
-  const { showToast } = useToast();
+  const { data: fridgeItems } = useFridge(effectiveId);
+  const { data: shoppingLists } = useShoppingLists(effectiveId);
+  const { data: attention, isLoading: loadingAttention } = useHouseholdAttention(effectiveId);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'voce';
-  const urgentLists = (shoppingLists ?? []).filter((l) => l.urgent);
-  const visibleSuggestions = (replenishmentSuggestions ?? []).slice(0, 3);
-
-  const now = new Date();
-  const expiringFridge = (fridgeItems ?? [])
-    .filter((item) => {
-      if (!item.expirationDate) return false;
-      const diff = (new Date(item.expirationDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
-      return diff <= 3;
-    })
-    .sort((a, b) => new Date(a.expirationDate!).getTime() - new Date(b.expirationDate!).getTime())
-    .slice(0, 5);
-
-  function goToListaTab() {
-    navigation.getParent()?.navigate('ListaTab' as never);
-  }
-
-  function goToGeladeirTab() {
-    navigation.getParent()?.navigate('GeladeirTab' as never);
-  }
-
-  async function addSuggestionToList(suggestion: ReplenishmentSuggestion, list: ShoppingList) {
-    if (!effectiveId) return;
-    try {
-      await api.post(`/households/${effectiveId}/shopping-lists/${list.id}/items`, {
-        name: suggestion.name,
-        quantity: suggestion.quantity,
-        unit: suggestion.unit,
-      });
-      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, list.id] });
-      queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
-      queryClient.invalidateQueries({ queryKey: ['shopping-activity', effectiveId] });
-      queryClient.invalidateQueries({ queryKey: ['replenishment-suggestions', effectiveId] });
-      showToast(`${suggestion.name} foi para ${list.name}`, 'success');
-    } catch {
-      Alert.alert('Erro', 'Nao foi possivel adicionar o item na lista.');
-    }
-  }
-
-  function pickListForSuggestion(suggestion: ReplenishmentSuggestion) {
-    const lists = shoppingLists ?? [];
-    if (lists.length === 0) {
-      Alert.alert('Sem listas', 'Crie uma lista de compras primeiro.');
-      return;
-    }
-    Alert.alert(
-      'Adicionar a qual lista?',
-      suggestion.name,
-      [
-        ...lists.map((list) => ({ text: list.name, onPress: () => addSuggestionToList(suggestion, list) })),
-        { text: 'Cancelar', style: 'cancel' as const },
-      ],
-    );
-  }
+  const attentionItems = attention?.items ?? [];
 
   return (
     <View style={{ flex: 1 }}>
@@ -180,126 +114,36 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {(loadingSuggestions || visibleSuggestions.length > 0) && (
+      {(loadingAttention || attentionItems.length > 0) && (
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitleIcon}>{'\u{1F501}'}</Text>
-              <Text style={styles.cardTitle}>Comprar de novo?</Text>
+              <Text style={styles.cardTitleIcon}>{'\u26A1'}</Text>
+              <Text style={styles.cardTitle}>Atencao da casa</Text>
             </View>
           </View>
 
-          {loadingSuggestions ? (
+          {loadingAttention ? (
             <View style={styles.loadingLines}>
-              <SkeletonLine width="76%" height={15} />
-              <SkeletonLine width="48%" height={13} />
+              <SkeletonLine width="80%" height={15} />
+              <SkeletonLine width="58%" height={13} />
             </View>
           ) : (
-            visibleSuggestions.map((suggestion) => (
-              <TouchableOpacity
-                key={suggestion.name}
-                style={styles.itemRow}
-                onPress={() => pickListForSuggestion(suggestion)}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.itemDot, { backgroundColor: Colors.accent }]} />
-                <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{suggestion.name}</Text>
-                <Text style={styles.itemStorage}>
-                  Apareceu em listas {suggestion.count} vezes
-                </Text>
+            attentionItems.slice(0, 4).map((item, index) => {
+              const dotColor = item.severity === 'danger'
+                ? Colors.destructive
+                : item.severity === 'warning'
+                  ? '#F0A500'
+                  : Colors.accent;
+              return (
+                <View key={`${item.type}-${item.targetId ?? index}`} style={styles.itemRow}>
+                  <View style={[styles.itemDot, { backgroundColor: dotColor }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName}>{item.title}</Text>
+                    <Text style={styles.itemStorage}>{item.subtitle}</Text>
+                  </View>
                 </View>
-                <Text style={styles.itemQty}>+ lista</Text>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      )}
-
-      {(listsLoading || urgentLists.length > 0) && (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitleIcon}>{'\u{1F6A8}'}</Text>
-              <Text style={styles.cardTitle}>Urgente</Text>
-            </View>
-            <TouchableOpacity onPress={goToListaTab}>
-              <Text style={styles.cardLink}>Ver lista -&gt;</Text>
-            </TouchableOpacity>
-          </View>
-
-          {listsLoading ? (
-          <View style={styles.loadingLines}>
-            <SkeletonLine width="74%" height={15} />
-            <SkeletonLine width="52%" height={13} />
-          </View>
-          ) : (
-            urgentLists.map((list) => (
-              <TouchableOpacity
-                key={list.id}
-                style={styles.itemRow}
-                onPress={() =>
-                  navigation.navigate('HomeShoppingListDetail', {
-                    householdId: effectiveId!,
-                    listId: list.id,
-                    listName: list.name,
-                    listUrgent: list.urgent,
-                  })
-                }
-                activeOpacity={0.7}
-              >
-                <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>{list.name}</Text>
-                  <Text style={styles.itemStorage}>{'\u{1F6D2}'} Lista de compras</Text>
-                </View>
-                {list.itemCount > 0 && <Text style={styles.itemQty}>{list.itemCount} itens</Text>}
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-      )}
-
-      {(fridgeLoading || expiringFridge.length > 0) && (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.cardTitleRow}>
-              <Text style={styles.cardTitleIcon}>{'\u26A0\uFE0F'}</Text>
-              <Text style={styles.cardTitle}>Vencendo</Text>
-            </View>
-            <TouchableOpacity onPress={goToGeladeirTab}>
-              <Text style={styles.cardLink}>Ver estoque -&gt;</Text>
-            </TouchableOpacity>
-          </View>
-
-          {fridgeLoading ? (
-          <View style={styles.loadingLines}>
-            <SkeletonLine width="82%" height={15} />
-            <SkeletonLine width="58%" height={13} />
-          </View>
-          ) : (
-            expiringFridge.map((item) => {
-            const diff = Math.ceil(
-              (new Date(item.expirationDate!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-            );
-            const expired = diff < 0;
-            const dotColor = expired ? '#EF4444' : diff === 0 ? '#F97316' : '#F0A500';
-            const label = expired ? `Vencido ha ${Math.abs(diff)}d` : diff === 0 ? 'Vence hoje' : `Vence em ${diff}d`;
-
-            return (
-              <View key={item.id} style={styles.itemRow}>
-                <View style={[styles.itemDot, { backgroundColor: dotColor }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName}>{item.name}</Text>
-                  {item.storage && (
-                    <Text style={styles.itemStorage}>
-                      {item.storage.emoji} {item.storage.name}
-                    </Text>
-                  )}
-                </View>
-                <Text style={[styles.itemQty, { color: dotColor }]}>{label}</Text>
-              </View>
-            );
+              );
             })
           )}
         </View>

@@ -789,6 +789,83 @@ export class HouseholdsService {
       }));
   }
 
+  async getHouseholdAttention(householdId: string, userId: string) {
+    await this.assertMember(householdId, userId);
+
+    const now = new Date();
+    const in3Days = new Date(now);
+    in3Days.setDate(in3Days.getDate() + 3);
+
+    const [urgentLists, boughtItems, expiringItems, suggestions] = await Promise.all([
+      this.shoppingListsRepo.find({ where: { householdId, urgent: true }, order: { createdAt: 'DESC' }, take: 3 }),
+      this.shoppingRepo.find({ where: { householdId, checked: true }, order: { createdAt: 'DESC' }, take: 5 }),
+      this.fridgeRepo
+        .createQueryBuilder('item')
+        .leftJoinAndSelect('item.storage', 'storage')
+        .where('item.householdId = :householdId', { householdId })
+        .andWhere('item.expirationDate IS NOT NULL')
+        .andWhere('item.expirationDate <= :in3Days', { in3Days: in3Days.toISOString().slice(0, 10) })
+        .orderBy('item.expirationDate', 'ASC')
+        .take(5)
+        .getMany(),
+      this.getReplenishmentSuggestions(householdId, userId),
+    ]);
+
+    const items: Array<{
+      type: 'expiration' | 'urgent_list' | 'bought_waiting' | 'replenishment';
+      severity: 'danger' | 'warning' | 'info';
+      title: string;
+      subtitle: string;
+      targetId?: string;
+    }> = [];
+
+    expiringItems.slice(0, 3).forEach((item) => {
+      const days = Math.ceil((new Date(item.expirationDate).getTime() - now.getTime()) / 86_400_000);
+      const title = days < 0
+        ? `${item.name} ja venceu`
+        : days === 0
+          ? `${item.name} vence hoje`
+          : `${item.name} vence em ${days} dias`;
+      items.push({
+        type: 'expiration',
+        severity: days <= 0 ? 'danger' : 'warning',
+        title,
+        subtitle: item.storage ? `${item.storage.emoji} ${item.storage.name}` : 'Estoque',
+        targetId: item.id,
+      });
+    });
+
+    urgentLists.forEach((list) => {
+      items.push({
+        type: 'urgent_list',
+        severity: 'warning',
+        title: `${list.name} esta urgente`,
+        subtitle: 'Lista de compras',
+        targetId: list.id,
+      });
+    });
+
+    if (boughtItems.length > 0) {
+      items.push({
+        type: 'bought_waiting',
+        severity: 'info',
+        title: `${boughtItems.length} ${boughtItems.length === 1 ? 'comprado esperando guardar' : 'comprados esperando guardar'}`,
+        subtitle: boughtItems.slice(0, 2).map((item) => item.name).join(', '),
+      });
+    }
+
+    suggestions.slice(0, 2).forEach((suggestion) => {
+      items.push({
+        type: 'replenishment',
+        severity: 'info',
+        title: `Comprar ${suggestion.name} de novo?`,
+        subtitle: `Apareceu em listas ${suggestion.count} vezes`,
+      });
+    });
+
+    return { items: items.slice(0, 6) };
+  }
+
   async getFridgeActivity(householdId: string, userId: string) {
     await this.assertMember(householdId, userId);
     return this.fridgeActivityRepo.find({

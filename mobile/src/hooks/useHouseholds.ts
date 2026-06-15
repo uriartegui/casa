@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { Household } from '../types';
+import { Household, HouseholdAttention } from '../types';
 
 export function useHouseholds() {
   return useQuery({
@@ -33,6 +33,17 @@ export function useInviteCode(householdId: string) {
       const response = await api.get<{ inviteCode: string }>(
         `/households/${householdId}/invite`
       );
+      return response.data;
+    },
+    enabled: !!householdId,
+  });
+}
+
+export function useHouseholdAttention(householdId: string | null) {
+  return useQuery({
+    queryKey: ['household-attention', householdId],
+    queryFn: async () => {
+      const response = await api.get<HouseholdAttention>(`/households/${householdId}/attention`);
       return response.data;
     },
     enabled: !!householdId,
