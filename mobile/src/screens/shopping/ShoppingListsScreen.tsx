@@ -8,17 +8,16 @@ import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useShoppingLists, useDeleteShoppingList, useShoppingActivity, useUpdateShoppingList } from '../../hooks/useShoppingLists';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
-import { formatBrDate, formatBrTime, formatBrShortDate } from '../../utils/dateUtils';
+import { formatBrShortDate } from '../../utils/dateUtils';
 import { ShoppingListCardSkeleton } from '../../components/Skeleton';
+import ActivityTimeline from '../../components/ActivityTimeline';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
-import { ShoppingList, ShoppingActivityEvent } from '../../types';
+import { ShoppingList } from '../../types';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
 };
-
-type FilterPeriod = 'all' | '7d' | '30d';
 
 export default function ShoppingListsScreen({ navigation }: Props) {
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
@@ -31,7 +30,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
-  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
+  const [activityPeriod, setActivityPeriod] = useState<'all' | '7d' | '30d'>('all');
 
   React.useEffect(() => {
     if (showActivity) refetchActivity();
@@ -69,47 +68,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     ]);
   }
 
-  function getCutoff(): number | null {
-    if (filterPeriod === '7d') return Date.now() - 7 * 24 * 60 * 60 * 1000;
-    if (filterPeriod === '30d') return Date.now() - 30 * 24 * 60 * 60 * 1000;
-    return null;
-  }
-
-  function getActivityColor(event: ShoppingActivityEvent) {
-    const action = event.action ?? event.type;
-    if (action === 'sent_to_fridge') return '#8B5CF6';
-    if (action === 'removed') return Colors.destructive;
-    if (action === 'checked') return Colors.success;
-    if (action === 'unchecked') return '#F59E0B';
-    return Colors.accent;
-  }
-
-  function renderActivityText(event: ShoppingActivityEvent) {
-    const action = event.action ?? event.type;
-    const itemName = event.itemName ?? event.name ?? 'item';
-    const userName = event.userName ?? event.createdBy?.name ?? 'Alguem';
-
-    if (action === 'sent_to_fridge') {
-      return <><Text style={styles.activityName}>{userName}</Text>{' mandou '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text>{' para o estoque'}</>;
-    }
-
-    if (action === 'removed') {
-      return <><Text style={styles.activityName}>{userName}</Text>{' removeu '}<Text style={styles.activityItem}>{itemName}</Text>{' da lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
-    }
-
-    if (action === 'checked' || action === 'unchecked') {
-      return <><Text style={styles.activityName}>{userName}</Text>{action === 'checked' ? ' marcou ' : ' desmarcou '}<Text style={styles.activityItem}>{itemName}</Text>{' na lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
-    }
-
-    return <><Text style={styles.activityName}>{userName}</Text>{' adicionou '}<Text style={styles.activityItem}>{itemName}</Text>{' na lista '}<Text style={styles.activityListName}>{event.listName}</Text></>;
-  }
-
   function renderActivityModal() {
-    const cutoff = getCutoff();
-    const sorted = (activity ?? [])
-      .filter((e) => !cutoff || new Date(e.createdAt).getTime() >= cutoff)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
     return (
       <Modal visible={showActivity} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowActivity(false)}>
         <View style={styles.modalContainer}>
@@ -120,44 +79,13 @@ export default function ShoppingListsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.filterRow}>
-            {(['all', '7d', '30d'] as FilterPeriod[]).map((p) => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.filterChip, filterPeriod === p && styles.filterChipActive]}
-                onPress={() => setFilterPeriod(p)}
-              >
-                <Text style={[styles.filterChipText, filterPeriod === p && styles.filterChipTextActive]}>
-                  {p === 'all' ? 'Tudo' : p === '7d' ? '7 dias' : '30 dias'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {sorted.length === 0 ? (
-            <View style={styles.modalEmpty}>
-              <Text style={styles.modalEmptyText}>Nenhuma atividade neste periodo.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={sorted}
-              keyExtractor={(e) => e.id}
-              contentContainerStyle={styles.modalList}
-              renderItem={({ item: e }) => (
-                <View style={styles.activityRow}>
-                  <View style={[styles.activityDot, { backgroundColor: getActivityColor(e) }]} />
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>{renderActivityText(e)}</Text>
-                    <Text style={styles.activityTime}>
-                      {formatBrDate(e.createdAt)}
-                      {' - '}
-                      {formatBrTime(e.createdAt)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            />
-          )}
+          <ActivityTimeline
+            shoppingEvents={activity}
+            scope="shopping"
+            period={activityPeriod}
+            onPeriodChange={setActivityPeriod}
+            showScopeFilter={false}
+          />
         </View>
       </Modal>
     );
@@ -308,20 +236,4 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
-  filterRow: { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 8 },
-  filterChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 16, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
-  filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  filterChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
-  filterChipTextActive: { color: '#fff' },
-  modalEmpty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  modalEmptyText: { fontSize: 15, color: Colors.textSecondary },
-  modalList: { padding: 16, gap: 4 },
-  activityRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.separator },
-  activityDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.accent, marginTop: 5, flexShrink: 0 },
-  activityContent: { flex: 1, gap: 2 },
-  activityText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
-  activityName: { fontWeight: '600' },
-  activityListName: { fontWeight: '600', color: Colors.accent },
-  activityItem: { fontStyle: 'italic' },
-  activityTime: { fontSize: 12, color: Colors.textSecondary },
 });

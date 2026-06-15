@@ -11,11 +11,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge } from '../../hooks/useFridge';
-import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { useFridge, useFridgeActivity } from '../../hooks/useFridge';
+import { useShoppingLists, useShoppingActivity } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 import { SkeletonLine } from '../../components/Skeleton';
+import { buildTimelineEvents } from '../../components/ActivityTimeline';
+import { formatBrTime } from '../../utils/dateUtils';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -30,11 +32,14 @@ export default function HomeScreen() {
   const household = households?.find((h) => h.id === effectiveId);
   const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);
   const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
+  const { data: fridgeActivity } = useFridgeActivity(effectiveId);
+  const { data: shoppingActivity } = useShoppingActivity(effectiveId);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'voce';
   const urgentLists = (shoppingLists ?? []).filter((l) => l.urgent);
+  const recentActivity = buildTimelineEvents(fridgeActivity, shoppingActivity).slice(0, 3);
 
   const now = new Date();
   const expiringFridge = (fridgeItems ?? [])
@@ -135,6 +140,31 @@ export default function HomeScreen() {
           <Text style={styles.quickBtnIcon}>{'\u{1F6D2}'}</Text>
           <Text style={styles.quickBtnText}>+ Lista</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleRow}>
+            <Text style={styles.cardTitleIcon}>{'\u{1F4DD}'}</Text>
+            <Text style={styles.cardTitle}>O que mudou</Text>
+          </View>
+        </View>
+
+        {recentActivity.length === 0 ? (
+          <Text style={styles.emptyText}>Nenhuma movimentacao recente.</Text>
+        ) : (
+          recentActivity.map((event) => (
+            <View key={event.id} style={styles.activityMiniRow}>
+              <View style={[styles.activityMiniIcon, { backgroundColor: `${event.color}18` }]}>
+                <Text style={[styles.activityMiniIconText, { color: event.color }]}>{event.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.activityMiniTitle}>{event.title}</Text>
+                <Text style={styles.activityMiniSubtitle}>{event.subtitle} - {formatBrTime(event.createdAt)}</Text>
+              </View>
+            </View>
+          ))
+        )}
       </View>
 
       <View style={styles.card}>
@@ -332,6 +362,25 @@ const styles = StyleSheet.create({
   itemName: { flex: 1, fontSize: 15, color: Colors.textPrimary },
   itemStorage: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   itemQty: { fontSize: 13, color: Colors.textSecondary },
+  activityMiniRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.separator,
+  },
+  activityMiniIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  activityMiniIconText: { fontSize: 10, fontWeight: '800' },
+  activityMiniTitle: { fontSize: 14, color: Colors.textPrimary, lineHeight: 19 },
+  activityMiniSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
 
   emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
   loadingLines: { gap: 10, paddingVertical: 8 },
