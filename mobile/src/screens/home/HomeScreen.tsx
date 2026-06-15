@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -16,6 +15,7 @@ import { useFridge } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
+import { SkeletonLine } from '../../components/Skeleton';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -149,7 +149,10 @@ export default function HomeScreen() {
         </View>
 
         {listsLoading ? (
-          <ActivityIndicator color={Colors.accent} style={{ marginVertical: 12 }} />
+          <View style={styles.loadingLines}>
+            <SkeletonLine width="74%" height={15} />
+            <SkeletonLine width="52%" height={13} />
+          </View>
         ) : urgentLists.length === 0 ? (
           <Text style={styles.emptyText}>Nenhuma lista urgente.</Text>
         ) : (
@@ -190,7 +193,10 @@ export default function HomeScreen() {
         </View>
 
         {fridgeLoading ? (
-          <ActivityIndicator color={Colors.accent} style={{ marginVertical: 12 }} />
+          <View style={styles.loadingLines}>
+            <SkeletonLine width="82%" height={15} />
+            <SkeletonLine width="58%" height={13} />
+          </View>
         ) : expiringFridge.length === 0 ? (
           <Text style={styles.emptyText}>Nenhum item proximo do vencimento.</Text>
         ) : (
@@ -328,5 +334,6 @@ const styles = StyleSheet.create({
   itemQty: { fontSize: 13, color: Colors.textSecondary },
 
   emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
+  loadingLines: { gap: 10, paddingVertical: 8 },
 
 });

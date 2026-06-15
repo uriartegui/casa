@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Modal, Alert, TextInput,
+  StyleSheet, RefreshControl, Modal, Alert, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,7 +19,7 @@ import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
 import { expirationLabel } from '../../utils/expiration';
 import { formatBrDate, formatBrTime } from '../../utils/dateUtils';
-import { FridgeItemSkeleton } from '../../components/Skeleton';
+import { FridgeItemSkeleton, StoragePickerSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -364,8 +364,11 @@ export default function FridgeScreen({ navigation }: Props) {
 
   if (loadingHouseholds) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.accent} />
+      <View style={styles.container}>
+        <StoragePickerSkeleton />
+        <View style={styles.list}>
+          {Array.from({ length: 6 }).map((_, i) => <FridgeItemSkeleton key={i} />)}
+        </View>
       </View>
     );
   }
@@ -428,7 +431,9 @@ export default function FridgeScreen({ navigation }: Props) {
         </Modal>
       )}
 
-      {storages !== undefined && (
+      {storages === undefined ? (
+        <StoragePickerSkeleton />
+      ) : (
         <View style={styles.storagePicker}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.storagePickerContent}>
             {visibleStorages.map((s) => (

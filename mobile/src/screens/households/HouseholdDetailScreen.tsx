@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { HouseholdMember } from '../../types';
+import { MemberRowSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdDetail'>;
@@ -31,8 +32,13 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.accent} />
+      <View style={styles.container}>
+        <View style={styles.list}>
+          <View style={styles.header}>
+            <Text style={styles.sectionLabel}>MEMBROS</Text>
+          </View>
+          {Array.from({ length: 3 }).map((_, index) => <MemberRowSkeleton key={index} />)}
+        </View>
       </View>
     );
   }

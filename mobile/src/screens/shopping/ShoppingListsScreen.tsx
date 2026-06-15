@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl, Alert, Modal,
+  StyleSheet, RefreshControl, Alert, Modal,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
@@ -164,7 +164,13 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   }
 
   if (loadingHouseholds) {
-    return <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>;
+    return (
+      <View style={styles.container}>
+        <View style={[styles.list, { gap: 12 }]}>
+          {Array.from({ length: 4 }).map((_, i) => <ShoppingListCardSkeleton key={i} />)}
+        </View>
+      </View>
+    );
   }
 
   if (!effectiveId) {

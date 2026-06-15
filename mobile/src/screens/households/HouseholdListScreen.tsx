@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHouseholds } from '../../hooks/useHouseholds';
@@ -9,6 +9,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Household } from '../../types';
+import { HouseholdCardSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdList'>;
@@ -27,8 +28,10 @@ export default function HouseholdListScreen({ navigation }: Props) {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.accent} />
+      <View style={styles.container}>
+        <View style={styles.list}>
+          {Array.from({ length: 4 }).map((_, index) => <HouseholdCardSkeleton key={index} />)}
+        </View>
       </View>
     );
   }

@@ -8,6 +8,7 @@ import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Storage } from '../../types';
 import { useStorages, useUpdateStorage } from '../../hooks/useStorages';
+import { StorageAdminCardSkeleton } from '../../components/Skeleton';
 
 type Props = {
   route: RouteProp<HouseholdStackParamList, 'ManageStorages'>;
@@ -82,9 +83,12 @@ export default function ManageStoragesScreen({ route }: Props) {
 
   if (isLoading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors.accent} />
-      </View>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        <Text style={styles.hint}>
+          Estoques ocultos somem da aba Estoque, mas seus itens e categorias continuam salvos.
+        </Text>
+        {Array.from({ length: 5 }).map((_, index) => <StorageAdminCardSkeleton key={index} />)}
+      </ScrollView>
     );
   }
 
