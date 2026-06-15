@@ -13,14 +13,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge, useFridgeActivity } from '../../hooks/useFridge';
-import { useShoppingLists, useShoppingActivity, useReplenishmentSuggestions } from '../../hooks/useShoppingLists';
+import { useFridge } from '../../hooks/useFridge';
+import { useShoppingLists, useReplenishmentSuggestions } from '../../hooks/useShoppingLists';
 import { useToast } from '../../context/ToastContext';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 import { SkeletonLine } from '../../components/Skeleton';
-import { buildTimelineEvents } from '../../components/ActivityTimeline';
-import { formatBrTime } from '../../utils/dateUtils';
 import { api } from '../../services/api';
 import { ReplenishmentSuggestion, ShoppingList } from '../../types';
 
@@ -37,8 +35,6 @@ export default function HomeScreen() {
   const household = households?.find((h) => h.id === effectiveId);
   const { data: fridgeItems, isLoading: fridgeLoading } = useFridge(effectiveId);
   const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
-  const { data: fridgeActivity } = useFridgeActivity(effectiveId);
-  const { data: shoppingActivity } = useShoppingActivity(effectiveId);
   const { data: replenishmentSuggestions, isLoading: loadingSuggestions } = useReplenishmentSuggestions(effectiveId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -47,7 +43,6 @@ export default function HomeScreen() {
 
   const firstName = user?.name?.split(' ')[0] ?? 'voce';
   const urgentLists = (shoppingLists ?? []).filter((l) => l.urgent);
-  const recentActivity = buildTimelineEvents(fridgeActivity, shoppingActivity).slice(0, 2);
   const visibleSuggestions = (replenishmentSuggestions ?? []).slice(0, 3);
 
   const now = new Date();
@@ -221,95 +216,69 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>{'\u{1F4DD}'}</Text>
-            <Text style={styles.cardTitle}>O que mudou</Text>
-          </View>
-        </View>
-
-        {recentActivity.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhuma movimentacao recente.</Text>
-        ) : (
-          recentActivity.map((event) => (
-            <View key={event.id} style={styles.activityMiniRow}>
-              <View style={[styles.activityMiniIcon, { backgroundColor: `${event.color}18` }]}>
-                <Text style={[styles.activityMiniIconText, { color: event.color }]}>{event.icon}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.activityMiniTitle}>{event.title}</Text>
-                <Text style={styles.activityMiniSubtitle}>{event.subtitle} - {formatBrTime(event.createdAt)}</Text>
-              </View>
+      {(listsLoading || urgentLists.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitleIcon}>{'\u{1F6A8}'}</Text>
+              <Text style={styles.cardTitle}>Urgente</Text>
             </View>
-          ))
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>{'\u{1F6A8}'}</Text>
-            <Text style={styles.cardTitle}>Urgente</Text>
+            <TouchableOpacity onPress={goToListaTab}>
+              <Text style={styles.cardLink}>Ver lista -&gt;</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={goToListaTab}>
-            <Text style={styles.cardLink}>Ver lista -&gt;</Text>
-          </TouchableOpacity>
-        </View>
 
-        {listsLoading ? (
+          {listsLoading ? (
           <View style={styles.loadingLines}>
             <SkeletonLine width="74%" height={15} />
             <SkeletonLine width="52%" height={13} />
           </View>
-        ) : urgentLists.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhuma lista urgente.</Text>
-        ) : (
-          urgentLists.map((list) => (
-            <TouchableOpacity
-              key={list.id}
-              style={styles.itemRow}
-              onPress={() =>
-                navigation.navigate('HomeShoppingListDetail', {
-                  householdId: effectiveId!,
-                  listId: list.id,
-                  listName: list.name,
-                  listUrgent: list.urgent,
-                })
-              }
-              activeOpacity={0.7}
-            >
-              <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{list.name}</Text>
-                <Text style={styles.itemStorage}>{'\u{1F6D2}'} Lista de compras</Text>
-              </View>
-              {list.itemCount > 0 && <Text style={styles.itemQty}>{list.itemCount} itens</Text>}
-            </TouchableOpacity>
-          ))
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>{'\u26A0\uFE0F'}</Text>
-            <Text style={styles.cardTitle}>Vencendo</Text>
-          </View>
-          <TouchableOpacity onPress={goToGeladeirTab}>
-            <Text style={styles.cardLink}>Ver estoque -&gt;</Text>
-          </TouchableOpacity>
+          ) : (
+            urgentLists.map((list) => (
+              <TouchableOpacity
+                key={list.id}
+                style={styles.itemRow}
+                onPress={() =>
+                  navigation.navigate('HomeShoppingListDetail', {
+                    householdId: effectiveId!,
+                    listId: list.id,
+                    listName: list.name,
+                    listUrgent: list.urgent,
+                  })
+                }
+                activeOpacity={0.7}
+              >
+                <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>{list.name}</Text>
+                  <Text style={styles.itemStorage}>{'\u{1F6D2}'} Lista de compras</Text>
+                </View>
+                {list.itemCount > 0 && <Text style={styles.itemQty}>{list.itemCount} itens</Text>}
+              </TouchableOpacity>
+            ))
+          )}
         </View>
+      )}
 
-        {fridgeLoading ? (
+      {(fridgeLoading || expiringFridge.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitleIcon}>{'\u26A0\uFE0F'}</Text>
+              <Text style={styles.cardTitle}>Vencendo</Text>
+            </View>
+            <TouchableOpacity onPress={goToGeladeirTab}>
+              <Text style={styles.cardLink}>Ver estoque -&gt;</Text>
+            </TouchableOpacity>
+          </View>
+
+          {fridgeLoading ? (
           <View style={styles.loadingLines}>
             <SkeletonLine width="82%" height={15} />
             <SkeletonLine width="58%" height={13} />
           </View>
-        ) : expiringFridge.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum item proximo do vencimento.</Text>
-        ) : (
-          expiringFridge.map((item) => {
+          ) : (
+            expiringFridge.map((item) => {
             const diff = Math.ceil(
               (new Date(item.expirationDate!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
             );
@@ -331,9 +300,10 @@ export default function HomeScreen() {
                 <Text style={[styles.itemQty, { color: dotColor }]}>{label}</Text>
               </View>
             );
-          })
-        )}
-      </View>
+            })
+          )}
+        </View>
+      )}
 
 
     </ScrollView>
@@ -441,27 +411,6 @@ const styles = StyleSheet.create({
   itemName: { flex: 1, fontSize: 15, color: Colors.textPrimary },
   itemStorage: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   itemQty: { fontSize: 13, color: Colors.textSecondary },
-  activityMiniRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.separator,
-  },
-  activityMiniIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  activityMiniIconText: { fontSize: 10, fontWeight: '800' },
-  activityMiniTitle: { fontSize: 14, color: Colors.textPrimary, lineHeight: 19 },
-  activityMiniSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
-
-  emptyText: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 8 },
   loadingLines: { gap: 10, paddingVertical: 8 },
 
 });
