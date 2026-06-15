@@ -90,6 +90,8 @@ export default function FridgeScreen({ navigation, route }: Props) {
     }
     return rows;
   }, [sections]);
+  const categoryCount = availableCategories.length;
+  const summaryText = `${filteredItems.length} ${filteredItems.length === 1 ? 'item cadastrado' : 'itens cadastrados'}${categoryCount > 0 ? ` em ${categoryCount} ${categoryCount === 1 ? 'categoria' : 'categorias'}` : ''}`;
 
   async function doRemove(item: FridgeItem, toShoppingListName?: string) {
     try {
@@ -248,9 +250,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
           }}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={styles.sectionLabel}>
-              {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Estoque'} - {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'itens'}
-            </Text>
+            <Text style={styles.sectionLabel}>{summaryText}</Text>
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
