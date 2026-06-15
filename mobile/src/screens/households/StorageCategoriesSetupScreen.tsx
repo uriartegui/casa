@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, Share, Alert, ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteCode } from '../../hooks/useHouseholds';
 import { useStorages, useUpdateStorage } from '../../hooks/useStorages';
@@ -59,7 +60,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.eyebrow}>Primeiros passos</Text>
         <Text style={styles.title}>Deixe sua casa pronta</Text>
@@ -134,13 +135,13 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
           <Text style={styles.doneButtonText}>Entrar na casa</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 24 },
+  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
   eyebrow: { fontSize: 12, fontWeight: '700', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
   title: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 18 },
