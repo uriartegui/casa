@@ -386,6 +386,25 @@ export class HouseholdsService {
         storageEmoji: item.storage?.emoji ?? null,
         toShoppingListName: toShoppingListName ?? undefined,
       } as any).catch((err) => this.logger.error('[FridgeActivity] save error: ' + err?.message));
+      if (toShoppingListName) {
+        this.notificationsService
+          .notifyHouseholdMembers(
+            householdId,
+            userId,
+            'Estoque',
+            `${userName} acabou com ${item.name} e mandou para a lista "${toShoppingListName}"`,
+            {
+              data: {
+                type: 'stock_finished_to_list',
+                householdId,
+                itemId,
+                itemName: item.name,
+                listName: toShoppingListName,
+              },
+            },
+          )
+          .catch(() => {});
+      }
     }
     await this.fridgeRepo.delete({ id: itemId, householdId });
     this.eventsGateway.emitHouseholdUpdate(householdId);
@@ -583,9 +602,11 @@ export class HouseholdsService {
       userId,
       userName,
     });
-    this.notificationsService
-      .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
-      .catch(() => {});
+    if (dto.notify !== false) {
+      this.notificationsService
+        .notifyHouseholdMembers(householdId, userId, 'Lista de compras', `${userName} adicionou ${saved.name} na lista "${list.name}"`)
+        .catch(() => {});
+    }
 
     return saved;
   }

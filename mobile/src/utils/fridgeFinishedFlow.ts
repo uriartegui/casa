@@ -24,6 +24,7 @@ async function addItemToShoppingList(
     quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
     unit: item.unit ?? 'un',
     category: item.category ?? undefined,
+    notify: false,
   });
 
   return response.data;
