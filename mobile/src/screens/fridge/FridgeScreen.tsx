@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, Modal, Alert, TextInput,
+  StyleSheet, RefreshControl, Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
-import { useHouseholds } from '../../hooks/useHouseholds';
-import { useFridge, useRemoveFridgeItem, useFridgeActivity, FridgeActivityEntry } from '../../hooks/useFridge';
-import { useStorages } from '../../hooks/useStorages';
+import { RouteProp } from '@react-navigation/native';
+import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { api } from '../../services/api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,64 +15,36 @@ import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
 import { expirationLabel } from '../../utils/expiration';
-import { formatBrDate, formatBrTime } from '../../utils/dateUtils';
-import { FridgeItemSkeleton, StoragePickerSkeleton } from '../../components/Skeleton';
+import { formatBrDate } from '../../utils/dateUtils';
+import { FridgeItemSkeleton } from '../../components/Skeleton';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
+  route: RouteProp<FridgeStackParamList, 'Fridge'>;
 };
 
-export default function FridgeScreen({ navigation }: Props) {
-  const HOUSEHOLD_DROPDOWN_WIDTH = 180;
-  const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
-  const { data: households, isLoading: loadingHouseholds } = useHouseholds();
-  const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
-  const [showHouseholdPicker, setShowHouseholdPicker] = useState(false);
-  const [pickerAnchor, setPickerAnchor] = useState({ x: 0, y: 0 });
-  const triggerRef = useRef<View>(null);
-
-  const { data: storages } = useStorages(effectiveId, { includeHidden: true });
-  const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
+export default function FridgeScreen({ navigation, route }: Props) {
+  const {
+    householdId: effectiveId,
+    storageId: effectiveStorageId,
+    storageName,
+    storageEmoji,
+  } = route.params;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const visibleStorages = React.useMemo(() => (storages ?? []).filter((s) => !s.hidden), [storages]);
-  const selectedStorageIsVisible = visibleStorages.some((s) => s.id === selectedStorageId);
-  const effectiveStorageId = (selectedStorageIsVisible ? selectedStorageId : null) ?? visibleStorages[0]?.id ?? null;
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
   const { data: shoppingLists } = useShoppingLists(effectiveId);
-  const { data: activityLog, refetch: refetchActivity } = useFridgeActivity(effectiveId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
-  const [showLog, setShowLog] = useState(false);
-  const [logFilter, setLogFilter] = useState<7 | 30 | null>(null);
 
   async function handleRefresh() {
     setManualRefreshing(true);
     await refetch();
     setManualRefreshing(false);
   }
-
-  useEffect(() => {
-    const householdName = households?.find((h) => h.id === effectiveId)?.name ?? 'Estoque';
-    navigation.setOptions({
-      title: householdName,
-      headerLeft: () => null,
-      headerRight: () => (
-        <TouchableOpacity onPress={() => { refetchActivity(); setShowLog(true); }} style={{ paddingHorizontal: 16, alignSelf: 'center' }}>
-          <Text style={{ fontSize: 15, color: Colors.accent, fontWeight: '500' }}>Atividades</Text>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation, households, effectiveId]);
-
-  useEffect(() => {
-    setSelectedStorageId(null);
-    setSelectedCategory(null);
-  }, [effectiveId]);
-
 
   const availableCategories = React.useMemo(() => {
     if (!items) return [];
@@ -121,137 +90,6 @@ export default function FridgeScreen({ navigation }: Props) {
     }
     return rows;
   }, [sections]);
-
-  function getActivityColor(it: FridgeActivityEntry) {
-    if (it.action === 'updated') return '#3B82F6';
-    if (it.action === 'removed' && it.toShoppingListName) return Colors.accent;
-    if (it.action === 'removed') return Colors.destructive;
-    if (it.fromShoppingListName) return '#8B5CF6';
-    return Colors.success;
-  }
-
-  function getStorageLabel(it: FridgeActivityEntry) {
-    if (!it.storageName) return null;
-    return `${it.storageEmoji ? `${it.storageEmoji} ` : ''}${it.storageName}`;
-  }
-
-  function renderActivityText(it: FridgeActivityEntry) {
-    const storageLabel = getStorageLabel(it);
-    const userName = it.userName ?? 'Alguem';
-
-    if (it.action === 'updated') {
-      return (
-        <>
-          <Text style={styles.activityName}>{userName}</Text>
-          {' editou '}
-          <Text style={styles.activityItem}>{it.itemName}</Text>
-          {storageLabel ? <> em <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
-          {it.details ? <> ({it.details})</> : null}
-        </>
-      );
-    }
-
-    if (it.action === 'removed' && it.toShoppingListName) {
-      return (
-        <>
-          <Text style={styles.activityName}>{userName}</Text>
-          {' removeu '}
-          <Text style={styles.activityItem}>{it.itemName}</Text>
-          {storageLabel ? <> de <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
-          {' e mandou para a lista '}
-          <Text style={styles.activityListName}>{it.toShoppingListName}</Text>
-        </>
-      );
-    }
-
-    if (it.action === 'removed') {
-      return (
-        <>
-          <Text style={styles.activityName}>{userName}</Text>
-          {' removeu '}
-          <Text style={styles.activityItem}>{it.itemName}</Text>
-          {storageLabel ? <> de <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
-        </>
-      );
-    }
-
-    if (it.fromShoppingListName) {
-      return (
-        <>
-          <Text style={styles.activityName}>{userName}</Text>
-          {' mandou '}
-          <Text style={styles.activityItem}>{it.itemName}</Text>
-          {' da lista '}
-          <Text style={styles.activityListName}>{it.fromShoppingListName}</Text>
-          {storageLabel ? <> para <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
-        </>
-      );
-    }
-
-    return (
-      <>
-        <Text style={styles.activityName}>{userName}</Text>
-        {' adicionou '}
-        <Text style={styles.activityItem}>{it.itemName}</Text>
-        {storageLabel ? <> em <Text style={styles.activityStorage}>{storageLabel}</Text></> : null}
-      </>
-    );
-  }
-
-  function renderLogModal() {
-    const cutoff = logFilter ? Date.now() - logFilter * 86400000 : null;
-    const filtered = (activityLog ?? [])
-      .filter((it) => !cutoff || new Date(it.createdAt).getTime() >= cutoff);
-    return (
-      <Modal visible={showLog} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowLog(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Atividade</Text>
-            <TouchableOpacity onPress={() => setShowLog(false)} style={styles.modalClose}>
-              <Text style={styles.modalCloseText}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.filterRow}>
-            {([null, 7, 30] as const).map((f) => (
-              <TouchableOpacity
-                key={String(f)}
-                style={[styles.filterChip, logFilter === f && styles.filterChipActive]}
-                onPress={() => setLogFilter(f)}
-              >
-                <Text style={[styles.filterChipText, logFilter === f && styles.filterChipTextActive]}>
-                  {f === null ? 'Tudo' : f === 7 ? '7 dias' : '30 dias'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {filtered.length === 0 ? (
-            <View style={styles.modalEmpty}>
-              <Text style={styles.modalEmptyText}>Nenhuma atividade neste periodo.</Text>
-            </View>
-          ) : (
-            <FlatList
-              data={filtered}
-              keyExtractor={(it) => it.id}
-              contentContainerStyle={styles.modalList}
-              renderItem={({ item: it }: { item: FridgeActivityEntry }) => (
-                <View style={styles.activityRow}>
-                  <View style={[styles.activityDot, { backgroundColor: getActivityColor(it) }]} />
-                  <View style={styles.activityContent}>
-                    <Text style={styles.activityText}>{renderActivityText(it)}</Text>
-                    <Text style={styles.activityTime}>
-                      {formatBrDate(it.createdAt)}
-                      {' - '}
-                      {formatBrTime(it.createdAt)}
-                    </Text>
-                  </View>
-                </View>
-              )}
-            />
-          )}
-        </View>
-      </Modal>
-    );
-  }
 
   async function doRemove(item: FridgeItem, toShoppingListName?: string) {
     try {
@@ -362,102 +200,10 @@ export default function FridgeScreen({ navigation }: Props) {
     );
   }
 
-  if (loadingHouseholds) {
-    return (
-      <View style={styles.container}>
-        <StoragePickerSkeleton />
-        <View style={styles.list}>
-          {Array.from({ length: 6 }).map((_, i) => <FridgeItemSkeleton key={i} />)}
-        </View>
-      </View>
-    );
-  }
-
-  if (!effectiveId) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>Nenhuma casa selecionada</Text>
-        <Text style={styles.emptySubtitle}>Crie ou entre em uma casa primeiro</Text>
-      </View>
-    );
-  }
-
-  const selectedStorage = visibleStorages.find((s) => s.id === effectiveStorageId);
+  const selectedStorage = { id: effectiveStorageId, name: storageName, emoji: storageEmoji };
 
   return (
     <View style={styles.container}>
-      {households && households.length > 1 && (
-        <Modal
-          visible={showHouseholdPicker}
-          transparent
-          animationType="none"
-          onRequestClose={() => setShowHouseholdPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            activeOpacity={1}
-            onPress={() => setShowHouseholdPicker(false)}
-          >
-            <View
-              style={[
-                styles.householdDropdown,
-                {
-                  top: pickerAnchor.y,
-                  left: Math.max(12, pickerAnchor.x - HOUSEHOLD_DROPDOWN_WIDTH / 2),
-                },
-              ]}
-            >
-              {households.map((h) => (
-                <TouchableOpacity
-                  key={h.id}
-                  style={[styles.householdOption, h.id === effectiveId && styles.householdOptionActive]}
-                  onPress={() => {
-                    setSelectedHouseholdId(h.id);
-                    setShowHouseholdPicker(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.householdOptionText,
-                      h.id === effectiveId && styles.householdOptionTextActive,
-                    ]}
-                  >
-                    {h.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
-
-      {storages === undefined ? (
-        <StoragePickerSkeleton />
-      ) : (
-        <View style={styles.storagePicker}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={styles.storagePickerContent}>
-            {visibleStorages.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                style={[styles.storageChip, s.id === effectiveStorageId && styles.storageChipActive]}
-                onPress={() => setSelectedStorageId(s.id)}
-              >
-                <Text style={styles.storageChipEmoji}>{s.emoji}</Text>
-                <Text style={[styles.storageChipText, s.id === effectiveStorageId && styles.storageChipTextActive]}>
-                  {s.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <TouchableOpacity
-            style={styles.storageAddChip}
-            onPress={() => navigation.navigate('CreateStorage', { householdId: effectiveId })}
-          >
-            <Text style={styles.storageAddChipText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {availableCategories.length > 0 && (
         <View style={styles.categoryPickerWrapper}>
           <ScrollView
@@ -516,7 +262,6 @@ export default function FridgeScreen({ navigation }: Props) {
         />
       )}
 
-      {renderLogModal()}
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.button}

@@ -12,6 +12,8 @@ import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import MemberDetailScreen from '../screens/households/MemberDetailScreen';
 import ManageCategoriesScreen from '../screens/households/ManageCategoriesScreen';
 import ManageStoragesScreen from '../screens/households/ManageStoragesScreen';
+import StorageOverviewScreen from '../screens/fridge/StorageOverviewScreen';
+import StorageActivityScreen from '../screens/fridge/StorageActivityScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
 import AddFridgeItemScreen from '../screens/fridge/AddFridgeItemScreen';
 import CreateStorageScreen from '../screens/fridge/CreateStorageScreen';
@@ -36,7 +38,9 @@ export type HouseholdStackParamList = {
 };
 
 export type FridgeStackParamList = {
-  Fridge: undefined;
+  StorageOverview: undefined;
+  StorageActivity: { householdId: string };
+  Fridge: { householdId: string; storageId: string; storageName: string; storageEmoji: string };
   AddFridgeItem: { householdId: string; storageId?: string };
   FridgeItemDetail: { itemId: string; householdId: string };
   CreateStorage: { householdId: string };
@@ -131,7 +135,9 @@ function ProfileNavigator() {
 function FridgeNavigator() {
   return (
     <FridgeStack.Navigator screenOptions={stackScreenOptions}>
-      <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={{ title: '' }} />
+      <FridgeStack.Screen name="StorageOverview" component={StorageOverviewScreen} options={{ title: 'Estoque' }} />
+      <FridgeStack.Screen name="StorageActivity" component={StorageActivityScreen} options={{ title: 'Atividade' }} />
+      <FridgeStack.Screen name="Fridge" component={FridgeScreen} options={({ route }) => ({ title: `${route.params.storageEmoji} ${route.params.storageName}` })} />
       <FridgeStack.Screen name="AddFridgeItem" component={AddFridgeItemScreen} options={{ title: 'Novo Item', presentation: 'modal' }} />
       <FridgeStack.Screen name="FridgeItemDetail" component={FridgeItemDetailScreen} options={{ title: 'Detalhes', presentation: 'modal' }} />
       <FridgeStack.Screen name="CreateStorage" component={CreateStorageScreen} options={{ title: 'Novo Compartimento', presentation: 'modal' }} />
@@ -179,7 +185,7 @@ export default function AppTabs() {
         component={FridgeNavigator}
         options={{ title: 'Estoque', tabBarIcon: () => <TabIcon icon={'\u{1F4E6}'} /> }}
         listeners={({ navigation }) => ({
-          tabPress: () => navigation.navigate('GeladeirTab', { screen: 'Fridge' } as never),
+          tabPress: () => navigation.navigate('GeladeirTab', { screen: 'StorageOverview' } as never),
         })}
       />
       <Tab.Screen
