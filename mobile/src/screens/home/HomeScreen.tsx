@@ -5,19 +5,24 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge, useFridgeActivity } from '../../hooks/useFridge';
-import { useShoppingLists, useShoppingActivity } from '../../hooks/useShoppingLists';
+import { useShoppingLists, useShoppingActivity, useReplenishmentSuggestions } from '../../hooks/useShoppingLists';
+import { useToast } from '../../context/ToastContext';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 import { SkeletonLine } from '../../components/Skeleton';
 import { buildTimelineEvents } from '../../components/ActivityTimeline';
 import { formatBrTime } from '../../utils/dateUtils';
+import { api } from '../../services/api';
+import { ReplenishmentSuggestion, ShoppingList } from '../../types';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -34,12 +39,16 @@ export default function HomeScreen() {
   const { data: shoppingLists, isLoading: listsLoading } = useShoppingLists(effectiveId);
   const { data: fridgeActivity } = useFridgeActivity(effectiveId);
   const { data: shoppingActivity } = useShoppingActivity(effectiveId);
+  const { data: replenishmentSuggestions, isLoading: loadingSuggestions } = useReplenishmentSuggestions(effectiveId);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const firstName = user?.name?.split(' ')[0] ?? 'voce';
   const urgentLists = (shoppingLists ?? []).filter((l) => l.urgent);
-  const recentActivity = buildTimelineEvents(fridgeActivity, shoppingActivity).slice(0, 3);
+  const recentActivity = buildTimelineEvents(fridgeActivity, shoppingActivity).slice(0, 2);
+  const visibleSuggestions = (replenishmentSuggestions ?? []).slice(0, 3);
 
   const now = new Date();
   const expiringFridge = (fridgeItems ?? [])
@@ -57,6 +66,40 @@ export default function HomeScreen() {
 
   function goToGeladeirTab() {
     navigation.getParent()?.navigate('GeladeirTab' as never);
+  }
+
+  async function addSuggestionToList(suggestion: ReplenishmentSuggestion, list: ShoppingList) {
+    if (!effectiveId) return;
+    try {
+      await api.post(`/households/${effectiveId}/shopping-lists/${list.id}/items`, {
+        name: suggestion.name,
+        quantity: suggestion.quantity,
+        unit: suggestion.unit,
+      });
+      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, list.id] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', effectiveId] });
+      queryClient.invalidateQueries({ queryKey: ['replenishment-suggestions', effectiveId] });
+      showToast(`${suggestion.name} foi para ${list.name}`, 'success');
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel adicionar o item na lista.');
+    }
+  }
+
+  function pickListForSuggestion(suggestion: ReplenishmentSuggestion) {
+    const lists = shoppingLists ?? [];
+    if (lists.length === 0) {
+      Alert.alert('Sem listas', 'Crie uma lista de compras primeiro.');
+      return;
+    }
+    Alert.alert(
+      'Adicionar a qual lista?',
+      suggestion.name,
+      [
+        ...lists.map((list) => ({ text: list.name, onPress: () => addSuggestionToList(suggestion, list) })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ],
+    );
   }
 
   return (
@@ -141,6 +184,42 @@ export default function HomeScreen() {
           <Text style={styles.quickBtnText}>+ Lista</Text>
         </TouchableOpacity>
       </View>
+
+      {(loadingSuggestions || visibleSuggestions.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitleIcon}>{'\u{1F501}'}</Text>
+              <Text style={styles.cardTitle}>Comprar de novo?</Text>
+            </View>
+          </View>
+
+          {loadingSuggestions ? (
+            <View style={styles.loadingLines}>
+              <SkeletonLine width="76%" height={15} />
+              <SkeletonLine width="48%" height={13} />
+            </View>
+          ) : (
+            visibleSuggestions.map((suggestion) => (
+              <TouchableOpacity
+                key={suggestion.name}
+                style={styles.itemRow}
+                onPress={() => pickListForSuggestion(suggestion)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.itemDot, { backgroundColor: Colors.accent }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName}>{suggestion.name}</Text>
+                  <Text style={styles.itemStorage}>
+                    Comprado {suggestion.count} vezes
+                  </Text>
+                </View>
+                <Text style={styles.itemQty}>+ lista</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>

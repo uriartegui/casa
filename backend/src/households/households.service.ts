@@ -721,6 +721,73 @@ export class HouseholdsService {
     });
   }
 
+  async getReplenishmentSuggestions(householdId: string, userId: string) {
+    await this.assertMember(householdId, userId);
+
+    const pendingItems = await this.shoppingRepo.find({
+      where: { householdId, checked: false },
+    });
+    const stockItems = await this.fridgeRepo.find({
+      where: { householdId },
+    });
+    const recentShoppingActivity = await this.shoppingActivityRepo.find({
+      where: { householdId },
+      order: { createdAt: 'DESC' },
+      take: 250,
+    });
+
+    const blockedNames = new Set(
+      [...pendingItems.map((item) => item.name), ...stockItems.map((item) => item.name)]
+        .map((name) => this.normalizeSuggestionName(name)),
+    );
+    const stats = new Map<string, {
+      name: string;
+      count: number;
+      lastBoughtAt: Date;
+      quantity: number | null;
+      unit: string | null;
+    }>();
+
+    for (const event of recentShoppingActivity) {
+      if (!['added', 'checked', 'sent_to_fridge'].includes(event.action)) continue;
+      const key = this.normalizeSuggestionName(event.itemName);
+      if (!key || blockedNames.has(key)) continue;
+
+      const current = stats.get(key);
+      const createdAt = event.createdAt instanceof Date ? event.createdAt : new Date(event.createdAt);
+      if (!current) {
+        stats.set(key, {
+          name: event.itemName,
+          count: 1,
+          lastBoughtAt: createdAt,
+          quantity: event.quantity === null || event.quantity === undefined ? null : Number(event.quantity),
+          unit: event.unit ?? null,
+        });
+        continue;
+      }
+
+      current.count += 1;
+      if (createdAt.getTime() > current.lastBoughtAt.getTime()) {
+        current.name = event.itemName;
+        current.lastBoughtAt = createdAt;
+        current.quantity = event.quantity === null || event.quantity === undefined ? current.quantity : Number(event.quantity);
+        current.unit = event.unit ?? current.unit;
+      }
+    }
+
+    return [...stats.values()]
+      .filter((item) => item.count >= 2)
+      .sort((a, b) => b.count - a.count || b.lastBoughtAt.getTime() - a.lastBoughtAt.getTime())
+      .slice(0, 6)
+      .map((item) => ({
+        name: item.name,
+        count: item.count,
+        lastBoughtAt: item.lastBoughtAt,
+        quantity: item.quantity ?? 1,
+        unit: item.unit ?? 'un',
+      }));
+  }
+
   async getFridgeActivity(householdId: string, userId: string) {
     await this.assertMember(householdId, userId);
     return this.fridgeActivityRepo.find({
@@ -742,5 +809,13 @@ export class HouseholdsService {
     }
     const result = await qb.getRawMany<{ category: string }>();
     return result.map((r) => r.category);
+  }
+
+  private normalizeSuggestionName(name: string | null | undefined): string {
+    return (name ?? '')
+      .trim()
+      .toLocaleLowerCase('pt-BR')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
   }
 }

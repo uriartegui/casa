@@ -241,6 +241,12 @@ export class HouseholdsController {
     return this.householdsService.getShoppingActivity(id, req.user.id);
   }
 
+  @Get(':id/replenishment-suggestions')
+  @ApiOperation({ summary: 'Sugestoes de reposicao da casa' })
+  getReplenishmentSuggestions(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.householdsService.getReplenishmentSuggestions(id, req.user.id);
+  }
+
   @Get(':id/shopping-lists')
   @ApiOperation({ summary: 'Listar listas de compras' })
   getShoppingLists(@Param('id', ParseUUIDPipe) id: string, @Request() req) {

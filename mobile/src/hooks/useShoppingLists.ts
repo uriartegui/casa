@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { ShoppingList, ShoppingItem, ShoppingActivityEvent } from '../types';
+import { ShoppingList, ShoppingItem, ShoppingActivityEvent, ReplenishmentSuggestion } from '../types';
 
 export function useShoppingLists(householdId: string | null) {
   return useQuery({
@@ -168,6 +168,17 @@ export function useShoppingActivity(householdId: string | null) {
     queryKey: ["shopping-activity", householdId],
     queryFn: async () => {
       const res = await api.get<ShoppingActivityEvent[]>(`/households/${householdId}/shopping-activity`);
+      return res.data;
+    },
+    enabled: !!householdId,
+  });
+}
+
+export function useReplenishmentSuggestions(householdId: string | null) {
+  return useQuery<ReplenishmentSuggestion[]>({
+    queryKey: ['replenishment-suggestions', householdId],
+    queryFn: async () => {
+      const res = await api.get<ReplenishmentSuggestion[]>(`/households/${householdId}/replenishment-suggestions`);
       return res.data;
     },
     enabled: !!householdId,

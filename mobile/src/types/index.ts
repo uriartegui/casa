@@ -97,3 +97,11 @@ export interface ShoppingActivityEvent {
   createdBy?: User;
   createdAt: string;
 }
+
+export interface ReplenishmentSuggestion {
+  name: string;
+  count: number;
+  lastBoughtAt: string;
+  quantity: number;
+  unit: string;
+}
