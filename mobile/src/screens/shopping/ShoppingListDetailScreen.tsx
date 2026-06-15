@@ -166,6 +166,11 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const pending = items?.filter((i) => !i.checked) ?? [];
   const bought = items?.filter((i) => i.checked) ?? [];
   const total = items?.length ?? 0;
+  const storeBoughtButtonLabel =
+    bought.length === 1
+      ? `Guardar ${bought[0].name}`
+      : `Guardar ${bought.length} comprados`;
+  const selectedAllBought = bought.length > 0 && selectedToSend.size === bought.length;
 
   const handleDeleteList = useCallback(() => {
     const doDelete = () => deleteList.mutate(listId, { onSuccess: () => navigation.goBack() });
@@ -347,7 +352,19 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               <Text style={styles.modalClose}>Cancelar</Text>
             </TouchableOpacity>
           </View>
-          <Text style={styles.modalSubtitle}>Escolha os comprados que voce quer guardar agora.</Text>
+          <View style={styles.modalSummary}>
+            <Text style={styles.modalSummaryTitle}>
+              {bought.length} {bought.length === 1 ? 'item comprado pronto' : 'itens comprados prontos'}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedToSend(selectedAllBought ? new Set() : new Set(bought.map((item) => item.id)))}
+            >
+              <Text style={styles.modalToggleAll}>
+                {selectedAllBought ? 'Desmarcar todos' : 'Selecionar todos'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modalSubtitle}>Escolha o que voce quer guardar agora.</Text>
           {bought.map((item) => {
             const selected = selectedToSend.has(item.id);
             return (
@@ -415,7 +432,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
         {bought.length > 0 && (
           <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
-          <Text style={styles.buttonSecondaryText}>Guardar comprados</Text>
+          <Text style={styles.buttonSecondaryText}>{storeBoughtButtonLabel}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -637,7 +654,10 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator },
   modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
-  modalSubtitle: { fontSize: 13, color: Colors.textSecondary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
+  modalSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 16, paddingTop: 16 },
+  modalSummaryTitle: { flex: 1, fontSize: 14, color: Colors.textPrimary, fontWeight: '700' },
+  modalToggleAll: { fontSize: 13, color: Colors.accent, fontWeight: '700' },
+  modalSubtitle: { fontSize: 13, color: Colors.textSecondary, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 6 },
   modalItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, gap: 12 },
   modalCheckbox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center' },
   modalCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
