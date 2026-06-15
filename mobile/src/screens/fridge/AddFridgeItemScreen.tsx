@@ -33,12 +33,15 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [showStorageOptions, setShowStorageOptions] = useState(false);
+  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
 
   // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
   // escolhe um; item sem compartimento nao aparece no estoque.
   const { data: storages } = useStorages(householdId);
   const [pickedStorageId, setPickedStorageId] = useState<string | null>(routeStorageId ?? null);
-  const storageId = pickedStorageId ?? storages?.[0]?.id ?? undefined;
+  const storageId = pickedStorageId ?? undefined;
+  const selectedStorage = storages?.find((s) => s.id === storageId);
 
   const addItem = useAddFridgeItem(householdId);
   const { data: categories } = useCategories(householdId, storageId ?? null);
@@ -57,6 +60,10 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
       Alert.alert('Erro', 'Quantidade inválida.');
+      return;
+    }
+    if (!storageId) {
+      Alert.alert('Escolha onde guardar', 'Selecione um estoque antes de adicionar o item.');
       return;
     }
     try {
@@ -158,57 +165,109 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
             ))}
           </View>
 
-          {!routeStorageId && (storages?.length ?? 0) > 0 && (
+          {(storages?.length ?? 0) > 0 && (
             <>
               <Text style={styles.label}>Compartimento</Text>
-              <View style={styles.chipRow}>
-                {(storages ?? []).map((s) => (
-                  <TouchableOpacity
-                    key={s.id}
-                    style={[styles.chip, storageId === s.id && styles.chipActive]}
-                    onPress={() => { setPickedStorageId(s.id); setCategory(null); }}
-                  >
-                    <Text style={[styles.chipText, storageId === s.id && styles.chipTextActive]}>
-                      {s.emoji} {s.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={[styles.selectRow, routeStorageId ? styles.selectRowLocked : null]}
+                onPress={() => {
+                  if (routeStorageId) return;
+                  setShowStorageOptions((value) => !value);
+                  setShowCategoryOptions(false);
+                }}
+                activeOpacity={routeStorageId ? 1 : 0.7}
+              >
+                <Text style={[styles.selectRowText, !selectedStorage && styles.selectRowPlaceholder]}>
+                  {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Escolher compartimento'}
+                </Text>
+                {!routeStorageId && <Text style={styles.selectRowToggle}>{showStorageOptions ? '-' : '+'}</Text>}
+              </TouchableOpacity>
+              {showStorageOptions && !routeStorageId && (
+                <View style={styles.compactOptions}>
+                  {(storages ?? []).map((s) => (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.compactChip, storageId === s.id && styles.compactChipActive]}
+                      onPress={() => {
+                        setPickedStorageId(s.id);
+                        setCategory(null);
+                        setShowStorageOptions(false);
+                        setShowCategoryOptions(true);
+                      }}
+                    >
+                      <Text style={[styles.compactChipText, storageId === s.id && styles.compactChipTextActive]}>
+                        {s.emoji} {s.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </>
           )}
 
           <Text style={styles.label}>
             Categoria <Text style={styles.optional}>(opcional · segure para excluir)</Text>
           </Text>
-          <View style={styles.chipRow}>
+          <TouchableOpacity
+            style={[styles.selectRow, !storageId && styles.selectRowDisabled]}
+            onPress={() => {
+              if (!storageId) return;
+              setShowCategoryOptions((value) => !value);
+              setShowStorageOptions(false);
+            }}
+          >
+            <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>
+              {category ?? (storageId ? 'Escolher categoria' : 'Escolha um compartimento primeiro')}
+            </Text>
+            <Text style={styles.selectRowToggle}>{showCategoryOptions ? '-' : '+'}</Text>
+          </TouchableOpacity>
+          {showCategoryOptions && storageId && (
+          <View style={styles.compactOptions}>
+            <TouchableOpacity
+              style={[styles.compactChip, !category && styles.compactChipActive]}
+              onPress={() => {
+                setCategory(null);
+                setShowCategoryOptions(false);
+              }}
+            >
+              <Text style={[styles.compactChipText, !category && styles.compactChipTextActive]}>Sem categoria</Text>
+            </TouchableOpacity>
             {(categories ?? []).map((c) => (
               <TouchableOpacity
                 key={c.id}
-                style={[styles.chip, category === c.label && styles.chipActive]}
-                onPress={() => setCategory(category === c.label ? null : c.label)}
+                style={[styles.compactChip, category === c.label && styles.compactChipActive]}
+                onPress={() => {
+                  setCategory(c.label);
+                  setShowCategoryOptions(false);
+                }}
                 onLongPress={() => handleCategoryLongPress(c)}
                 delayLongPress={500}
               >
-                <Text style={[styles.chipText, category === c.label && styles.chipTextActive]}>
+                <Text style={[styles.compactChipText, category === c.label && styles.compactChipTextActive]}>
                   {c.emoji} {c.label}
                 </Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={styles.addCategoryChip}
+              style={styles.compactAddChip}
               onPress={() => setNewCatModal(true)}
             >
               <Text style={styles.addCategoryText}>+ Nova</Text>
             </TouchableOpacity>
           </View>
+          )}
 
           <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
           <DateField value={expirationDate} onChange={setExpirationDate} />
 
-          <TouchableOpacity style={styles.button} onPress={handleAdd} disabled={addItem.isPending}>
+          <TouchableOpacity
+            style={[styles.button, (!storageId || addItem.isPending) && styles.buttonDisabled]}
+            onPress={handleAdd}
+            disabled={!storageId || addItem.isPending}
+          >
             {addItem.isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.buttonText}>Adicionar</Text>
+              : <Text style={styles.buttonText}>{storageId ? 'Adicionar' : 'Escolha um compartimento'}</Text>
             }
           </TouchableOpacity>
         </ScrollView>
@@ -281,6 +340,43 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   chipTextActive: { color: '#fff' },
+  selectRow: {
+    minHeight: 46,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.card,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectRowLocked: { opacity: 0.85 },
+  selectRowDisabled: { opacity: 0.65 },
+  selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
+  selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
+  selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
+  compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
+  compactChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+  },
+  compactChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  compactChipText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  compactChipTextActive: { color: '#fff' },
+  compactAddChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    borderStyle: 'dashed',
+  },
   addCategoryChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
     borderWidth: 1, borderColor: Colors.accent, borderStyle: 'dashed',
@@ -304,6 +400,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 16,
   },
+  buttonDisabled: { opacity: 0.45 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 20, textAlign: 'center' },
 
   // Modal
