@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl, Alert,
+  StyleSheet, RefreshControl,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
-import { api } from '../../services/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../context/ToastContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
@@ -17,6 +16,7 @@ import { FridgeItem } from '../../types';
 import { expirationLabel } from '../../utils/expiration';
 import { formatBrDate } from '../../utils/dateUtils';
 import { FridgeItemSkeleton } from '../../components/Skeleton';
+import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -34,7 +34,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
-  const { data: shoppingLists } = useShoppingLists(effectiveId);
+  const { data: shoppingLists, isLoading: loadingShoppingLists } = useShoppingLists(effectiveId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   useRefreshOnFocus(refetch);
@@ -93,53 +93,16 @@ export default function FridgeScreen({ navigation, route }: Props) {
   const categoryCount = availableCategories.length;
   const summaryText = `${filteredItems.length} ${filteredItems.length === 1 ? 'item cadastrado' : 'itens cadastrados'}${categoryCount > 0 ? ` em ${categoryCount} ${categoryCount === 1 ? 'categoria' : 'categorias'}` : ''}`;
 
-  async function doRemove(item: FridgeItem, toShoppingListName?: string) {
-    try {
-      await removeItem.mutateAsync({ itemId: item.id, toShoppingListName });
-    } catch {
-      Alert.alert('Erro', 'Nao foi possivel remover o item.');
-    }
-  }
-
-  function handlePickListAndRemove(item: FridgeItem) {
-    const lists = shoppingLists ?? [];
-    if (lists.length === 0) {
-      Alert.alert('Sem listas', 'Crie uma lista de compras primeiro.');
-      return;
-    }
-    Alert.alert(
-      'Escolher lista',
-      'Adicionar a qual lista?',
-      [
-        ...lists.map((l) => ({
-          text: l.name,
-          onPress: async () => {
-            await doRemove(item, l.name);
-            try {
-              await api.post(`/households/${effectiveId}/shopping-lists/${l.id}/items`, {
-                name: item.name,
-                quantity: Math.max(1, Math.round(Number(item.quantity) || 1)),
-                unit: item.unit ?? 'un',
-                category: item.category ?? undefined,
-              });
-              queryClient.invalidateQueries({ queryKey: ['shopping-list-items', effectiveId, l.id] });
-              queryClient.invalidateQueries({ queryKey: ['shopping-lists', effectiveId] });
-            } catch {
-              showToast('Item removido, mas erro ao adicionar a lista', 'error');
-            }
-          },
-        })),
-        { text: 'Cancelar', style: 'cancel' as const },
-      ],
-    );
-  }
-
   function confirmItemFinished(item: FridgeItem) {
-    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item do estoque.', [
-      { text: 'Somente excluir', style: 'destructive', onPress: () => doRemove(item) },
-      { text: 'Excluir e mandar para lista', onPress: () => handlePickListAndRemove(item) },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    showFinishedFridgeItemAlert({
+      householdId: effectiveId,
+      item,
+      shoppingLists,
+      shoppingListsLoading: loadingShoppingLists,
+      removeItem: removeItem.mutateAsync,
+      queryClient,
+      showToast,
+    });
   }
 
   function renderItem({ item }: { item: FridgeItem }) {

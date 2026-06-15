@@ -16,6 +16,7 @@ import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
+import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'FridgeItemDetail'>;
@@ -52,7 +53,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const { data: categories } = useCategories(householdId, item?.storageId ?? item?.storage?.id ?? null);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
-  const { data: shoppingLists } = useShoppingLists(householdId);
+  const { data: shoppingLists, isLoading: loadingShoppingLists } = useShoppingLists(householdId);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -162,22 +163,16 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   function handleRemove() {
     if (!item) return;
 
-    Alert.alert(`"${item.name}" acabou?`, 'Voce esta excluindo este item do estoque.', [
-      {
-        text: 'Somente excluir',
-        style: 'destructive' as const,
-        onPress: async () => {
-          try {
-            await removeItem.mutateAsync({ itemId: item.id });
-            navigation.goBack();
-          } catch {
-            Alert.alert('Erro', 'Nao foi possivel remover o item.');
-          }
-        },
-      },
-      { text: 'Excluir e mandar para lista', onPress: handlePickList },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    showFinishedFridgeItemAlert({
+      householdId,
+      item,
+      shoppingLists,
+      shoppingListsLoading: loadingShoppingLists,
+      removeItem: removeItem.mutateAsync,
+      queryClient,
+      showToast,
+      onDone: () => navigation.goBack(),
+    });
   }
 
   if (isLoading) {
