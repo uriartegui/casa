@@ -25,6 +25,7 @@ import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
+import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -251,6 +252,41 @@ export class HouseholdsController {
   @ApiOperation({ summary: 'Resumo de atencao da casa' })
   getHouseholdAttention(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.householdsService.getHouseholdAttention(id, req.user.id);
+  }
+
+  // House Tasks
+
+  @Get(':id/tasks')
+  @ApiOperation({ summary: 'Listar tarefas da casa' })
+  getHouseTasks(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.householdsService.getHouseTasks(id, req.user.id);
+  }
+
+  @Post(':id/tasks')
+  @ApiOperation({ summary: 'Criar tarefa da casa' })
+  createHouseTask(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateHouseTaskDto, @Request() req) {
+    return this.householdsService.createHouseTask(id, req.user.id, dto);
+  }
+
+  @Patch(':id/tasks/:taskId')
+  @ApiOperation({ summary: 'Concluir ou reabrir tarefa da casa' })
+  updateHouseTaskStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Body('done') done: boolean,
+    @Request() req,
+  ) {
+    return this.householdsService.updateHouseTaskStatus(id, taskId, req.user.id, Boolean(done));
+  }
+
+  @Delete(':id/tasks/:taskId')
+  @ApiOperation({ summary: 'Excluir tarefa da casa' })
+  deleteHouseTask(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('taskId', ParseUUIDPipe) taskId: string,
+    @Request() req,
+  ) {
+    return this.householdsService.deleteHouseTask(id, taskId, req.user.id);
   }
 
   @Get(':id/shopping-lists')

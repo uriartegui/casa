@@ -15,6 +15,7 @@ import { HouseholdInvite } from './household-invite.entity';
 import { FridgeItem } from './fridge-item.entity';
 import { FridgeActivity } from './fridge-activity.entity';
 import { ShoppingActivity } from './shopping-activity.entity';
+import { HouseTask } from './house-task.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
@@ -25,6 +26,7 @@ import { UpdateStorageDto } from './dto/update-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
+import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
@@ -52,6 +54,8 @@ export class HouseholdsService {
     private fridgeActivityRepo: Repository<FridgeActivity>,
     @InjectRepository(ShoppingActivity)
     private shoppingActivityRepo: Repository<ShoppingActivity>,
+    @InjectRepository(HouseTask)
+    private houseTasksRepo: Repository<HouseTask>,
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
     private dataSource: DataSource,
@@ -483,6 +487,7 @@ export class HouseholdsService {
       await queryRunner.manager.delete(FridgeItem, { householdId });
       await queryRunner.manager.delete(FridgeActivity, { householdId });
       await queryRunner.manager.delete(ShoppingActivity, { householdId });
+      await queryRunner.manager.delete(HouseTask, { householdId });
       await queryRunner.manager.delete(ShoppingItem, { householdId });
       await queryRunner.manager.delete(ShoppingList, { householdId });
       await queryRunner.manager.delete(HouseholdCategory, { householdId });
@@ -536,6 +541,68 @@ export class HouseholdsService {
   private logShoppingActivity(data: Partial<ShoppingActivity>) {
     this.shoppingActivityRepo.save(data as ShoppingActivity)
       .catch((err) => this.logger.error('[ShoppingActivity] save error: ' + err?.message));
+  }
+
+  // House Tasks
+
+  async getHouseTasks(householdId: string, userId: string): Promise<HouseTask[]> {
+    await this.assertMember(householdId, userId);
+    return this.houseTasksRepo.find({
+      where: { householdId },
+      relations: ['createdBy', 'completedBy'],
+      order: { done: 'ASC', dueDate: 'ASC', createdAt: 'DESC' },
+      take: 100,
+    });
+  }
+
+  async createHouseTask(
+    householdId: string,
+    userId: string,
+    dto: CreateHouseTaskDto,
+  ): Promise<HouseTask> {
+    await this.assertMember(householdId, userId);
+    const task = this.houseTasksRepo.create({
+      householdId,
+      createdById: userId,
+      title: dto.title.trim(),
+      category: dto.category?.trim() || null,
+      dueDate: dto.dueDate || null,
+      done: false,
+      completedById: null,
+      completedAt: null,
+    });
+    const saved = await this.houseTasksRepo.save(task);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return this.houseTasksRepo.findOneOrFail({
+      where: { id: saved.id, householdId },
+      relations: ['createdBy', 'completedBy'],
+    });
+  }
+
+  async updateHouseTaskStatus(
+    householdId: string,
+    taskId: string,
+    userId: string,
+    done: boolean,
+  ): Promise<HouseTask> {
+    await this.assertMember(householdId, userId);
+    const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
+    if (!task) throw new NotFoundException('Tarefa nao encontrada');
+    task.done = done;
+    task.completedById = done ? userId : null;
+    task.completedAt = done ? new Date() : null;
+    await this.houseTasksRepo.save(task);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return this.houseTasksRepo.findOneOrFail({
+      where: { id: task.id, householdId },
+      relations: ['createdBy', 'completedBy'],
+    });
+  }
+
+  async deleteHouseTask(householdId: string, taskId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    await this.houseTasksRepo.delete({ id: taskId, householdId });
+    this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 
   // Shopping Lists

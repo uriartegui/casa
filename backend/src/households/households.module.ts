@@ -12,11 +12,12 @@ import { HouseholdCategory } from './household-category.entity';
 import { HouseholdInvite } from './household-invite.entity';
 import { FridgeActivity } from './fridge-activity.entity';
 import { ShoppingActivity } from './shopping-activity.entity';
+import { HouseTask } from './house-task.entity';
 import { EventsModule } from '../events/events.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Household, HouseholdMember, FridgeItem, ShoppingItem, ShoppingList, Storage, HouseholdCategory, HouseholdInvite, FridgeActivity, ShoppingActivity]), EventsModule, NotificationsModule],
+  imports: [TypeOrmModule.forFeature([Household, HouseholdMember, FridgeItem, ShoppingItem, ShoppingList, Storage, HouseholdCategory, HouseholdInvite, FridgeActivity, ShoppingActivity, HouseTask]), EventsModule, NotificationsModule],
   providers: [HouseholdsService],
   controllers: [HouseholdsController],
   exports: [HouseholdsService],

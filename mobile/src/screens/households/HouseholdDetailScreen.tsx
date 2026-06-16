@@ -148,6 +148,12 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.button, styles.buttonSecondary]}
+          onPress={() => navigation.navigate('HouseTasks', { householdId, householdName: household.name })}
+        >
+          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Checklist da casa</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.buttonSecondary]}
           onPress={() => navigation.navigate('ManageCategories', { householdId, householdName: household.name })}
         >
           <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Gerenciar categorias</Text>

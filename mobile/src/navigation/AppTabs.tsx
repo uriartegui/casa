@@ -12,6 +12,7 @@ import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import MemberDetailScreen from '../screens/households/MemberDetailScreen';
 import ManageCategoriesScreen from '../screens/households/ManageCategoriesScreen';
 import ManageStoragesScreen from '../screens/households/ManageStoragesScreen';
+import HouseTasksScreen from '../screens/households/HouseTasksScreen';
 import StorageOverviewScreen from '../screens/fridge/StorageOverviewScreen';
 import StorageActivityScreen from '../screens/fridge/StorageActivityScreen';
 import FridgeScreen from '../screens/fridge/FridgeScreen';
@@ -36,6 +37,7 @@ export type HouseholdStackParamList = {
   MemberDetail: { householdId: string; memberId: string };
   ManageCategories: { householdId: string; householdName: string };
   ManageStorages: { householdId: string; householdName: string };
+  HouseTasks: { householdId: string; householdName: string };
 };
 
 export type FridgeStackParamList = {
@@ -123,6 +125,7 @@ function HouseholdNavigator() {
       <HouseholdStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Membro' }} />
       <HouseholdStack.Screen name="ManageStorages" component={ManageStoragesScreen} options={({ route }) => ({ title: `Estoques - ${route.params.householdName}` })} />
       <HouseholdStack.Screen name="ManageCategories" component={ManageCategoriesScreen} options={({ route }) => ({ title: `Categorias - ${route.params.householdName}` })} />
+      <HouseholdStack.Screen name="HouseTasks" component={HouseTasksScreen} options={({ route }) => ({ title: `Checklist - ${route.params.householdName}` })} />
     </HouseholdStack.Navigator>
   );
 }

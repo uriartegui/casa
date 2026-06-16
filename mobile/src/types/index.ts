@@ -117,3 +117,19 @@ export interface HouseholdAttentionItem {
 export interface HouseholdAttention {
   items: HouseholdAttentionItem[];
 }
+
+export interface HouseTask {
+  id: string;
+  householdId: string;
+  title: string;
+  category: string | null;
+  dueDate: string | null;
+  done: boolean;
+  createdById: string;
+  completedById: string | null;
+  completedAt: string | null;
+  createdBy?: User;
+  completedBy?: User | null;
+  createdAt: string;
+  updatedAt: string;
+}
