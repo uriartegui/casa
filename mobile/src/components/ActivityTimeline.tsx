@@ -12,8 +12,12 @@ type TimelineEvent = {
   scope: 'stock' | 'shopping';
   kind: string;
   createdAt: string;
+  userId?: string | null;
   userName: string;
   itemName: string;
+  storageId?: string | null;
+  storageName?: string | null;
+  storageEmoji?: string | null;
   title: React.ReactNode;
   subtitle: string;
   color: string;
@@ -32,6 +36,9 @@ type Props = {
   showScopeFilter?: boolean;
   showPeriodFilter?: boolean;
   emptyText?: string;
+  onEventPress?: (event: TimelineEvent) => void;
+  newSince?: string | null;
+  localUserId?: string | null;
 };
 
 function dayKey(iso: string) {
@@ -63,8 +70,12 @@ function fridgeToEvent(item: FridgeActivityEntry): TimelineEvent {
       scope: 'stock',
       kind: 'updated',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName: item.itemName,
+      storageId: item.storageId,
+      storageName: item.storageName,
+      storageEmoji: item.storageEmoji,
       color: '#3B82F6',
       icon: 'E',
       title: <><Text style={styles.strong}>{userName}</Text>{' editou '}<Text style={styles.item}>{item.itemName}</Text>{storageLabel ? <> em <Text style={styles.storage}>{storageLabel}</Text></> : null}</>,
@@ -78,8 +89,12 @@ function fridgeToEvent(item: FridgeActivityEntry): TimelineEvent {
       scope: 'stock',
       kind: 'finished',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName: item.itemName,
+      storageId: item.storageId,
+      storageName: item.storageName,
+      storageEmoji: item.storageEmoji,
       color: Colors.accent,
       icon: '->',
       title: <><Text style={styles.strong}>{userName}</Text>{' acabou com '}<Text style={styles.item}>{item.itemName}</Text>{storageLabel ? <> de <Text style={styles.storage}>{storageLabel}</Text></> : null}</>,
@@ -93,8 +108,12 @@ function fridgeToEvent(item: FridgeActivityEntry): TimelineEvent {
       scope: 'stock',
       kind: 'removed',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName: item.itemName,
+      storageId: item.storageId,
+      storageName: item.storageName,
+      storageEmoji: item.storageEmoji,
       color: Colors.destructive,
       icon: '-',
       title: <><Text style={styles.strong}>{userName}</Text>{' removeu '}<Text style={styles.item}>{item.itemName}</Text>{storageLabel ? <> de <Text style={styles.storage}>{storageLabel}</Text></> : null}</>,
@@ -108,8 +127,12 @@ function fridgeToEvent(item: FridgeActivityEntry): TimelineEvent {
       scope: 'stock',
       kind: 'sent_to_stock',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName: item.itemName,
+      storageId: item.storageId,
+      storageName: item.storageName,
+      storageEmoji: item.storageEmoji,
       color: '#8B5CF6',
       icon: '<-',
       title: <><Text style={styles.strong}>{userName}</Text>{' mandou '}<Text style={styles.item}>{item.itemName}</Text>{' da lista '}<Text style={styles.listName}>{item.fromShoppingListName}</Text></>,
@@ -122,8 +145,12 @@ function fridgeToEvent(item: FridgeActivityEntry): TimelineEvent {
     scope: 'stock',
     kind: 'added',
     createdAt: item.createdAt,
+    userId: item.userId,
     userName,
     itemName: item.itemName,
+    storageId: item.storageId,
+    storageName: item.storageName,
+    storageEmoji: item.storageEmoji,
     color: Colors.success,
     icon: '+',
     title: <><Text style={styles.strong}>{userName}</Text>{' adicionou '}<Text style={styles.item}>{item.itemName}</Text>{storageLabel ? <> em <Text style={styles.storage}>{storageLabel}</Text></> : null}</>,
@@ -137,12 +164,45 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
   const itemName = item.itemName ?? item.name ?? 'item';
   const listName = item.listName ?? 'lista';
 
+  if (action === 'list_created') {
+    return {
+      id: `shopping-${item.id}`,
+      scope: 'shopping',
+      kind: 'list_created',
+      createdAt: item.createdAt,
+      userId: item.userId,
+      userName,
+      itemName: listName,
+      color: Colors.success,
+      icon: '+',
+      title: <><Text style={styles.strong}>{userName}</Text>{' criou a lista '}<Text style={styles.listName}>{listName}</Text></>,
+      subtitle: 'Lista de compras criada',
+    };
+  }
+
+  if (action === 'list_deleted') {
+    return {
+      id: `shopping-${item.id}`,
+      scope: 'shopping',
+      kind: 'list_deleted',
+      createdAt: item.createdAt,
+      userId: item.userId,
+      userName,
+      itemName: listName,
+      color: Colors.destructive,
+      icon: '-',
+      title: <><Text style={styles.strong}>{userName}</Text>{' excluiu a lista '}<Text style={styles.listName}>{listName}</Text></>,
+      subtitle: 'Lista de compras excluida',
+    };
+  }
+
   if (action === 'checked') {
     return {
       id: `shopping-${item.id}`,
       scope: 'shopping',
       kind: 'checked',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName,
       color: Colors.success,
@@ -158,6 +218,7 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
       scope: 'shopping',
       kind: 'unchecked',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName,
       color: '#F59E0B',
@@ -173,6 +234,7 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
       scope: 'shopping',
       kind: 'sent_to_stock',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName,
       color: '#8B5CF6',
@@ -188,6 +250,7 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
       scope: 'shopping',
       kind: 'removed',
       createdAt: item.createdAt,
+      userId: item.userId,
       userName,
       itemName,
       color: Colors.destructive,
@@ -202,6 +265,7 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
     scope: 'shopping',
     kind: 'added',
     createdAt: item.createdAt,
+    userId: item.userId,
     userName,
     itemName,
     color: Colors.accent,
@@ -236,6 +300,9 @@ export default function ActivityTimeline({
   showScopeFilter = true,
   showPeriodFilter = true,
   emptyText = 'Nenhuma atividade neste periodo.',
+  onEventPress,
+  newSince,
+  localUserId,
 }: Props) {
   const allEvents = buildTimelineEvents(fridgeEvents, shoppingEvents);
   const cutoff = getCutoff(period);
@@ -300,18 +367,33 @@ export default function ActivityTimeline({
           <Text style={styles.sectionTitle}>{section.title}</Text>
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>{emptyText}</Text>}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <View style={[styles.iconWrap, { backgroundColor: `${item.color}18` }]}>
-              <Text style={[styles.iconText, { color: item.color }]}>{item.icon}</Text>
+        renderItem={({ item }) => {
+          const isOwnEvent = !!localUserId && item.userId === localUserId;
+          const isNew = !!newSince
+            && new Date(item.createdAt).getTime() > new Date(newSince).getTime()
+            && !isOwnEvent;
+
+          return (
+            <View style={styles.rowWrap}>
+              {isNew && <View style={styles.newDot} />}
+              <TouchableOpacity
+                style={[styles.row, isNew && styles.rowNew]}
+                activeOpacity={onEventPress ? 0.72 : 1}
+                disabled={!onEventPress}
+                onPress={() => onEventPress?.(item)}
+              >
+                <View style={[styles.iconWrap, { backgroundColor: `${item.color}18` }]}>
+                  <Text style={[styles.iconText, { color: item.color }]}>{item.icon}</Text>
+                </View>
+                <View style={styles.body}>
+                  <Text style={styles.titleText}>{item.title}</Text>
+                  <Text style={styles.subtitle}>{item.subtitle}</Text>
+                  <Text style={styles.time}>{formatBrTime(item.createdAt)}</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-            <View style={styles.body}>
-              <Text style={styles.titleText}>{item.title}</Text>
-              <Text style={styles.subtitle}>{item.subtitle}</Text>
-              <Text style={styles.time}>{formatBrTime(item.createdAt)}</Text>
-            </View>
-          </View>
-        )}
+          );
+        }}
       />
     </View>
   );
@@ -355,6 +437,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     backgroundColor: Colors.background,
   },
+  rowWrap: { position: 'relative', marginBottom: 8 },
   row: {
     flexDirection: 'row',
     gap: 12,
@@ -363,7 +446,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.separator,
     borderRadius: 12,
     padding: 12,
-    marginBottom: 8,
+  },
+  rowNew: { borderColor: Colors.accent + '55', backgroundColor: Colors.card },
+  newDot: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.accent,
+    zIndex: 2,
   },
   iconWrap: {
     width: 34,

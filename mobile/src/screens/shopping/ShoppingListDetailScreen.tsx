@@ -7,12 +7,12 @@ import {
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
+import { Feather } from '@expo/vector-icons';
 import {
   useListItems, useToggleListItem, useRemoveListItem, useAddListItem,
   useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
 } from '../../hooks/useShoppingLists';
 import { useKeepAwake } from 'expo-keep-awake';
-import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useHouseholdCategoryGroups } from '../../hooks/useCategories';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { filterItems, categoryFor } from '../../constants/commonItems';
@@ -42,6 +42,9 @@ function compareNames(a: ShoppingItem, b: ShoppingItem) {
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
+  const [currentName, setCurrentName] = useState(listName);
+  const [currentPlace, setCurrentPlace] = useState(listPlace ?? '');
+  const [currentCategory, setCurrentCategory] = useState(listCategory ?? '');
   const [urgent, setUrgent] = useState(listUrgent);
   const updateList = useUpdateShoppingList(householdId);
   const { data: items, isLoading, refetch } = useListItems(householdId, listId);
@@ -52,7 +55,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const removeItem = useRemoveListItem(householdId, listId);
   const clearChecked = useClearCheckedListItems(householdId, listId);
   const deleteList = useDeleteShoppingList(householdId);
-  const addFridgeItem = useAddFridgeItem(householdId);
   const prevItemCount = useRef<number | undefined>(undefined);
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -65,9 +67,18 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addCategory, setAddCategory] = useState<string | null>(null);
   const [showAddStorageOptions, setShowAddStorageOptions] = useState(false);
   const [showAddCategoryOptions, setShowAddCategoryOptions] = useState(false);
+  const [editModal, setEditModal] = useState(false);
+  const [editName, setEditName] = useState(listName);
+  const [editPlace, setEditPlace] = useState(listPlace ?? '');
+  const [editCategory, setEditCategory] = useState(listCategory ?? '');
+  const [editUrgent, setEditUrgent] = useState(listUrgent);
   const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
   const categoryOrder = categoryGroups.flatMap((group) => group.categories.map((category) => category.label));
   const availableCategories = categoryGroups.flatMap((group) => group.categories);
+
+  const openMenu = useCallback(() => {
+    navigation.getParent()?.navigate('Menu' as never);
+  }, [navigation]);
   const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
@@ -84,9 +95,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       prefillQuantity: Number(next.quantity),
       prefillUnit: next.unit ?? null,
       prefillCategory: next.category ?? null,
-      listName,
+      listName: currentName,
     });
-  }, [isFocused, sendQueue]);
+  }, [isFocused, sendQueue, currentName]);
 
   function handleSendAllToFridge() {
     setSelectedToSend(new Set(bought.map((i) => i.id)));
@@ -141,11 +152,67 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     const pendingLines = pending.map((item) => `☐ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
     const boughtLines = bought.map((item) => `✓ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
     const message = [
-      `Lista: ${listName}`,
+      `Lista: ${currentName}`,
       pendingLines.length > 0 ? '\nA comprar:\n' + pendingLines.join('\n') : '',
       boughtLines.length > 0 ? '\nComprados:\n' + boughtLines.join('\n') : '',
     ].filter(Boolean).join('\n');
     await Share.share({ message });
+  }
+
+  function openEditModal() {
+    setEditName(currentName);
+    setEditPlace(currentPlace);
+    setEditCategory(currentCategory);
+    setEditUrgent(urgent);
+    setEditModal(true);
+  }
+
+  async function handleSaveListEdit() {
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      Alert.alert('Erro', 'Digite o nome da lista.');
+      return;
+    }
+
+    try {
+      await updateList.mutateAsync({
+        listId,
+        name: trimmedName,
+        place: editPlace.trim() || undefined,
+        category: editCategory.trim() || undefined,
+        urgent: editUrgent,
+      });
+      setCurrentName(trimmedName);
+      setCurrentPlace(editPlace.trim());
+      setCurrentCategory(editCategory.trim());
+      setUrgent(editUrgent);
+      navigation.setParams({
+        listName: trimmedName,
+        listPlace: editPlace.trim() || null,
+        listCategory: editCategory.trim() || null,
+        listUrgent: editUrgent,
+      });
+      setEditModal(false);
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel atualizar a lista.');
+    }
+  }
+
+  async function handleToggleUrgent() {
+    const nextUrgent = !urgent;
+    try {
+      await updateList.mutateAsync({
+        listId,
+        name: currentName,
+        place: currentPlace || undefined,
+        category: currentCategory || undefined,
+        urgent: nextUrgent,
+      });
+      setUrgent(nextUrgent);
+      navigation.setParams({ listUrgent: nextUrgent });
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel atualizar a lista.');
+    }
   }
 
   function stepQty(delta: number) {
@@ -179,41 +246,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const selectedAllBought = bought.length > 0 && selectedToSend.size === bought.length;
   const selectedAddStorage = categoryGroups.find((group) => group.storageId === addStorageId);
 
-  const handleDeleteList = useCallback(() => {
-    const doDelete = () => deleteList.mutate(listId, { onSuccess: () => navigation.goBack() });
-
-    if (pending.length > 0) {
-      Alert.alert(
-        'Excluir lista',
-        `Há ${pending.length} ${pending.length === 1 ? 'item não comprado' : 'itens não comprados'}.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Mandar tudo para estoque',
-            onPress: () => {
-              Promise.all(
-                pending.map((item) =>
-                  addFridgeItem.mutateAsync({
-                    name: item.name,
-                    quantity: Number(item.quantity),
-                    unit: item.unit ?? undefined,
-                    fromShoppingListName: listName,
-                  }),
-                ),
-              ).then(doDelete);
-            },
-          },
-          { text: 'Excluir lista', style: 'destructive', onPress: doDelete },
-        ],
-      );
-    } else {
-      Alert.alert('Excluir lista', 'Deseja excluir esta lista?', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Excluir', style: 'destructive', onPress: doDelete },
-      ]);
-    }
-  }, [pending, deleteList, addFridgeItem, listId, navigation]);
-
   // Detect transition to empty list
   useEffect(() => {
     if (items === undefined) return;
@@ -233,18 +265,22 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   useEffect(() => {
     navigation.setOptions({
+      title: currentName,
       headerRight: () => (
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={openEditModal} style={styles.headerButton}>
+            <Text style={styles.headerEditText}>Editar</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleShareList} style={styles.headerButton}>
             <Text style={styles.headerShareText}>Compartilhar</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDeleteList} style={styles.headerButton}>
-            <Text style={styles.headerButtonText}>Excluir</Text>
+          <TouchableOpacity onPress={openMenu} style={styles.headerMenuButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Feather name="menu" size={28} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
       ),
     });
-  }, [handleDeleteList, pending, bought, listName]);
+  }, [currentName, handleShareList, pending, bought, openMenu]);
 
   function renderItem({ item }: { item: ShoppingItem }) {
     return (
@@ -318,6 +354,20 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           </View>
         </View>
       )}
+
+      <View style={styles.metaRow}>
+        <TouchableOpacity
+          style={[styles.urgentChip, urgent && styles.urgentChipActive]}
+          onPress={handleToggleUrgent}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.urgentChipText, urgent && styles.urgentChipTextActive]}>
+            {urgent ? 'Urgente' : 'Marcar urgente'}
+          </Text>
+        </TouchableOpacity>
+        {!!currentPlace && <Text style={styles.metaChip}>{currentPlace}</Text>}
+        {!!currentCategory && <Text style={styles.metaChip}>{currentCategory}</Text>}
+      </View>
 
       {isLoading ? (
         <View style={{ backgroundColor: Colors.background }}>
@@ -404,6 +454,66 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               Guardar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
             </Text>
           </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setEditModal(false)} />
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>Editar lista</Text>
+
+              <Text style={styles.sheetLabel}>Nome da lista</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Ex: Mercado da semana"
+                placeholderTextColor={Colors.textSecondary}
+                returnKeyType="next"
+              />
+
+              <Text style={styles.sheetLabel}>Lugar de compra</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editPlace}
+                onChangeText={setEditPlace}
+                placeholder="Ex: Mercado, farmacia"
+                placeholderTextColor={Colors.textSecondary}
+                returnKeyType="next"
+              />
+
+              <Text style={styles.sheetLabel}>Categoria</Text>
+              <TextInput
+                style={styles.editInput}
+                value={editCategory}
+                onChangeText={setEditCategory}
+                placeholder="Ex: Semana, limpeza"
+                placeholderTextColor={Colors.textSecondary}
+                returnKeyType="done"
+                onSubmitEditing={handleSaveListEdit}
+              />
+
+              <TouchableOpacity style={styles.editCheckRow} onPress={() => setEditUrgent((value) => !value)} activeOpacity={0.75}>
+                <View style={[styles.editCheckbox, editUrgent && styles.editCheckboxChecked]}>
+                  {editUrgent && <Text style={styles.editCheckboxMark}>✓</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.editCheckTitle}>Lista urgente</Text>
+                  <Text style={styles.editCheckSubtitle}>Use para destacar essa lista na Home.</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.button} onPress={handleSaveListEdit} disabled={updateList.isPending}>
+                {updateList.isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.buttonText}>Salvar alterações</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
 
@@ -679,6 +789,40 @@ const styles = StyleSheet.create({
     fontSize: 12, fontWeight: '600', color: Colors.textSecondary,
     textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8,
   },
+  editInput: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
+  editCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    marginTop: 8,
+  },
+  editCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  editCheckboxMark: { color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
+  editCheckTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
+  editCheckSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
   selectRow: {
     minHeight: 46,
@@ -731,6 +875,8 @@ const styles = StyleSheet.create({
   unitChipTextActive: { color: '#fff' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerButton: { paddingHorizontal: 4 },
+  headerMenuButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
+  headerEditText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
   headerShareText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {

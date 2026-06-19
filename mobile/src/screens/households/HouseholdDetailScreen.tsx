@@ -65,7 +65,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
               await deleteHousehold.mutateAsync(householdId);
               setSelectedHouseholdId(null);
               navigation.popToTop();
-              navigation.getParent()?.navigate('ColmeiaTab' as never);
+              navigation.popToTop();
             } catch (err: any) {
               const msg = err?.response?.data?.message ?? 'Nao foi possivel excluir a casa.';
               Alert.alert('Erro', String(msg));
@@ -89,7 +89,7 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
             try {
               await leaveHousehold.mutateAsync(householdId);
               setSelectedHouseholdId(null);
-              navigation.getParent()?.navigate('ColmeiaTab' as never);
+              navigation.popToTop();
             } catch (err: any) {
               const msg = err?.response?.data?.message ?? 'Nao foi possivel sair da casa.';
               Alert.alert('Erro', String(msg));

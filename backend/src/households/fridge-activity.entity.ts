@@ -38,6 +38,9 @@ export class FridgeActivity {
   toShoppingListName: string;
 
   @Column({ nullable: true })
+  storageId: string;
+
+  @Column({ nullable: true })
   storageName: string;
 
   @Column({ nullable: true })

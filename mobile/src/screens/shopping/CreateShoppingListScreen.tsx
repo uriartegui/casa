@@ -19,6 +19,7 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
   const [name, setName] = useState('');
   const [place, setPlace] = useState('');
   const [category, setCategory] = useState('');
+  const [urgent, setUrgent] = useState(false);
   const createList = useCreateShoppingList(householdId);
 
   async function handleCreate() {
@@ -31,6 +32,7 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
         name: name.trim(),
         place: place.trim() || undefined,
         category: category.trim() || undefined,
+        urgent,
       });
       navigation.goBack();
     } catch {
@@ -76,6 +78,16 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
           onSubmitEditing={handleCreate}
         />
 
+        <TouchableOpacity style={styles.checkRow} onPress={() => setUrgent((value) => !value)} activeOpacity={0.75}>
+          <View style={[styles.checkbox, urgent && styles.checkboxChecked]}>
+            {urgent && <Text style={styles.checkboxMark}>✓</Text>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.checkTitle}>Lista urgente</Text>
+            <Text style={styles.checkSubtitle}>Marque quando essa compra precisa de prioridade.</Text>
+          </View>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.button} onPress={handleCreate} disabled={createList.isPending}>
           {createList.isPending
             ? <ActivityIndicator color="#fff" />
@@ -95,6 +107,30 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
     fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    marginTop: 8,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  checkboxMark: { color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
+  checkTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
+  checkSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

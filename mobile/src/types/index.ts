@@ -85,7 +85,7 @@ export type Unit = 'un' | 'kg' | 'g' | 'L' | 'ml';
 
 export interface ShoppingActivityEvent {
   id: string;
-  action?: 'added' | 'removed' | 'checked' | 'unchecked' | 'sent_to_fridge';
+  action?: 'added' | 'removed' | 'checked' | 'unchecked' | 'sent_to_fridge' | 'list_created' | 'list_deleted';
   type?: 'added' | 'sent_to_fridge';
   itemName?: string;
   name?: string;

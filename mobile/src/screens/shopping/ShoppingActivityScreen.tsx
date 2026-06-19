@@ -10,16 +10,20 @@ import ActivityTimeline from '../../components/ActivityTimeline';
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingActivity'>;
   route: RouteProp<ShoppingStackParamList, 'ShoppingActivity'>;
+  embedded?: boolean;
+  newSince?: string | null;
+  localUserId?: string | null;
 };
 
-export default function ShoppingActivityScreen({ navigation, route }: Props) {
+export default function ShoppingActivityScreen({ navigation, route, embedded = false, newSince, localUserId }: Props) {
   const { householdId } = route.params;
   const { data: shoppingActivity } = useShoppingActivity(householdId);
   const [period, setPeriod] = React.useState<'all' | '7d' | '30d'>('all');
 
   React.useEffect(() => {
+    if (embedded) return;
     navigation.setOptions({ title: 'Atividade da lista' });
-  }, [navigation]);
+  }, [navigation, embedded]);
 
   return (
     <View style={styles.container}>
@@ -29,6 +33,8 @@ export default function ShoppingActivityScreen({ navigation, route }: Props) {
         period={period}
         onPeriodChange={setPeriod}
         showScopeFilter={false}
+        newSince={newSince}
+        localUserId={localUserId}
       />
     </View>
   );

@@ -236,6 +236,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
           <Text style={styles.buttonText}>+ Adicionar item</Text>
         </TouchableOpacity>
       </View>
+
     </View>
   );
 }

@@ -10,18 +10,22 @@ export function useShoppingLists(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   });
 }
 
 export function useCreateShoppingList(householdId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { name: string; place?: string; category?: string }) => {
+    mutationFn: async (data: { name: string; place?: string; category?: string; urgent?: boolean }) => {
       const res = await api.post<ShoppingList>(`/households/${householdId}/shopping-lists`, data);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -35,6 +39,7 @@ export function useUpdateShoppingList(householdId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -47,6 +52,7 @@ export function useDeleteShoppingList(householdId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
   });
 }
@@ -67,6 +73,7 @@ export function useListItems(householdId: string | null, listId: string | null) 
 export function useAddListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
   const queryKey = ['shopping-list-items', householdId, listId];
+  const listsQueryKey = ['shopping-lists', householdId];
   return useMutation({
     mutationFn: async (data: { name: string; quantity?: number; unit?: string; category?: string }) => {
       const res = await api.post<ShoppingItem>(
@@ -79,7 +86,9 @@ export function useAddListItem(householdId: string, listId: string) {
     // substituído pelo real quando o servidor responde.
     onMutate: async (data) => {
       await queryClient.cancelQueries({ queryKey });
+      await queryClient.cancelQueries({ queryKey: listsQueryKey });
       const previous = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+      const previousLists = queryClient.getQueryData<ShoppingList[]>(listsQueryKey);
       const temp = {
         id: `temp-${Date.now()}`,
         name: data.name,
@@ -89,10 +98,16 @@ export function useAddListItem(householdId: string, listId: string) {
         checked: false,
       } as ShoppingItem;
       queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => [...(old ?? []), temp]);
-      return { previous };
+      queryClient.setQueryData<ShoppingList[]>(listsQueryKey, (old) =>
+        old?.map((list) => (
+          list.id === listId ? { ...list, itemCount: (list.itemCount ?? 0) + 1 } : list
+        )),
+      );
+      return { previous, previousLists };
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+      if (context?.previousLists) queryClient.setQueryData(listsQueryKey, context.previousLists);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
@@ -134,6 +149,8 @@ export function useToggleListItem(householdId: string, listId: string) {
 
 export function useRemoveListItem(householdId: string, listId: string) {
   const queryClient = useQueryClient();
+  const itemsQueryKey = ['shopping-list-items', householdId, listId];
+  const listsQueryKey = ['shopping-lists', householdId];
   return useMutation({
     mutationFn: async (input: string | { itemId: string; reason?: 'removed' | 'sent_to_fridge' }) => {
       const itemId = typeof input === 'string' ? input : input.itemId;
@@ -141,8 +158,28 @@ export function useRemoveListItem(householdId: string, listId: string) {
       const params = reason ? `?reason=${encodeURIComponent(reason)}` : '';
       await api.delete(`/households/${householdId}/shopping-lists/${listId}/items/${itemId}${params}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+    onMutate: async (input) => {
+      const itemId = typeof input === 'string' ? input : input.itemId;
+      await queryClient.cancelQueries({ queryKey: itemsQueryKey });
+      await queryClient.cancelQueries({ queryKey: listsQueryKey });
+      const previous = queryClient.getQueryData<ShoppingItem[]>(itemsQueryKey);
+      const previousLists = queryClient.getQueryData<ShoppingList[]>(listsQueryKey);
+
+      queryClient.setQueryData<ShoppingItem[]>(itemsQueryKey, (old) => old?.filter((item) => item.id !== itemId));
+      queryClient.setQueryData<ShoppingList[]>(listsQueryKey, (old) =>
+        old?.map((list) => (
+          list.id === listId ? { ...list, itemCount: Math.max(0, (list.itemCount ?? 0) - 1) } : list
+        )),
+      );
+
+      return { previous, previousLists };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(itemsQueryKey, context.previous);
+      if (context?.previousLists) queryClient.setQueryData(listsQueryKey, context.previousLists);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: itemsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
@@ -151,12 +188,34 @@ export function useRemoveListItem(householdId: string, listId: string) {
 
 export function useClearCheckedListItems(householdId: string, listId: string) {
   const queryClient = useQueryClient();
+  const itemsQueryKey = ['shopping-list-items', householdId, listId];
+  const listsQueryKey = ['shopping-lists', householdId];
   return useMutation({
     mutationFn: async () => {
       await api.delete(`/households/${householdId}/shopping-lists/${listId}/items/checked`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: itemsQueryKey });
+      await queryClient.cancelQueries({ queryKey: listsQueryKey });
+      const previous = queryClient.getQueryData<ShoppingItem[]>(itemsQueryKey);
+      const previousLists = queryClient.getQueryData<ShoppingList[]>(listsQueryKey);
+      const checkedCount = previous?.filter((item) => item.checked).length ?? 0;
+
+      queryClient.setQueryData<ShoppingItem[]>(itemsQueryKey, (old) => old?.filter((item) => !item.checked));
+      queryClient.setQueryData<ShoppingList[]>(listsQueryKey, (old) =>
+        old?.map((list) => (
+          list.id === listId ? { ...list, itemCount: Math.max(0, (list.itemCount ?? 0) - checkedCount) } : list
+        )),
+      );
+
+      return { previous, previousLists };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(itemsQueryKey, context.previous);
+      if (context?.previousLists) queryClient.setQueryData(listsQueryKey, context.previousLists);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: itemsQueryKey });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
     },
@@ -171,6 +230,9 @@ export function useShoppingActivity(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   });
 }
 
@@ -182,5 +244,8 @@ export function useReplenishmentSuggestions(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   });
 }

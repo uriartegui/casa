@@ -112,6 +112,7 @@ export interface FridgeActivityEntry {
   userName: string;
   fromShoppingListName?: string | null;
   toShoppingListName?: string | null;
+  storageId?: string | null;
   storageName?: string | null;
   storageEmoji?: string | null;
   details?: string | null;
@@ -128,6 +129,7 @@ export function useFridgeActivity(householdId: string | null) {
     enabled: !!householdId,
     staleTime: 0,
     refetchOnMount: 'always',
+    refetchInterval: 5000,
   });
 }
 

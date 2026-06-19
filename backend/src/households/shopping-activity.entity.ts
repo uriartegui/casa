@@ -17,7 +17,7 @@ export class ShoppingActivity {
   shoppingListId: string | null;
 
   @Column()
-  action: 'added' | 'removed' | 'checked' | 'unchecked' | 'sent_to_fridge';
+  action: 'added' | 'removed' | 'checked' | 'unchecked' | 'sent_to_fridge' | 'list_created' | 'list_deleted';
 
   @Column()
   itemName: string;
