@@ -41,11 +41,15 @@ export function useHouseholdSync(households: Household[] | undefined) {
       queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
       queryClient.invalidateQueries({ queryKey: ['storages', householdId] });
       queryClient.invalidateQueries({ queryKey: ['categories', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['house-tasks', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['house-task-activity', householdId] });
+      queryClient.invalidateQueries({ queryKey: ['task-categories', householdId] });
 
       queryClient.refetchQueries({ queryKey: ['fridge-activity', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['shopping-activity', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['fridge', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['shopping-lists', householdId], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['house-tasks', householdId], type: 'active' });
     }
 
     socket.on('household:updated', onUpdate);

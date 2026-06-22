@@ -77,6 +77,18 @@ export class NotificationsService {
     }
   }
 
+  async notifyUsers(userIds: string[], title: string, body: string, options?: PushNotificationOptions): Promise<void> {
+    if (userIds.length === 0) return;
+    const messages = await this.getPushMessages(userIds, title, body, options);
+    if (messages.length === 0) return;
+    for (const chunk of this.expo.chunkPushNotifications(messages)) {
+      await this.expo.sendPushNotificationsAsync(chunk).catch((err) => {
+        this.logger.error('Erro ao enviar push:', err?.message ?? err);
+        return [];
+      });
+    }
+  }
+
   async notifyHouseholdMembers(
     householdId: string,
     excludeUserId: string,

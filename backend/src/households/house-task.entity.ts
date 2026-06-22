@@ -24,11 +24,32 @@ export class HouseTask {
   @Column({ type: 'varchar', nullable: true })
   category: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
+
   @Column({ type: 'date', nullable: true })
   dueDate: string | null;
 
   @Column({ default: false })
   done: boolean;
+
+  @Column({ type: 'varchar', default: 'pending' })
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+
+  @Column({ type: 'varchar', default: 'unassigned' })
+  assignmentType: 'unassigned' | 'all' | 'user';
+
+  @Column({ type: 'varchar', nullable: true })
+  assignedToId: string | null;
+
+  @Column({ type: 'varchar', default: 'none' })
+  recurrence: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+
+  @Column({ type: 'integer', nullable: true })
+  recurrenceIntervalDays: number | null;
+
+  @Column({ type: 'varchar', default: 'none' })
+  reminder: 'none' | 'due' | 'one_hour_before' | 'one_day_before';
 
   @Column()
   createdById: string;
@@ -50,6 +71,10 @@ export class HouseTask {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'completedById' })
   completedBy: User | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'assignedToId' })
+  assignedTo: User | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

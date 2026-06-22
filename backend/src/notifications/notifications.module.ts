@@ -11,6 +11,9 @@ import { FridgeItem } from '../households/fridge-item.entity';
 import { ShoppingItem } from '../households/shopping-item.entity';
 import { ShoppingList } from '../households/shopping-list.entity';
 import { NotificationLog } from './notification-log.entity';
+import { HouseTask } from '../households/house-task.entity';
+import { HouseTaskActivity } from '../households/house-task-activity.entity';
+import { TaskReminderService } from './task-reminder.service';
 
 @Module({
   imports: [
@@ -23,9 +26,11 @@ import { NotificationLog } from './notification-log.entity';
       ShoppingItem,
       ShoppingList,
       NotificationLog,
+      HouseTask,
+      HouseTaskActivity,
     ]),
   ],
-  providers: [NotificationsService, ExpirationService, AttentionService],
+  providers: [NotificationsService, ExpirationService, AttentionService, TaskReminderService],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

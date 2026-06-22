@@ -16,6 +16,8 @@ import { FridgeItem } from './fridge-item.entity';
 import { FridgeActivity } from './fridge-activity.entity';
 import { ShoppingActivity } from './shopping-activity.entity';
 import { HouseTask } from './house-task.entity';
+import { HouseTaskActivity } from './house-task-activity.entity';
+import { TaskCategory } from './task-category.entity';
 import { ShoppingItem } from './shopping-item.entity';
 import { ShoppingList } from './shopping-list.entity';
 import { Storage } from './storage.entity';
@@ -56,6 +58,10 @@ export class HouseholdsService {
     private shoppingActivityRepo: Repository<ShoppingActivity>,
     @InjectRepository(HouseTask)
     private houseTasksRepo: Repository<HouseTask>,
+    @InjectRepository(HouseTaskActivity)
+    private houseTaskActivityRepo: Repository<HouseTaskActivity>,
+    @InjectRepository(TaskCategory)
+    private taskCategoriesRepo: Repository<TaskCategory>,
     private eventsGateway: EventsGateway,
     private notificationsService: NotificationsService,
     private dataSource: DataSource,
@@ -552,14 +558,72 @@ export class HouseholdsService {
 
   // House Tasks
 
+  async getTaskCategories(householdId: string, userId: string): Promise<TaskCategory[]> {
+    await this.assertMember(householdId, userId);
+    return this.taskCategoriesRepo.find({ where: { householdId }, order: { position: 'ASC', createdAt: 'ASC' } });
+  }
+
+  async createTaskCategory(householdId: string, userId: string, name: string): Promise<TaskCategory> {
+    await this.assertMember(householdId, userId);
+    const clean = name.trim();
+    if (!clean) throw new BadRequestException('Informe o nome da categoria');
+    const position = await this.taskCategoriesRepo.count({ where: { householdId } });
+    const saved = await this.taskCategoriesRepo.save(this.taskCategoriesRepo.create({ householdId, name: clean, position }));
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+    return saved;
+  }
+
+  async deleteTaskCategory(householdId: string, categoryId: string, userId: string): Promise<void> {
+    await this.assertMember(householdId, userId);
+    const category = await this.taskCategoriesRepo.findOne({ where: { id: categoryId, householdId } });
+    if (!category) throw new NotFoundException('Categoria nao encontrada');
+    await this.houseTasksRepo.update({ householdId, category: category.name }, { category: null });
+    await this.taskCategoriesRepo.delete(categoryId);
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+  }
+
   async getHouseTasks(householdId: string, userId: string): Promise<HouseTask[]> {
     await this.assertMember(householdId, userId);
     return this.houseTasksRepo.find({
       where: { householdId },
-      relations: ['createdBy', 'completedBy'],
+      relations: ['createdBy', 'completedBy', 'assignedTo'],
       order: { done: 'ASC', dueDate: 'ASC', createdAt: 'DESC' },
       take: 100,
     });
+  }
+
+  async getHouseTaskActivity(householdId: string, userId: string): Promise<HouseTaskActivity[]> {
+    await this.assertMember(householdId, userId);
+    return this.houseTaskActivityRepo.find({ where: { householdId }, order: { createdAt: 'DESC' }, take: 100 });
+  }
+
+  private async assertTaskAssignee(householdId: string, assignmentType: string, assignedToId?: string | null) {
+    if (assignmentType !== 'user') return null;
+    if (!assignedToId) throw new BadRequestException('Escolha o responsavel da tarefa');
+    const member = await this.membersRepo.findOne({ where: { householdId, userId: assignedToId } });
+    if (!member) throw new BadRequestException('Responsavel nao pertence a esta casa');
+    return assignedToId;
+  }
+
+  private async logHouseTaskActivity(data: Partial<HouseTaskActivity>) {
+    await this.houseTaskActivityRepo.save(this.houseTaskActivityRepo.create(data));
+  }
+
+  private recurrenceDays(task: HouseTask): number | null {
+    if (task.recurrence === 'daily') return 1;
+    if (task.recurrence === 'weekly') return 7;
+    if (task.recurrence === 'biweekly') return 14;
+    if (task.recurrence === 'monthly') return 30;
+    if (task.recurrence === 'custom') return task.recurrenceIntervalDays ?? null;
+    return null;
+  }
+
+  private nextDueDate(task: HouseTask): string | null {
+    const days = this.recurrenceDays(task);
+    if (!days || !task.dueDate) return null;
+    const date = new Date(`${task.dueDate}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + days);
+    return date.toISOString().slice(0, 10);
   }
 
   async createHouseTask(
@@ -568,47 +632,102 @@ export class HouseholdsService {
     dto: CreateHouseTaskDto,
   ): Promise<HouseTask> {
     await this.assertMember(householdId, userId);
+    const assignmentType = dto.assignmentType ?? 'unassigned';
+    const assignedToId = await this.assertTaskAssignee(householdId, assignmentType, dto.assignedToId);
     const task = this.houseTasksRepo.create({
       householdId,
       createdById: userId,
       title: dto.title.trim(),
       category: dto.category?.trim() || null,
+      description: dto.description?.trim() || null,
       dueDate: dto.dueDate || null,
       done: false,
+      status: 'pending',
+      assignmentType,
+      assignedToId,
+      recurrence: dto.recurrence ?? 'none',
+      recurrenceIntervalDays: dto.recurrence === 'custom' ? dto.recurrenceIntervalDays ?? null : null,
+      reminder: dto.reminder ?? 'none',
       completedById: null,
       completedAt: null,
     });
     const saved = await this.houseTasksRepo.save(task);
+    const userName = await this.getHouseholdUserName(householdId, userId);
+    await this.logHouseTaskActivity({ householdId, taskId: saved.id, action: 'created', taskTitle: saved.title, userId, userName, details: saved.dueDate ? `Prazo: ${saved.dueDate}` : null });
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return this.houseTasksRepo.findOneOrFail({
       where: { id: saved.id, householdId },
-      relations: ['createdBy', 'completedBy'],
+      relations: ['createdBy', 'completedBy', 'assignedTo'],
     });
   }
 
-  async updateHouseTaskStatus(
+  async updateHouseTask(
     householdId: string,
     taskId: string,
     userId: string,
-    done: boolean,
+    dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'completed' | 'skipped' },
   ): Promise<HouseTask> {
     await this.assertMember(householdId, userId);
     const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
     if (!task) throw new NotFoundException('Tarefa nao encontrada');
-    task.done = done;
-    task.completedById = done ? userId : null;
-    task.completedAt = done ? new Date() : null;
+
+    const oldStatus = task.status;
+    const nextStatus = dto.status ?? (dto.done === undefined ? task.status : (dto.done ? 'completed' : 'pending'));
+    if (dto.title !== undefined) task.title = dto.title.trim();
+    if (dto.description !== undefined) task.description = dto.description?.trim() || null;
+    if (dto.category !== undefined) task.category = dto.category?.trim() || null;
+    if (dto.dueDate !== undefined) task.dueDate = dto.dueDate || null;
+    if (dto.assignmentType !== undefined) {
+      task.assignmentType = dto.assignmentType;
+      task.assignedToId = await this.assertTaskAssignee(householdId, dto.assignmentType, dto.assignedToId);
+    } else if (dto.assignedToId !== undefined && task.assignmentType === 'user') {
+      task.assignedToId = await this.assertTaskAssignee(householdId, 'user', dto.assignedToId);
+    }
+    if (dto.recurrence !== undefined) task.recurrence = dto.recurrence;
+    if (dto.recurrenceIntervalDays !== undefined) task.recurrenceIntervalDays = dto.recurrenceIntervalDays;
+    if (dto.reminder !== undefined) task.reminder = dto.reminder;
+    task.status = nextStatus;
+    task.done = nextStatus === 'completed';
+    task.completedById = task.done ? userId : null;
+    task.completedAt = task.done ? new Date() : null;
     await this.houseTasksRepo.save(task);
+
+    const userName = await this.getHouseholdUserName(householdId, userId);
+    const action = nextStatus === 'completed'
+      ? (oldStatus === 'completed' ? 'updated' : 'completed')
+      : nextStatus === 'skipped'
+        ? 'skipped'
+        : oldStatus === 'completed' ? 'reopened' : 'updated';
+    await this.logHouseTaskActivity({ householdId, taskId: task.id, action, taskTitle: task.title, userId, userName, details: null });
+
+    if (oldStatus !== 'completed' && nextStatus === 'completed') {
+      const nextDueDate = this.nextDueDate(task);
+      if (nextDueDate) {
+        const next = this.houseTasksRepo.create({
+          householdId, createdById: task.createdById, title: task.title, description: task.description,
+          category: task.category, dueDate: nextDueDate, done: false, status: 'pending',
+          assignmentType: task.assignmentType, assignedToId: task.assignedToId,
+          recurrence: task.recurrence, recurrenceIntervalDays: task.recurrenceIntervalDays,
+          reminder: task.reminder, completedById: null, completedAt: null,
+        });
+        const nextSaved = await this.houseTasksRepo.save(next);
+        await this.logHouseTaskActivity({ householdId, taskId: nextSaved.id, action: 'next_created', taskTitle: nextSaved.title, userId, userName, details: `Proxima ocorrencia: ${nextDueDate}` });
+      }
+    }
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return this.houseTasksRepo.findOneOrFail({
       where: { id: task.id, householdId },
-      relations: ['createdBy', 'completedBy'],
+      relations: ['createdBy', 'completedBy', 'assignedTo'],
     });
   }
 
   async deleteHouseTask(householdId: string, taskId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
+    const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
+    if (!task) throw new NotFoundException('Tarefa nao encontrada');
+    const userName = await this.getHouseholdUserName(householdId, userId);
     await this.houseTasksRepo.delete({ id: taskId, householdId });
+    await this.logHouseTaskActivity({ householdId, taskId: task.id, action: 'deleted', taskTitle: task.title, userId, userName, details: null });
     this.eventsGateway.emitHouseholdUpdate(householdId);
   }
 

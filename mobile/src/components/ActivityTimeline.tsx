@@ -2,7 +2,7 @@ import React from 'react';
 import { SectionList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/colors';
 import { FridgeActivityEntry } from '../hooks/useFridge';
-import { ShoppingActivityEvent } from '../types';
+import { HouseTaskActivityEvent, ShoppingActivityEvent } from '../types';
 import { formatBrDate, formatBrTime } from '../utils/dateUtils';
 
 export type ActivityScope = 'all' | 'stock' | 'shopping';
@@ -27,6 +27,7 @@ type TimelineEvent = {
 type Props = {
   fridgeEvents?: FridgeActivityEntry[];
   shoppingEvents?: ShoppingActivityEvent[];
+  taskEvents?: HouseTaskActivityEvent[];
   scope?: ActivityScope;
   onScopeChange?: (scope: ActivityScope) => void;
   period?: 'all' | '7d' | '30d';
@@ -275,22 +276,29 @@ function shoppingToEvent(item: ShoppingActivityEvent): TimelineEvent {
   };
 }
 
+function taskToEvent(item: HouseTaskActivityEvent): TimelineEvent {
+  const actionText = item.action === 'completed' ? 'concluiu' : item.action === 'created' ? 'criou' : item.action === 'overdue' ? 'tem atraso em' : item.action === 'skipped' ? 'pulou' : 'atualizou';
+  return { id: `task-${item.id}`, scope: 'stock', kind: `task_${item.action}`, createdAt: item.createdAt, userId: item.userId, userName: item.userName, itemName: item.taskTitle, color: item.action === 'overdue' ? Colors.destructive : Colors.accent, icon: item.action === 'completed' ? 'OK' : 'T', title: <><Text style={styles.strong}>{item.userName}</Text>{` ${actionText} `}<Text style={styles.item}>{item.taskTitle}</Text></>, subtitle: item.details ?? 'Tarefa da casa', };
+}
+
 function getCutoff(period: Props['period']) {
   if (period === '7d') return Date.now() - 7 * 86400000;
   if (period === '30d') return Date.now() - 30 * 86400000;
   return null;
 }
 
-export function buildTimelineEvents(fridgeEvents?: FridgeActivityEntry[], shoppingEvents?: ShoppingActivityEvent[]) {
+export function buildTimelineEvents(fridgeEvents?: FridgeActivityEntry[], shoppingEvents?: ShoppingActivityEvent[], taskEvents?: HouseTaskActivityEvent[]) {
   return [
     ...(fridgeEvents ?? []).map(fridgeToEvent),
     ...(shoppingEvents ?? []).map(shoppingToEvent),
+    ...(taskEvents ?? []).map(taskToEvent),
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export default function ActivityTimeline({
   fridgeEvents,
   shoppingEvents,
+  taskEvents,
   scope = 'all',
   onScopeChange,
   period = 'all',
@@ -304,7 +312,7 @@ export default function ActivityTimeline({
   newSince,
   localUserId,
 }: Props) {
-  const allEvents = buildTimelineEvents(fridgeEvents, shoppingEvents);
+  const allEvents = buildTimelineEvents(fridgeEvents, shoppingEvents, taskEvents);
   const cutoff = getCutoff(period);
   const filtered = allEvents
     .filter((item) => scope === 'all' || item.scope === scope)

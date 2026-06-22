@@ -26,6 +26,7 @@ import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
 import { CreateHouseTaskDto } from './dto/create-house-task.dto';
+import { CreateTaskCategoryDto } from './dto/create-task-category.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -256,10 +257,25 @@ export class HouseholdsController {
 
   // House Tasks
 
+  @Get(':id/task-categories')
+  getTaskCategories(@Param('id', ParseUUIDPipe) id: string, @Request() req) { return this.householdsService.getTaskCategories(id, req.user.id); }
+
+  @Post(':id/task-categories')
+  createTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateTaskCategoryDto, @Request() req) { return this.householdsService.createTaskCategory(id, req.user.id, dto.name); }
+
+  @Delete(':id/task-categories/:categoryId')
+  deleteTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Param('categoryId', ParseUUIDPipe) categoryId: string, @Request() req) { return this.householdsService.deleteTaskCategory(id, categoryId, req.user.id); }
+
   @Get(':id/tasks')
   @ApiOperation({ summary: 'Listar tarefas da casa' })
   getHouseTasks(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.householdsService.getHouseTasks(id, req.user.id);
+  }
+
+  @Get(':id/task-activity')
+  @ApiOperation({ summary: 'Historico das tarefas da casa' })
+  getHouseTaskActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+    return this.householdsService.getHouseTaskActivity(id, req.user.id);
   }
 
   @Post(':id/tasks')
@@ -269,14 +285,14 @@ export class HouseholdsController {
   }
 
   @Patch(':id/tasks/:taskId')
-  @ApiOperation({ summary: 'Concluir ou reabrir tarefa da casa' })
-  updateHouseTaskStatus(
+  @ApiOperation({ summary: 'Editar, concluir, reabrir ou pular tarefa da casa' })
+  updateHouseTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body('done') done: boolean,
+    @Body() dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'completed' | 'skipped' },
     @Request() req,
   ) {
-    return this.householdsService.updateHouseTaskStatus(id, taskId, req.user.id, Boolean(done));
+    return this.householdsService.updateHouseTask(id, taskId, req.user.id, dto);
   }
 
   @Delete(':id/tasks/:taskId')

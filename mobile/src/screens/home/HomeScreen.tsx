@@ -14,6 +14,7 @@ import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
 import ActivityTimeline from '../../components/ActivityTimeline';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { useHouseTasks, useHouseTaskActivity } from '../../hooks/useHouseTasks';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 type ActivityPeriodFilter = 'all' | 'today' | '7d' | '30d';
@@ -85,6 +86,8 @@ export default function HomeScreen() {
   const { data: fridgeActivity } = useFridgeActivity(effectiveId);
   const { data: storages } = useStorages(effectiveId, { includeHidden: true });
   const { data: shoppingLists } = useShoppingLists(effectiveId);
+  const { data: houseTasks = [] } = useHouseTasks(effectiveId);
+  const { data: taskActivity = [] } = useHouseTaskActivity(effectiveId);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -125,6 +128,8 @@ export default function HomeScreen() {
   const today = new Date();
   const todayLabel = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
   const urgentLists = (shoppingLists ?? []).filter((list) => list.urgent);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const priorityTasks = houseTasks.filter((task) => !task.done && (task.dueDate === todayKey || (task.dueDate && task.dueDate < todayKey) || task.assignedToId === user?.id)).slice(0, 3);
   const expiringItems = (fridgeItems ?? [])
     .filter((item) => {
       if (!item.expirationDate) return false;
@@ -177,6 +182,8 @@ export default function HomeScreen() {
     markSeen: markStockActivitySeen,
     unseenCount: stockActivityUnreadCount,
   } = useActivitySeen('stock', effectiveId, fridgeActivity ?? [], user?.id);
+  const { unseenCount: taskActivityUnreadCount, markSeen: markTaskActivitySeen, lastSeenAt: taskActivitySeenAt } = useActivitySeen('tasks', effectiveId, taskActivity, user?.id);
+  const activityUnreadCount = stockActivityUnreadCount + taskActivityUnreadCount;
 
   function openMenu() {
     navigation.getParent()?.navigate('Menu' as never);
@@ -270,12 +277,13 @@ export default function HomeScreen() {
   }
 
   function openActivityModal() {
-    setActivityNewSince(stockActivitySeenAt);
+    setActivityNewSince([stockActivitySeenAt, taskActivitySeenAt].filter(Boolean).sort()[0] ?? null);
     activitySheetHeight.setValue(activityCollapsedHeight);
     activitySheetTranslateY.setValue(activityCollapsedHeight);
     activityHeightRef.current = activityCollapsedHeight;
     setActivityModalVisible(true);
     markStockActivitySeen();
+    markTaskActivitySeen();
     requestAnimationFrame(() => {
       Animated.spring(activitySheetTranslateY, {
         toValue: 0,
@@ -399,9 +407,9 @@ export default function HomeScreen() {
               onPress={() => effectiveId && openActivityModal()}
             >
               <Feather name="bell" size={23} color={Colors.textPrimary} />
-              {stockActivityUnreadCount > 0 && (
+              {activityUnreadCount > 0 && (
                 <View style={styles.headerBadge}>
-                  <Text style={styles.headerBadgeText}>{stockActivityUnreadCount > 99 ? '99+' : stockActivityUnreadCount}</Text>
+                  <Text style={styles.headerBadgeText}>{activityUnreadCount > 99 ? '99+' : activityUnreadCount}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -520,6 +528,11 @@ export default function HomeScreen() {
       </View>
 
       <View style={styles.card}>
+        <View style={styles.cardHeader}><View style={styles.cardTitleRow}><Text style={styles.cardTitle}>Tarefas de hoje</Text></View><TouchableOpacity onPress={() => navigation.getParent()?.navigate('TasksFlow' as never)}><Text style={styles.cardLink}>Ver tarefas {'->'}</Text></TouchableOpacity></View>
+        {priorityTasks.length ? priorityTasks.map((task) => <TouchableOpacity key={task.id} style={styles.itemRow} onPress={() => navigation.getParent()?.navigate('TasksFlow' as never)}><View style={[styles.itemDot, { backgroundColor: task.dueDate && task.dueDate < todayKey ? Colors.destructive : Colors.accent }]} /><View style={{ flex: 1 }}><Text style={styles.itemName}>{task.title}</Text><Text style={styles.itemStorage}>{task.assignedTo?.name ? task.assignedTo.name : task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel'}</Text></View></TouchableOpacity>) : <Text style={styles.emptyCardText}>Nenhuma tarefa importante hoje.</Text>}
+      </View>
+
+      <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
             <Text style={styles.cardTitleIcon}>{'\u26A0'}</Text>
@@ -622,7 +635,7 @@ export default function HomeScreen() {
             <View style={styles.sheetDragHint} />
           </View>
           <View style={styles.activitySheetHeader}>
-            <Text style={styles.activitySheetTitle}>Atividades dos estoques</Text>
+            <Text style={styles.activitySheetTitle}>Atividades da casa</Text>
             <View style={styles.activityHeaderActions}>
               <TouchableOpacity
                 style={[styles.filterButton, activeActivityFilterCount > 0 && styles.filterButtonActive]}
@@ -711,6 +724,7 @@ export default function HomeScreen() {
           )}
           <ActivityTimeline
             fridgeEvents={filteredFridgeActivity}
+            taskEvents={taskActivity}
             scope="stock"
             showFilters={false}
             showScopeFilter={false}

@@ -123,8 +123,16 @@ export interface HouseTask {
   householdId: string;
   title: string;
   category: string | null;
+  description: string | null;
   dueDate: string | null;
   done: boolean;
+  status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+  assignmentType: 'unassigned' | 'all' | 'user';
+  assignedToId: string | null;
+  assignedTo?: User | null;
+  recurrence: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
+  recurrenceIntervalDays: number | null;
+  reminder: 'none' | 'due' | 'one_hour_before' | 'one_day_before';
   createdById: string;
   completedById: string | null;
   completedAt: string | null;
@@ -132,4 +140,18 @@ export interface HouseTask {
   completedBy?: User | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TaskCategory { id: string; householdId: string; name: string; position: number; createdAt: string; }
+
+export interface HouseTaskActivityEvent {
+  id: string;
+  householdId: string;
+  taskId: string | null;
+  action: 'created' | 'updated' | 'completed' | 'reopened' | 'deleted' | 'skipped' | 'overdue' | 'next_created';
+  taskTitle: string;
+  userId: string;
+  userName: string;
+  details: string | null;
+  createdAt: string;
 }

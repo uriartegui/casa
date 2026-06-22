@@ -31,6 +31,8 @@ import HomeScreen from '../screens/home/HomeScreen';
 import { useHouseholds } from '../hooks/useHouseholds';
 import { useSelectedHousehold } from '../context/SelectedHouseholdContext';
 import { useStorages } from '../hooks/useStorages';
+import { useTaskCategories } from '../hooks/useHouseTasks';
+import { api } from '../services/api';
 
 export type HouseholdStackParamList = {
   HouseholdList: undefined;
@@ -41,7 +43,7 @@ export type HouseholdStackParamList = {
   MemberDetail: { householdId: string; memberId: string };
   ManageCategories: { householdId: string; householdName: string };
   ManageStorages: { householdId: string; householdName: string };
-  HouseTasks: { householdId: string; householdName: string };
+  HouseTasks: { householdId: string; householdName: string; initialCategory?: string };
 };
 
 export type RootStackParamList = {
@@ -49,7 +51,7 @@ export type RootStackParamList = {
   Menu: undefined;
   StorageFlow: { screen?: keyof FridgeStackParamList; params?: any } | undefined;
   ShoppingFlow: undefined;
-  TasksFlow: undefined;
+  TasksFlow: { screen?: 'TasksEntry' | 'TaskCategory'; params?: { category: string } } | undefined;
   HouseholdFlow: undefined;
   ProfileFlow: undefined;
 };
@@ -143,6 +145,34 @@ function HeaderMenuButton() {
   );
 }
 
+function StorageHouseholdHeader({ navigation, storageName, householdName }: { navigation: any; storageName: string; householdName: string }) {
+  const { data: households } = useHouseholds();
+  const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
+  const [open, setOpen] = React.useState(false);
+  const activeName = households?.find((household) => household.id === selectedHouseholdId)?.name ?? householdName;
+
+  async function changeHousehold(householdId: string) {
+    setOpen(false);
+    setSelectedHouseholdId(householdId);
+    const response = await api.get<{ id: string; name: string; emoji: string }[]>(`/households/${householdId}/storages`);
+    const storage = response.data.find((item) => item.name === storageName) ?? response.data[0];
+    if (storage) navigation.replace('Fridge', { householdId, storageId: storage.id, storageName: storage.name, storageEmoji: storage.emoji });
+  }
+
+  return <View style={{ position: 'relative', minWidth: 150 }}>
+    <TouchableOpacity onPress={() => setOpen((value) => !value)} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
+      <Text style={styles.storageHeaderTitle}>{storageName}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <Text style={styles.storageHeaderSubtitle}>{activeName}</Text>
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={13} color={Colors.textSecondary} />
+      </View>
+    </TouchableOpacity>
+    {open && <View style={{ position: 'absolute', top: 40, left: -6, minWidth: 180, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator, borderRadius: 8, zIndex: 20, elevation: 8, overflow: 'hidden' }}>
+      {(households ?? []).map((household) => <TouchableOpacity key={household.id} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: household.id === selectedHouseholdId ? Colors.accent + '12' : Colors.card }} onPress={() => changeHousehold(household.id)}><Text style={{ fontSize: 13, fontWeight: household.id === selectedHouseholdId ? '800' : '500', color: household.id === selectedHouseholdId ? Colors.accent : Colors.textPrimary }}>{household.name}</Text></TouchableOpacity>)}
+    </View>}
+  </View>;
+}
+
 function AppHeader({ navigation, route, options, back }: any) {
   const insets = useSafeAreaInsets();
   const title = options.title ?? route.name;
@@ -222,7 +252,7 @@ function ProfileNavigator() {
   );
 }
 
-function TasksEntryScreen({ navigation }: any) {
+function TasksEntryScreen({ navigation, initialCategory }: any) {
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
   const { data: households, isLoading } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
@@ -251,16 +281,32 @@ function TasksEntryScreen({ navigation }: any) {
       route={{
         key: 'TasksEntry',
         name: 'HouseTasks',
-        params: { householdId: effectiveId, householdName: household?.name ?? 'Casa' },
+        params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory },
       } as any}
     />
   );
 }
 
+function TaskCategoryScreen({ navigation, route }: any) {
+  const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
+  const { data: households, isLoading } = useHouseholds();
+  const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
+  const household = households?.find((h) => h.id === effectiveId);
+
+  if (isLoading || !effectiveId) {
+    return <View style={styles.center}><Text style={styles.mutedText}>{isLoading ? 'Carregando...' : 'Nenhuma casa selecionada'}</Text></View>;
+  }
+
+  return <HouseTasksScreen key={`task-category-${route.params.category}`} navigation={navigation} route={{ key: `TaskCategory-${route.params.category}`, name: 'HouseTasks', params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory: route.params.category } } as any} />;
+}
+
 function TasksNavigator() {
   return (
     <TasksStack.Navigator screenOptions={stackScreenOptions}>
-      <TasksStack.Screen name="TasksEntry" component={TasksEntryScreen} options={{ title: 'Tarefas' }} />
+      <TasksStack.Screen name="TasksEntry" options={{ title: 'Tarefas' }}>
+        {(props) => <TasksEntryScreen {...props} />}
+      </TasksStack.Screen>
+      <TasksStack.Screen name="TaskCategory" component={TaskCategoryScreen} options={({ route }: any) => ({ title: route.params.category, headerBackVisible: false })} />
     </TasksStack.Navigator>
   );
 }
@@ -274,16 +320,11 @@ function FridgeNavigator() {
       <FridgeStack.Screen
         name="Fridge"
         component={FridgeScreen}
-        options={({ route }) => {
+        options={({ route, navigation }) => {
           const householdName = households?.find((household) => household.id === route.params.householdId)?.name;
           return {
             headerBackVisible: false,
-            headerTitle: () => (
-              <View>
-                <Text style={styles.storageHeaderTitle}>{route.params.storageName}</Text>
-                {!!householdName && <Text style={styles.storageHeaderSubtitle}>{householdName}</Text>}
-              </View>
-            ),
+            headerTitle: () => <StorageHouseholdHeader navigation={navigation} storageName={route.params.storageName} householdName={householdName ?? ''} />,
           };
         }}
       />
@@ -431,14 +472,17 @@ function SideMenuScreen({ navigation }: any) {
   const initialStockOpen = previousRoute === 'StorageFlow';
   const menuProgress = React.useRef(new Animated.Value(0)).current;
   const stockProgress = React.useRef(new Animated.Value(initialStockOpen ? 1 : 0)).current;
+  const tasksProgress = React.useRef(new Animated.Value(previousRoute === 'TasksFlow' ? 1 : 0)).current;
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
   const { data: households } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
   const { data: storages } = useStorages(effectiveId);
+  const { data: taskCategories } = useTaskCategories(effectiveId);
   const [stockOpen, setStockOpen] = React.useState(initialStockOpen);
+  const [tasksOpen, setTasksOpen] = React.useState(previousRoute === 'TasksFlow');
+  const taskCategoryNames = taskCategories?.map((category) => category.name) ?? ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
   const entries = [
     { label: 'Lista de compras', icon: 'shopping-cart', route: 'ShoppingFlow' },
-    { label: 'Tarefas da casa', icon: 'check-square', route: 'TasksFlow' },
     { label: 'Casa', icon: 'home', route: 'HouseholdFlow' },
     { label: 'Perfil', icon: 'user', route: 'ProfileFlow' },
   ];
@@ -478,6 +522,12 @@ function SideMenuScreen({ navigation }: any) {
       duration: 150,
       useNativeDriver: true,
     }).start();
+  }
+
+  function toggleTasks() {
+    const next = !tasksOpen;
+    if (next) setTasksOpen(true);
+    Animated.timing(tasksProgress, { toValue: next ? 1 : 0, duration: 150, useNativeDriver: true }).start(() => { if (!next) setTasksOpen(false); });
   }
 
   function goTo(route: keyof RootStackParamList, params?: RootStackParamList[keyof RootStackParamList]) {
@@ -610,6 +660,21 @@ function SideMenuScreen({ navigation }: any) {
               {(storages ?? []).length === 0 && (
                 <Text style={styles.sideSubmenuEmpty}>Nenhum estoque visivel</Text>
               )}
+            </Animated.View>
+          )}
+
+          <TouchableOpacity style={styles.sideMenuItem} activeOpacity={0.78} onPress={toggleTasks}>
+            <View style={styles.sideMenuIconWrap}><Feather name="check-square" size={21} color={Colors.textSecondary} /></View>
+            <Text style={styles.sideMenuText}>Tarefas</Text>
+            <Animated.View style={{ transform: [{ rotate: tasksProgress.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] }) }] }}><Feather name="chevron-down" size={22} color={tasksOpen ? Colors.accent : Colors.textSecondary} /></Animated.View>
+          </TouchableOpacity>
+          {tasksOpen && (
+            <Animated.View style={[styles.sideSubmenu, { opacity: tasksProgress, transform: [{ translateY: tasksProgress.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }] }]}>
+              {taskCategoryNames.map((category) => (
+                <TouchableOpacity key={category} style={styles.sideSubmenuItem} activeOpacity={0.72} onPress={() => goTo('TasksFlow', { screen: 'TaskCategory', params: { category }, merge: false } as any)}>
+                  <Text style={styles.sideSubmenuText}>{category}</Text>
+                </TouchableOpacity>
+              ))}
             </Animated.View>
           )}
 
