@@ -175,16 +175,21 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   async function handleCreate() {
     const trimmed = title.trim();
     if (!trimmed) return;
-    await createTask.mutateAsync({ title: trimmed, description: description.trim() || null, category: initialCategory ?? category, dueDate, assignmentType, assignedToId, recurrence, reminder });
-    setTitle('');
-    setDescription('');
-    setDueDate(null);
-    setCategory('Limpeza');
-    setAssignmentType('unassigned');
-    setAssignedToId(null);
-    setRecurrence('none');
-    setReminder('none');
-    setSheetVisible(false);
+    try {
+      await createTask.mutateAsync({ title: trimmed, description: description.trim() || null, category: initialCategory ?? category, dueDate, assignmentType, assignedToId, recurrence, reminder });
+      setTitle('');
+      setDescription('');
+      setDueDate(null);
+      setCategory('Limpeza');
+      setAssignmentType('unassigned');
+      setAssignedToId(null);
+      setRecurrence('none');
+      setReminder('none');
+      setSheetVisible(false);
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      Alert.alert('Nao foi possivel criar a tarefa', Array.isArray(message) ? message[0] : message || 'Verifique sua conexao e tente novamente.');
+    }
   }
 
   function handleDelete(task: HouseTask) {
