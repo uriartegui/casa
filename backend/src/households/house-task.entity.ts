@@ -39,7 +39,7 @@ export class HouseTask {
   @Column({ type: 'varchar', default: 'unassigned' })
   assignmentType: 'unassigned' | 'all' | 'user';
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   assignedToId: string | null;
 
   @Column({ type: 'varchar', default: 'none' })
