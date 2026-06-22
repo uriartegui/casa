@@ -51,10 +51,10 @@ export class HouseTask {
   @Column({ type: 'varchar', default: 'none' })
   reminder: 'none' | 'due' | 'one_hour_before' | 'one_day_before';
 
-  @Column()
+  @Column({ type: 'uuid' })
   createdById: string;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   completedById: string | null;
 
   @Column({ type: 'timestamptz', nullable: true })
