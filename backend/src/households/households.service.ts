@@ -601,7 +601,7 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     return this.houseTasksRepo.find({
       where: { householdId },
-      relations: ['createdBy', 'completedBy', 'assignedTo'],
+      relations: ['createdBy', 'completedBy', 'assignedTo', 'shoppingList'],
       order: { done: 'ASC', dueDate: 'ASC', createdAt: 'DESC' },
       take: 100,
     });
@@ -618,6 +618,13 @@ export class HouseholdsService {
     const member = await this.membersRepo.findOne({ where: { householdId, userId: assignedToId } });
     if (!member) throw new BadRequestException('Responsavel nao pertence a esta casa');
     return assignedToId;
+  }
+
+  private async assertTaskShoppingList(householdId: string, shoppingListId?: string | null) {
+    if (!shoppingListId) return null;
+    const list = await this.shoppingListsRepo.findOne({ where: { id: shoppingListId, householdId } });
+    if (!list) throw new BadRequestException('Lista de compras nao pertence a esta casa');
+    return list.id;
   }
 
   private async logHouseTaskActivity(data: Partial<HouseTaskActivity>) {
@@ -649,6 +656,7 @@ export class HouseholdsService {
     await this.assertMember(householdId, userId);
     const assignmentType = dto.assignmentType ?? 'unassigned';
     const assignedToId = await this.assertTaskAssignee(householdId, assignmentType, dto.assignedToId);
+    const shoppingListId = await this.assertTaskShoppingList(householdId, dto.shoppingListId);
     const task = this.houseTasksRepo.create({
       householdId,
       createdById: userId,
@@ -660,6 +668,7 @@ export class HouseholdsService {
       status: 'pending',
       assignmentType,
       assignedToId,
+      shoppingListId,
       recurrence: dto.recurrence ?? 'none',
       recurrenceIntervalDays: dto.recurrence === 'custom' ? dto.recurrenceIntervalDays ?? null : null,
       reminder: dto.reminder ?? 'none',
@@ -672,7 +681,7 @@ export class HouseholdsService {
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return this.houseTasksRepo.findOneOrFail({
       where: { id: saved.id, householdId },
-      relations: ['createdBy', 'completedBy', 'assignedTo'],
+      relations: ['createdBy', 'completedBy', 'assignedTo', 'shoppingList'],
     });
   }
 
@@ -680,7 +689,7 @@ export class HouseholdsService {
     householdId: string,
     taskId: string,
     userId: string,
-    dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'completed' | 'skipped' },
+    dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'in_progress' | 'completed' | 'skipped' },
   ): Promise<HouseTask> {
     await this.assertMember(householdId, userId);
     const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
@@ -701,6 +710,7 @@ export class HouseholdsService {
     if (dto.recurrence !== undefined) task.recurrence = dto.recurrence;
     if (dto.recurrenceIntervalDays !== undefined) task.recurrenceIntervalDays = dto.recurrenceIntervalDays;
     if (dto.reminder !== undefined) task.reminder = dto.reminder;
+    if (dto.shoppingListId !== undefined) task.shoppingListId = await this.assertTaskShoppingList(householdId, dto.shoppingListId);
     task.status = nextStatus;
     task.done = nextStatus === 'completed';
     task.completedById = task.done ? userId : null;
@@ -722,6 +732,7 @@ export class HouseholdsService {
           householdId, createdById: task.createdById, title: task.title, description: task.description,
           category: task.category, dueDate: nextDueDate, done: false, status: 'pending',
           assignmentType: task.assignmentType, assignedToId: task.assignedToId,
+          shoppingListId: task.shoppingListId,
           recurrence: task.recurrence, recurrenceIntervalDays: task.recurrenceIntervalDays,
           reminder: task.reminder, completedById: null, completedAt: null,
         });
@@ -732,7 +743,7 @@ export class HouseholdsService {
     this.eventsGateway.emitHouseholdUpdate(householdId);
     return this.houseTasksRepo.findOneOrFail({
       where: { id: task.id, householdId },
-      relations: ['createdBy', 'completedBy', 'assignedTo'],
+      relations: ['createdBy', 'completedBy', 'assignedTo', 'shoppingList'],
     });
   }
 

@@ -289,7 +289,7 @@ export class HouseholdsController {
   updateHouseTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Body() dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'completed' | 'skipped' },
+    @Body() dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'in_progress' | 'completed' | 'skipped' },
     @Request() req,
   ) {
     return this.householdsService.updateHouseTask(id, taskId, req.user.id, dto);

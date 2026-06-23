@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Household } from './household.entity';
 import { User } from '../users/user.entity';
+import { ShoppingList } from './shopping-list.entity';
 
 @Entity('house_tasks')
 export class HouseTask {
@@ -41,6 +42,9 @@ export class HouseTask {
 
   @Column({ type: 'uuid', nullable: true })
   assignedToId: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  shoppingListId: string | null;
 
   @Column({ type: 'varchar', default: 'none' })
   recurrence: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
@@ -75,6 +79,10 @@ export class HouseTask {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'assignedToId' })
   assignedTo: User | null;
+
+  @ManyToOne(() => ShoppingList, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'shoppingListId' })
+  shoppingList: ShoppingList | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

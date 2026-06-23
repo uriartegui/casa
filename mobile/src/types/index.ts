@@ -130,6 +130,8 @@ export interface HouseTask {
   assignmentType: 'unassigned' | 'all' | 'user';
   assignedToId: string | null;
   assignedTo?: User | null;
+  shoppingListId: string | null;
+  shoppingList?: ShoppingList | null;
   recurrence: 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
   recurrenceIntervalDays: number | null;
   reminder: 'none' | 'due' | 'one_hour_before' | 'one_day_before';

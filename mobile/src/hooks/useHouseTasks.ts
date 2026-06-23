@@ -9,6 +9,7 @@ export type HouseTaskInput = {
   dueDate?: string | null;
   assignmentType?: 'unassigned' | 'all' | 'user';
   assignedToId?: string | null;
+  shoppingListId?: string | null;
   recurrence?: HouseTask['recurrence'];
   recurrenceIntervalDays?: number | null;
   reminder?: HouseTask['reminder'];

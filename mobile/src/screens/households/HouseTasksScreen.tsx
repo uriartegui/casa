@@ -31,6 +31,7 @@ import { formatBrShortDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
+import { useShoppingLists } from '../../hooks/useShoppingLists';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
@@ -97,6 +98,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const { data: households } = useHouseholds();
   const { data: tasks, isLoading, refetch } = useHouseTasks(householdId);
   const { data: activity = [] } = useHouseTaskActivity(householdId);
+  const { data: shoppingLists = [] } = useShoppingLists(householdId);
   const createTask = useCreateHouseTask(householdId);
   const updateStatus = useUpdateHouseTaskStatus(householdId);
   const deleteTask = useDeleteHouseTask(householdId);
@@ -114,6 +116,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [showCategoryFilters, setShowCategoryFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<HouseTask | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
 
@@ -203,6 +206,16 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     ]);
   }
 
+  async function updateSelectedTask(data: { status?: HouseTask['status']; shoppingListId?: string | null }) {
+    if (!selectedTask) return;
+    try {
+      const updated = await updateStatus.mutateAsync({ taskId: selectedTask.id, ...data });
+      setSelectedTask(updated);
+    } catch {
+      Alert.alert('Nao foi possivel atualizar a tarefa', 'Tente novamente em instantes.');
+    }
+  }
+
   function renderTask({ item }: { item: HouseTask }) {
     const label = dueLabel(item.dueDate);
     const late = isLate(item);
@@ -210,12 +223,16 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     return (
       <TouchableOpacity
         style={[styles.taskCard, item.done && styles.taskCardDone, late && styles.taskCardLate]}
-        activeOpacity={0.75}
-        onPress={() => updateStatus.mutate({ taskId: item.id, done: !item.done })}
+        onPress={() => setSelectedTask(item)}
+        activeOpacity={0.78}
       >
-        <View style={[styles.checkbox, item.done && styles.checkboxDone]}>
+        <TouchableOpacity
+          style={[styles.checkbox, item.done && styles.checkboxDone]}
+          onPress={() => updateStatus.mutate({ taskId: item.id, done: !item.done })}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           {item.done && <Feather name="check" size={15} color="#fff" />}
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.taskBody}>
           <Text style={[styles.taskTitle, item.done && styles.taskTitleDone]} numberOfLines={2}>
@@ -226,6 +243,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
             {label && <Text style={[styles.metaText, late && styles.metaTextLate]}>{label}</Text>}
             <Text style={styles.metaText}>{item.assignmentType === 'all' ? 'Todos' : item.assignedTo?.name ? item.assignedTo.name.split(' ')[0] : 'Sem responsavel'}</Text>
             {item.recurrence !== 'none' && <Text style={styles.metaText}>{item.recurrence === 'weekly' ? 'Toda semana' : item.recurrence === 'daily' ? 'Todo dia' : item.recurrence === 'monthly' ? 'Todo mes' : 'Recorrente'}</Text>}
+            {item.shoppingList && <Text style={styles.metaText}>Lista: {item.shoppingList.name}</Text>}
             {item.done && item.completedBy?.name && (
               <Text style={styles.metaText}>por {item.completedBy.name.split(' ')[0]}</Text>
             )}
@@ -433,6 +451,54 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      <Modal visible={!!selectedTask} transparent animationType="slide" onRequestClose={() => setSelectedTask(null)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setSelectedTask(null)} />
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>{selectedTask?.title}</Text>
+            {!!selectedTask?.description && <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>}
+
+            <Text style={styles.sheetLabel}>Status</Text>
+            <View style={styles.chipsRow}>
+              {([
+                { label: 'A fazer', value: 'pending' },
+                { label: 'Em andamento', value: 'in_progress' },
+                { label: 'Concluida', value: 'completed' },
+                { label: 'Nao fazer', value: 'skipped' },
+              ] as const).map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[styles.chip, selectedTask?.status === option.value && styles.chipActive]}
+                  onPress={() => updateSelectedTask({ status: option.value })}
+                >
+                  <Text style={[styles.chipText, selectedTask?.status === option.value && styles.chipTextActive]}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.sheetLabel}>Lista de compras vinculada</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChips}>
+              <TouchableOpacity
+                style={[styles.chip, !selectedTask?.shoppingListId && styles.chipActive]}
+                onPress={() => updateSelectedTask({ shoppingListId: null })}
+              >
+                <Text style={[styles.chipText, !selectedTask?.shoppingListId && styles.chipTextActive]}>Sem lista</Text>
+              </TouchableOpacity>
+              {shoppingLists.map((list) => (
+                <TouchableOpacity
+                  key={list.id}
+                  style={[styles.chip, selectedTask?.shoppingListId === list.id && styles.chipActive]}
+                  onPress={() => updateSelectedTask({ shoppingListId: list.id })}
+                >
+                  <Text style={[styles.chipText, selectedTask?.shoppingListId === list.id && styles.chipTextActive]}>{list.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -587,6 +653,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
+  taskDetailDescription: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 6 },
   sheetLabel: {
     fontSize: 12,
     fontWeight: '700',

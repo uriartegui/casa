@@ -31,6 +31,11 @@ export class CreateHouseTaskDto {
   @IsUUID()
   assignedToId?: string | null;
 
+  @ApiPropertyOptional({ description: 'Lista de compras vinculada a esta tarefa' })
+  @IsOptional()
+  @IsUUID()
+  shoppingListId?: string | null;
+
   @ApiPropertyOptional({ enum: ['none', 'daily', 'weekly', 'biweekly', 'monthly', 'custom'] })
   @IsOptional()
   @IsIn(['none', 'daily', 'weekly', 'biweekly', 'monthly', 'custom'])
