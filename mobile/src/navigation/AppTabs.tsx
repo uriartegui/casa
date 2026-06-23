@@ -480,7 +480,10 @@ function SideMenuScreen({ navigation }: any) {
   const { data: taskCategories } = useTaskCategories(effectiveId);
   const [stockOpen, setStockOpen] = React.useState(initialStockOpen);
   const [tasksOpen, setTasksOpen] = React.useState(previousRoute === 'TasksFlow');
-  const taskCategoryNames = taskCategories?.map((category) => category.name) ?? ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
+  const defaultTaskCategoryNames = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
+  const taskCategoryNames = taskCategories?.length
+    ? taskCategories.map((category) => category.name)
+    : defaultTaskCategoryNames;
   const entries = [
     { label: 'Lista de compras', icon: 'shopping-cart', route: 'ShoppingFlow' },
     { label: 'Casa', icon: 'home', route: 'HouseholdFlow' },

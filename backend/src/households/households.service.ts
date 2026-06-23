@@ -31,6 +31,17 @@ import { AddListItemDto } from './dto/add-list-item.dto';
 import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
+const DEFAULT_TASK_CATEGORIES = [
+  'Limpeza',
+  'Cozinha',
+  'Banheiro',
+  'Lavanderia',
+  'Manutencao',
+  'Compras',
+  'Organizacao',
+  'Outros',
+];
+
 @Injectable()
 export class HouseholdsService {
   private readonly logger = new Logger(HouseholdsService.name);
@@ -114,6 +125,10 @@ export class HouseholdsService {
       { householdId: saved.id, storageId: lavanderia.id, label: 'Roupas', emoji: '\u{1F9FA}' },
       { householdId: saved.id, storageId: lavanderia.id, label: 'Passadoria', emoji: '\u{1F455}' },
     ]);
+
+    await this.taskCategoriesRepo.save(
+      DEFAULT_TASK_CATEGORIES.map((name, position) => ({ householdId: saved.id, name, position })),
+    );
 
     return saved;
   }
