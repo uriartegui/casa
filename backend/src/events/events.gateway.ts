@@ -26,12 +26,15 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly memberRepo: Repository<HouseholdMember>,
   ) {}
 
-  handleConnection(client: WebSocket & { _rooms?: Set<string>; _request?: any; data?: any }) {
+  handleConnection(
+    client: WebSocket & { _rooms?: Set<string>; _request?: any; data?: any },
+    requestFromAdapter?: { url?: string; headers?: Record<string, string | string[] | undefined> },
+  ) {
     // A requisição de upgrade fica em client._socket?.server mas com ws puro
     // precisamos acessar via o request passado pelo adaptador.
     // No NestJS com adaptador ws, o request HTTP fica em (client as any)._socket._httpMessage
     // ou via handshake. Usamos a URL da conexão para extrair o token via query param.
-    const request: any = (client as any)._socket?._httpMessage ?? (client as any)._req;
+    const request: any = requestFromAdapter ?? (client as any)._req ?? (client as any)._socket?._httpMessage;
     const rawUrl: string = request?.url ?? '';
     const urlParams = new URLSearchParams(rawUrl.split('?')[1] ?? '');
     const token =
