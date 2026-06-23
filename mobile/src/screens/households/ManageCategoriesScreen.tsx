@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Modal, TextInput,
+  ScrollView, Alert, ActivityIndicator, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -77,8 +77,15 @@ function StorageSection({ householdId, storage }: { householdId: string; storage
       )}
 
       <Modal visible={modal} transparent animationType="fade" onRequestClose={() => setModal(false)}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setModal(false)}>
-          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
+        <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setModal(false)}>
+            <ScrollView
+              style={styles.modalBox}
+              contentContainerStyle={styles.modalContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              showsVerticalScrollIndicator={false}
+            >
             <Text style={styles.modalTitle}>Nova categoria — {storage.name}</Text>
             <TextInput
               style={styles.modalInput}
@@ -116,8 +123,9 @@ function StorageSection({ householdId, storage }: { householdId: string; storage
                 }
               </TouchableOpacity>
             </View>
+            </ScrollView>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -172,11 +180,13 @@ const styles = StyleSheet.create({
   },
   addChipText: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
 
+  modalKeyboard: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalBox: {
-    backgroundColor: Colors.card, borderRadius: 16, padding: 20, width: '90%',
+    backgroundColor: Colors.card, borderRadius: 16, width: '90%', maxHeight: '82%',
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 10,
   },
+  modalContent: { padding: 20 },
   modalTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
   modalInput: {
     borderWidth: 1, borderColor: Colors.separator, borderRadius: 10,

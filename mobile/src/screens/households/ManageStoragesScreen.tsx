@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, Modal, TextInput,
+  ActivityIndicator, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { Colors } from '../../constants/colors';
@@ -123,8 +123,9 @@ export default function ManageStoragesScreen({ route }: Props) {
       ))}
 
       <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
-        <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setEditing(null)}>
-          <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
+        <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={() => setEditing(null)}>
+            <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
             <Text style={styles.modalTitle}>Renomear estoque</Text>
             <TextInput
               style={styles.input}
@@ -151,8 +152,9 @@ export default function ManageStoragesScreen({ route }: Props) {
                 }
               </TouchableOpacity>
             </View>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
+        </KeyboardAvoidingView>
       </Modal>
     </ScrollView>
   );
@@ -191,6 +193,7 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   showText: { color: Colors.accent },
   hideText: { color: Colors.destructive },
+  modalKeyboard: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalBox: {
     backgroundColor: Colors.card,

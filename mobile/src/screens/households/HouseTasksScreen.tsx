@@ -17,12 +17,13 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import {
   useCreateHouseTask,
   useDeleteHouseTask,
-  useHouseTaskActivity,
   useHouseTasks,
   useUpdateHouseTaskStatus,
 } from '../../hooks/useHouseTasks';
@@ -39,6 +40,9 @@ type Props = {
 };
 
 type StatusFilter = 'open' | 'mine' | 'late' | 'done' | 'all';
+type DropdownOption = { label: string; value: string };
+
+const NONE_VALUE = '__none__';
 
 const CATEGORIES = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
@@ -69,6 +73,64 @@ function isLate(task: HouseTask) {
   return !!task.dueDate && task.dueDate < dateKeyFromOffset(0) && !task.done;
 }
 
+function dateFromKey(value: string | null): Date {
+  return value ? new Date(`${value}T12:00:00`) : new Date();
+}
+
+function dateKeyFromPicker(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function DropdownField({ label, value, options, onChange }: {
+  label: string;
+  value: string;
+  options: DropdownOption[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value)?.label ?? 'Selecionar';
+
+  return (
+    <View style={[styles.dropdownField, open && styles.dropdownFieldOpen]}>
+      <Text style={styles.sheetLabel}>{label}</Text>
+      <TouchableOpacity style={styles.selectRow} onPress={() => setOpen((current) => !current)} activeOpacity={0.75}>
+        <Text style={styles.selectValue} numberOfLines={1}>{selected}</Text>
+        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
+      </TouchableOpacity>
+      {open && <View style={styles.dropdownPanel}>
+        {options.map((option) => (
+          <TouchableOpacity
+            key={option.value}
+            style={[styles.dropdownOption, option.value === value && styles.dropdownOptionActive]}
+            onPress={() => { onChange(option.value); setOpen(false); }}
+          >
+            <Text style={[styles.dropdownOptionText, option.value === value && styles.dropdownOptionTextActive]}>{option.label}</Text>
+            {option.value === value && <Feather name="check" size={16} color={Colors.accent} />}
+          </TouchableOpacity>
+        ))}
+      </View>}
+    </View>
+  );
+}
+
+function DateField({ value, onPress, onClear }: { value: string | null; onPress: () => void; onClear: () => void }) {
+  return (
+    <View style={styles.dropdownField}>
+      <Text style={styles.sheetLabel}>Prazo</Text>
+      <View style={styles.dateRowWrap}>
+        <TouchableOpacity style={[styles.selectRow, styles.dateRow]} onPress={onPress} activeOpacity={0.75}>
+          <Text style={styles.selectValue}>{value ? formatBrShortDate(value) : 'Sem prazo'}</Text>
+          <Feather name="calendar" size={17} color={Colors.textSecondary} />
+        </TouchableOpacity>
+        {!!value && <TouchableOpacity onPress={onClear} style={styles.clearDateButton}><Text style={styles.clearDateText}>Limpar</Text></TouchableOpacity>}
+      </View>
+    </View>
+  );
+}
+
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
   const { data: households } = useHouseholds();
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
@@ -97,7 +159,6 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const { data: households } = useHouseholds();
   const { data: tasks, isLoading, refetch } = useHouseTasks(householdId);
-  const { data: activity = [] } = useHouseTaskActivity(householdId);
   const { data: shoppingLists = [] } = useShoppingLists(householdId);
   const createTask = useCreateHouseTask(householdId);
   const updateStatus = useUpdateHouseTaskStatus(householdId);
@@ -114,9 +175,12 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open');
   const [categoryFilter, setCategoryFilter] = useState<string>('Todas');
   const [showCategoryFilters, setShowCategoryFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [sheetVisible, setSheetVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HouseTask | null>(null);
+  const [draggedKanbanTaskId, setDraggedKanbanTaskId] = useState<string | null>(null);
+  const [kanbanDragX, setKanbanDragX] = useState(0);
+  const [newTaskDatePickerVisible, setNewTaskDatePickerVisible] = useState(false);
+  const [detailDatePickerVisible, setDetailDatePickerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
 
@@ -169,6 +233,14 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     });
   }, [categoryFilter, initialCategory, isCategoryPage, statusFilter, tasks, user?.id]);
 
+  const kanbanTasks = useMemo(() => {
+    return (tasks ?? []).filter((task) => {
+      if (isCategoryPage && task.category !== initialCategory) return false;
+      if (categoryFilter !== 'Todas' && task.category !== categoryFilter) return false;
+      return true;
+    });
+  }, [categoryFilter, initialCategory, isCategoryPage, tasks]);
+
   async function handleRefresh() {
     setRefreshing(true);
     await refetch();
@@ -206,7 +278,13 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     ]);
   }
 
-  async function updateSelectedTask(data: { status?: HouseTask['status']; shoppingListId?: string | null }) {
+  async function updateSelectedTask(data: {
+    status?: HouseTask['status'];
+    shoppingListId?: string | null;
+    assignmentType?: HouseTask['assignmentType'];
+    assignedToId?: string | null;
+    dueDate?: string | null;
+  }) {
     if (!selectedTask) return;
     try {
       const updated = await updateStatus.mutateAsync({ taskId: selectedTask.id, ...data });
@@ -214,6 +292,29 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     } catch {
       Alert.alert('Nao foi possivel atualizar a tarefa', 'Tente novamente em instantes.');
     }
+  }
+
+  function createKanbanMoveGesture(task: HouseTask) {
+    return Gesture.Pan()
+      .activateAfterLongPress(380)
+      .runOnJS(true)
+      .onBegin(() => {
+        setDraggedKanbanTaskId(task.id);
+        setKanbanDragX(0);
+      })
+      .onUpdate((event) => setKanbanDragX(Math.max(-110, Math.min(110, event.translationX))))
+      .onFinalize((event, success) => {
+        setDraggedKanbanTaskId(null);
+        setKanbanDragX(0);
+        if (!success || Math.abs(event.translationX) < 64) return;
+
+        const flow: HouseTask['status'][] = ['pending', 'in_progress', 'completed'];
+        const currentIndex = flow.indexOf(task.done ? 'completed' : task.status);
+        const nextIndex = currentIndex + (event.translationX > 0 ? 1 : -1);
+        const nextStatus = flow[nextIndex];
+
+        if (nextStatus) updateStatus.mutate({ taskId: task.id, status: nextStatus });
+      });
   }
 
   function renderTask({ item }: { item: HouseTask }) {
@@ -262,13 +363,27 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   }
 
   function renderKanbanColumn(title: string, status: 'pending' | 'in_progress' | 'completed') {
-    const items = visibleTasks.filter((task) => (status === 'completed' ? task.done : task.status === status && !task.done));
+    const items = kanbanTasks.filter((task) => (status === 'completed' ? task.done : task.status === status && !task.done));
     return <View key={status} style={styles.kanbanColumn}>
       <Text style={styles.kanbanTitle}>{title} ({items.length})</Text>
-      {items.map((task) => <TouchableOpacity key={task.id} style={styles.kanbanCard} onPress={() => updateStatus.mutate({ taskId: task.id, status: status === 'pending' ? 'in_progress' : status === 'in_progress' ? 'completed' : 'pending' })}>
-        <Text style={styles.kanbanCardTitle}>{task.title}</Text>
-        <Text style={styles.kanbanCardMeta}>{task.assignedTo?.name?.split(' ')[0] ?? (task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel')}</Text>
-      </TouchableOpacity>)}
+      {items.map((task) => (
+        <GestureDetector key={task.id} gesture={createKanbanMoveGesture(task)}>
+          <TouchableOpacity
+            style={[
+              styles.kanbanCard,
+              draggedKanbanTaskId === task.id && styles.kanbanCardDragging,
+              draggedKanbanTaskId === task.id && kanbanDragX > 12 && styles.kanbanCardMovingForward,
+              draggedKanbanTaskId === task.id && kanbanDragX < -12 && styles.kanbanCardMovingBack,
+              draggedKanbanTaskId === task.id && { transform: [{ translateX: kanbanDragX }, { scale: 1.02 }] },
+            ]}
+            onPress={() => setSelectedTask(task)}
+            activeOpacity={0.75}
+          >
+            <Text style={styles.kanbanCardTitle}>{task.title}</Text>
+            <Text style={styles.kanbanCardMeta}>{task.assignedTo?.name?.split(' ')[0] ?? (task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel')}</Text>
+          </TouchableOpacity>
+        </GestureDetector>
+      ))}
       {items.length === 0 && <Text style={styles.kanbanEmpty}>Nenhuma tarefa</Text>}
     </View>;
   }
@@ -276,10 +391,10 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <FlatList
-        data={viewMode === 'list' ? visibleTasks : []}
+        data={visibleTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
-        contentContainerStyle={[styles.list, viewMode === 'list' && visibleTasks.length === 0 && styles.listEmpty]}
+        contentContainerStyle={[styles.list, visibleTasks.length === 0 && styles.listEmpty]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         ListHeaderComponent={
           <View>
@@ -324,12 +439,23 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
                 </TouchableOpacity>
               ))}
             </ScrollView>}
-            {isCategoryPage && <Text style={styles.categoryContextText}>{stats.pending} {stats.pending === 1 ? 'tarefa pendente' : 'tarefas pendentes'} nesta categoria</Text>}
-            <View style={styles.viewSwitch}><TouchableOpacity style={[styles.viewSwitchOption, viewMode === 'list' && styles.viewSwitchOptionActive]} onPress={() => setViewMode('list')}><Text style={[styles.viewSwitchText, viewMode === 'list' && styles.viewSwitchTextActive]}>Lista</Text></TouchableOpacity><TouchableOpacity style={[styles.viewSwitchOption, viewMode === 'kanban' && styles.viewSwitchOptionActive]} onPress={() => setViewMode('kanban')}><Text style={[styles.viewSwitchText, viewMode === 'kanban' && styles.viewSwitchTextActive]}>Kanban</Text></TouchableOpacity></View>
-            {viewMode === 'kanban' && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kanbanBoard}>{renderKanbanColumn('A fazer', 'pending')}{renderKanbanColumn('Em andamento', 'in_progress')}{renderKanbanColumn('Concluidas', 'completed')}</ScrollView>}
+            {isCategoryPage && <View style={styles.categoryPageHeader}>
+              <Text style={styles.categoryContextText}>{stats.pending} {stats.pending === 1 ? 'tarefa pendente' : 'tarefas pendentes'} nesta categoria</Text>
+              <TouchableOpacity
+                style={[styles.completedToggle, statusFilter === 'done' && styles.completedToggleActive]}
+                onPress={() => setStatusFilter((current) => current === 'done' ? 'open' : 'done')}
+              >
+                <Text style={[styles.completedToggleText, statusFilter === 'done' && styles.completedToggleTextActive]}>
+                  {statusFilter === 'done' ? 'Ver pendentes' : 'Concluidas'}
+                </Text>
+              </TouchableOpacity>
+            </View>}
+            <Text style={styles.sectionTitle}>Visao geral</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kanbanBoard}>{renderKanbanColumn('A fazer', 'pending')}{renderKanbanColumn('Em andamento', 'in_progress')}{renderKanbanColumn('Concluidas', 'completed')}</ScrollView>
+            <Text style={styles.sectionTitle}>Tarefas</Text>
           </View>
         }
-        ListEmptyComponent={viewMode === 'list' ? (
+        ListEmptyComponent={
           !isLoading ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Nada por aqui</Text>
@@ -338,17 +464,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
           ) : (
             <ActivityIndicator color={Colors.accent} />
           )
-        ) : null}
-        ListFooterComponent={activity.length > 0 ? (
-          <View style={styles.activityPreview}>
-            <Text style={styles.activityTitle}>Atividade recente</Text>
-            {activity.slice(0, 3).map((event) => (
-              <Text key={event.id} style={styles.activityText}>
-                {event.userName} {event.action === 'completed' ? 'concluiu' : event.action === 'created' ? 'criou' : event.action === 'overdue' ? 'tem atraso em' : 'atualizou'} {event.taskTitle}
-              </Text>
-            ))}
-          </View>
-        ) : null}
+        }
       />
 
       <View style={styles.footer}>
@@ -360,8 +476,14 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       <Modal visible={sheetVisible} transparent animationType="slide" onRequestClose={() => setSheetVisible(false)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setSheetVisible(false)} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.sheet}>
+          <KeyboardAvoidingView style={styles.sheetKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView
+              style={styles.sheet}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.sheetHandle} />
               <Text style={styles.sheetTitle}>Nova tarefa</Text>
 
@@ -386,55 +508,51 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
                 multiline
               />
 
-              {!isCategoryPage && <><Text style={styles.sheetLabel}>Categoria</Text>
-              <View style={styles.chipsRow}>
-                {CATEGORIES.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={[styles.chip, category === item && styles.chipActive]}
-                    onPress={() => setCategory(category === item ? null : item)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.chipText, category === item && styles.chipTextActive]}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View></>}
+              {!isCategoryPage && <DropdownField
+                label="Categoria"
+                value={category ?? NONE_VALUE}
+                options={[{ label: 'Sem categoria', value: NONE_VALUE }, ...CATEGORIES.map((item) => ({ label: item, value: item }))]}
+                onChange={(value) => setCategory(value === NONE_VALUE ? null : value)}
+              />}
 
-              <Text style={styles.sheetLabel}>Responsavel</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChips}>
-                <TouchableOpacity style={[styles.chip, assignmentType === 'unassigned' && styles.chipActive]} onPress={() => { setAssignmentType('unassigned'); setAssignedToId(null); }}><Text style={[styles.chipText, assignmentType === 'unassigned' && styles.chipTextActive]}>Sem responsavel</Text></TouchableOpacity>
-                <TouchableOpacity style={[styles.chip, assignmentType === 'all' && styles.chipActive]} onPress={() => { setAssignmentType('all'); setAssignedToId(null); }}><Text style={[styles.chipText, assignmentType === 'all' && styles.chipTextActive]}>Todos</Text></TouchableOpacity>
-                {members.map((member) => <TouchableOpacity key={member.userId} style={[styles.chip, assignmentType === 'user' && assignedToId === member.userId && styles.chipActive]} onPress={() => { setAssignmentType('user'); setAssignedToId(member.userId); }}><Text style={[styles.chipText, assignmentType === 'user' && assignedToId === member.userId && styles.chipTextActive]}>{member.user?.name?.split(' ')[0] ?? 'Membro'}</Text></TouchableOpacity>)}
-              </ScrollView>
+              <DropdownField
+                label="Responsavel"
+                value={assignmentType === 'user' && assignedToId ? `user:${assignedToId}` : assignmentType}
+                options={[
+                  { label: 'Sem responsavel', value: 'unassigned' },
+                  { label: 'Todos', value: 'all' },
+                  ...members.map((member) => ({ label: member.user?.name ?? 'Membro', value: `user:${member.userId}` })),
+                ]}
+                onChange={(value) => {
+                  if (value === 'unassigned' || value === 'all') { setAssignmentType(value); setAssignedToId(null); }
+                  else { setAssignmentType('user'); setAssignedToId(value.slice(5)); }
+                }}
+              />
 
-              <Text style={styles.sheetLabel}>Repeticao</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChips}>
-                {(['none', 'daily', 'weekly', 'biweekly', 'monthly'] as const).map((item) => <TouchableOpacity key={item} style={[styles.chip, recurrence === item && styles.chipActive]} onPress={() => setRecurrence(item)}><Text style={[styles.chipText, recurrence === item && styles.chipTextActive]}>{item === 'none' ? 'Nao repetir' : item === 'daily' ? 'Todo dia' : item === 'weekly' ? 'Toda semana' : item === 'biweekly' ? '15 dias' : 'Todo mes'}</Text></TouchableOpacity>)}
-              </ScrollView>
+              <DropdownField
+                label="Repeticao"
+                value={recurrence}
+                options={[{ label: 'Nao repetir', value: 'none' }, { label: 'Todo dia', value: 'daily' }, { label: 'Toda semana', value: 'weekly' }, { label: 'A cada 15 dias', value: 'biweekly' }, { label: 'Todo mes', value: 'monthly' }]}
+                onChange={(value) => setRecurrence(value as HouseTask['recurrence'])}
+              />
 
-              <Text style={styles.sheetLabel}>Lembrete</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChips}>
-                {(['none', 'due', 'one_day_before'] as const).map((item) => <TouchableOpacity key={item} style={[styles.chip, reminder === item && styles.chipActive]} onPress={() => setReminder(item)}><Text style={[styles.chipText, reminder === item && styles.chipTextActive]}>{item === 'none' ? 'Sem lembrete' : item === 'due' ? 'No prazo' : '1 dia antes'}</Text></TouchableOpacity>)}
-              </ScrollView>
+              <DropdownField
+                label="Lembrete"
+                value={reminder}
+                options={[{ label: 'Sem lembrete', value: 'none' }, { label: 'No prazo', value: 'due' }, { label: '1 dia antes', value: 'one_day_before' }]}
+                onChange={(value) => setReminder(value as HouseTask['reminder'])}
+              />
 
-              <Text style={styles.sheetLabel}>Prazo</Text>
-              <View style={styles.chipsRow}>
-                {[
-                  { label: 'Sem data', value: null },
-                  { label: 'Hoje', value: dateKeyFromOffset(0) },
-                  { label: 'Amanha', value: dateKeyFromOffset(1) },
-                  { label: '7 dias', value: dateKeyFromOffset(7) },
-                ].map((item) => (
-                  <TouchableOpacity
-                    key={item.label}
-                    style={[styles.chip, dueDate === item.value && styles.chipActive]}
-                    onPress={() => setDueDate(item.value)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.chipText, dueDate === item.value && styles.chipTextActive]}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <DateField value={dueDate} onPress={() => setNewTaskDatePickerVisible(true)} onClear={() => setDueDate(null)} />
+              {newTaskDatePickerVisible && <DateTimePicker
+                value={dateFromKey(dueDate)}
+                mode="date"
+                display="default"
+                onChange={(_, selectedDate) => {
+                  setNewTaskDatePickerVisible(false);
+                  if (selectedDate) setDueDate(dateKeyFromPicker(selectedDate));
+                }}
+              />}
 
               <TouchableOpacity
                 style={[styles.button, !title.trim() && styles.buttonDisabled]}
@@ -447,7 +565,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
                   : <Text style={styles.buttonText}>Adicionar tarefa</Text>
                 }
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -455,48 +573,55 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       <Modal visible={!!selectedTask} transparent animationType="slide" onRequestClose={() => setSelectedTask(null)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setSelectedTask(null)} />
-          <View style={styles.sheet}>
+          <ScrollView
+            style={styles.sheet}
+            contentContainerStyle={styles.sheetContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>{selectedTask?.title}</Text>
             {!!selectedTask?.description && <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>}
 
-            <Text style={styles.sheetLabel}>Status</Text>
-            <View style={styles.chipsRow}>
-              {([
-                { label: 'A fazer', value: 'pending' },
-                { label: 'Em andamento', value: 'in_progress' },
-                { label: 'Concluida', value: 'completed' },
-                { label: 'Nao fazer', value: 'skipped' },
-              ] as const).map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[styles.chip, selectedTask?.status === option.value && styles.chipActive]}
-                  onPress={() => updateSelectedTask({ status: option.value })}
-                >
-                  <Text style={[styles.chipText, selectedTask?.status === option.value && styles.chipTextActive]}>{option.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <DropdownField
+              label="Responsavel"
+              value={selectedTask?.assignmentType === 'user' && selectedTask.assignedToId ? `user:${selectedTask.assignedToId}` : selectedTask?.assignmentType ?? 'unassigned'}
+              options={[
+                { label: 'Sem responsavel', value: 'unassigned' },
+                { label: 'Todos', value: 'all' },
+                ...members.map((member) => ({ label: member.user?.name ?? 'Membro', value: `user:${member.userId}` })),
+              ]}
+              onChange={(value) => {
+                if (value === 'unassigned' || value === 'all') updateSelectedTask({ assignmentType: value, assignedToId: null });
+                else updateSelectedTask({ assignmentType: 'user', assignedToId: value.slice(5) });
+              }}
+            />
 
-            <Text style={styles.sheetLabel}>Lista de compras vinculada</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalChips}>
-              <TouchableOpacity
-                style={[styles.chip, !selectedTask?.shoppingListId && styles.chipActive]}
-                onPress={() => updateSelectedTask({ shoppingListId: null })}
-              >
-                <Text style={[styles.chipText, !selectedTask?.shoppingListId && styles.chipTextActive]}>Sem lista</Text>
-              </TouchableOpacity>
-              {shoppingLists.map((list) => (
-                <TouchableOpacity
-                  key={list.id}
-                  style={[styles.chip, selectedTask?.shoppingListId === list.id && styles.chipActive]}
-                  onPress={() => updateSelectedTask({ shoppingListId: list.id })}
-                >
-                  <Text style={[styles.chipText, selectedTask?.shoppingListId === list.id && styles.chipTextActive]}>{list.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+            <DateField value={selectedTask?.dueDate ?? null} onPress={() => setDetailDatePickerVisible(true)} onClear={() => updateSelectedTask({ dueDate: null })} />
+            {detailDatePickerVisible && <DateTimePicker
+              value={dateFromKey(selectedTask?.dueDate ?? null)}
+              mode="date"
+              display="default"
+              onChange={(_, selectedDate) => {
+                setDetailDatePickerVisible(false);
+                if (selectedDate) updateSelectedTask({ dueDate: dateKeyFromPicker(selectedDate) });
+              }}
+            />}
+
+            <DropdownField
+              label="Status"
+              value={selectedTask?.status ?? 'pending'}
+              options={[{ label: 'A fazer', value: 'pending' }, { label: 'Em andamento', value: 'in_progress' }, { label: 'Concluida', value: 'completed' }, { label: 'Nao fazer', value: 'skipped' }]}
+              onChange={(value) => updateSelectedTask({ status: value as HouseTask['status'] })}
+            />
+
+            <DropdownField
+              label="Lista de compras vinculada"
+              value={selectedTask?.shoppingListId ?? NONE_VALUE}
+              options={[{ label: 'Sem lista', value: NONE_VALUE }, ...shoppingLists.map((list) => ({ label: list.name, value: list.id }))]}
+              onChange={(value) => updateSelectedTask({ shoppingListId: value === NONE_VALUE ? null : value })}
+            />
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -519,16 +644,20 @@ const styles = StyleSheet.create({
   compactSummary: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10, paddingHorizontal: 2 },
   compactTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
   compactStats: { fontSize: 12, color: Colors.textSecondary, paddingBottom: 2 },
-  categoryContextText: { fontSize: 12, color: Colors.textSecondary, marginBottom: 10 },
-  viewSwitch: { flexDirection: 'row', alignSelf: 'flex-start', borderWidth: 1, borderColor: Colors.separator, borderRadius: 18, overflow: 'hidden', marginBottom: 12 },
-  viewSwitchOption: { paddingHorizontal: 14, paddingVertical: 7 },
-  viewSwitchOptionActive: { backgroundColor: Colors.accent },
-  viewSwitchText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
-  viewSwitchTextActive: { color: '#fff' },
+  categoryPageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
+  categoryContextText: { flex: 1, fontSize: 12, color: Colors.textSecondary },
+  completedToggle: { borderWidth: 1, borderColor: Colors.separator, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: Colors.card },
+  completedToggleActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
+  completedToggleText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  completedToggleTextActive: { color: '#fff' },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
   kanbanBoard: { gap: 10, paddingBottom: 14 },
   kanbanColumn: { width: 218, minHeight: 270, backgroundColor: Colors.accent + '0D', borderRadius: 10, padding: 10, gap: 8 },
   kanbanTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
   kanbanCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator, borderRadius: 9, padding: 10, gap: 4 },
+  kanbanCardDragging: { opacity: 0.82, borderColor: Colors.accent, zIndex: 4, elevation: 4 },
+  kanbanCardMovingForward: { backgroundColor: Colors.success + '18', borderColor: Colors.success },
+  kanbanCardMovingBack: { backgroundColor: Colors.accent + '18', borderColor: Colors.accent },
   kanbanCardTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
   kanbanCardMeta: { fontSize: 11, color: Colors.textSecondary },
   kanbanEmpty: { fontSize: 12, color: Colors.textSecondary, paddingTop: 8 },
@@ -609,9 +738,6 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 40, paddingTop: 80 },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  activityPreview: { borderTopWidth: 1, borderTopColor: Colors.separator, marginTop: 10, paddingTop: 14, gap: 6 },
-  activityTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
-  activityText: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
   footer: {
     position: 'absolute',
     left: 0,
@@ -639,11 +765,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 28,
-    gap: 8,
+    maxHeight: '94%',
   },
+  sheetKeyboard: { justifyContent: 'flex-end', maxHeight: '100%' },
+  sheetContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 8 },
   sheetHandle: {
     width: 40,
     height: 4,
@@ -654,6 +779,19 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
   taskDetailDescription: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 6 },
+  dropdownField: { gap: 5, position: 'relative' },
+  dropdownFieldOpen: { zIndex: 30, elevation: 30 },
+  selectRow: { minHeight: 46, borderWidth: 1, borderColor: Colors.separator, borderRadius: 10, backgroundColor: Colors.card, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  selectValue: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  dropdownPanel: { position: 'absolute', top: 67, left: 0, right: 0, zIndex: 40, elevation: 40, borderWidth: 1, borderColor: Colors.separator, borderRadius: 10, backgroundColor: Colors.card, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  dropdownOption: { minHeight: 42, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Colors.separator },
+  dropdownOptionActive: { backgroundColor: Colors.accent + '12' },
+  dropdownOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+  dropdownOptionTextActive: { color: Colors.accent, fontWeight: '800' },
+  dateRowWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dateRow: { flex: 1 },
+  clearDateButton: { paddingHorizontal: 4, paddingVertical: 8 },
+  clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
   sheetLabel: {
     fontSize: 12,
     fontWeight: '700',

@@ -5,7 +5,7 @@ import {
   TouchableWithoutFeedback, Keyboard, Modal,
 } from 'react-native';
 import { filterItems } from '../../constants/commonItems';
-import DateField from '../../components/DateField';
+import DatePickerModal from '../../components/DatePickerModal';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
@@ -14,6 +14,7 @@ import { Colors } from '../../constants/colors';
 import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks/useCategories';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
+import { Feather } from '@expo/vector-icons';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'AddFridgeItem'>;
@@ -35,6 +36,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [category, setCategory] = useState<string | null>(null);
   const [showStorageOptions, setShowStorageOptions] = useState(false);
   const [showCategoryOptions, setShowCategoryOptions] = useState(false);
+  const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
 
   // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
   // escolhe um; item sem compartimento nao aparece no estoque.
@@ -168,74 +170,77 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
           {(storages?.length ?? 0) > 0 && (
             <>
               <Text style={styles.label}>Compartimento</Text>
-              <TouchableOpacity
-                style={[styles.selectRow, routeStorageId ? styles.selectRowLocked : null]}
-                onPress={() => {
-                  if (routeStorageId) return;
-                  setShowStorageOptions((value) => !value);
-                  setShowCategoryOptions(false);
-                }}
-                activeOpacity={routeStorageId ? 1 : 0.7}
-              >
-                <Text style={[styles.selectRowText, !selectedStorage && styles.selectRowPlaceholder]}>
-                  {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Escolher compartimento'}
-                </Text>
-                {!routeStorageId && <Text style={styles.selectRowToggle}>{showStorageOptions ? '-' : '+'}</Text>}
-              </TouchableOpacity>
-              {showStorageOptions && !routeStorageId && (
-                <View style={styles.compactOptions}>
+              <View style={[styles.selectField, showStorageOptions && styles.selectFieldOpen]}>
+                <TouchableOpacity
+                  style={[styles.selectRow, routeStorageId ? styles.selectRowLocked : null]}
+                  onPress={() => {
+                    if (routeStorageId) return;
+                    setShowStorageOptions((value) => !value);
+                    setShowCategoryOptions(false);
+                  }}
+                  activeOpacity={routeStorageId ? 1 : 0.7}
+                >
+                  <Text style={[styles.selectRowText, !selectedStorage && styles.selectRowPlaceholder]}>
+                    {selectedStorage ? `${selectedStorage.emoji} ${selectedStorage.name}` : 'Escolher compartimento'}
+                  </Text>
+                  {!routeStorageId && <Feather name={showStorageOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />}
+                </TouchableOpacity>
+                {showStorageOptions && !routeStorageId && (
+                  <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
                   {(storages ?? []).map((s) => (
                     <TouchableOpacity
                       key={s.id}
-                      style={[styles.compactChip, storageId === s.id && styles.compactChipActive]}
+                      style={[styles.selectOption, storageId === s.id && styles.selectOptionActive]}
                       onPress={() => {
                         setPickedStorageId(s.id);
                         setCategory(null);
                         setShowStorageOptions(false);
-                        setShowCategoryOptions(true);
+                        setShowCategoryOptions(false);
                       }}
                     >
-                      <Text style={[styles.compactChipText, storageId === s.id && styles.compactChipTextActive]}>
-                        {s.emoji} {s.name}
-                      </Text>
+                      <Text style={[styles.selectOptionText, storageId === s.id && styles.selectOptionTextActive]}>{s.name}</Text>
+                      {storageId === s.id && <Feather name="check" size={16} color={Colors.accent} />}
                     </TouchableOpacity>
                   ))}
-                </View>
-              )}
+                  </ScrollView>
+                )}
+              </View>
             </>
           )}
 
           <Text style={styles.label}>
             Categoria <Text style={styles.optional}>(opcional · segure para excluir)</Text>
           </Text>
-          <TouchableOpacity
-            style={[styles.selectRow, !storageId && styles.selectRowDisabled]}
-            onPress={() => {
-              if (!storageId) return;
-              setShowCategoryOptions((value) => !value);
-              setShowStorageOptions(false);
-            }}
-          >
-            <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>
-              {category ?? (storageId ? 'Escolher categoria' : 'Escolha um compartimento primeiro')}
-            </Text>
-            <Text style={styles.selectRowToggle}>{showCategoryOptions ? '-' : '+'}</Text>
-          </TouchableOpacity>
-          {showCategoryOptions && storageId && (
-          <View style={styles.compactOptions}>
+          <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
             <TouchableOpacity
-              style={[styles.compactChip, !category && styles.compactChipActive]}
+              style={[styles.selectRow, !storageId && styles.selectRowDisabled]}
+              onPress={() => {
+                if (!storageId) return;
+                setShowCategoryOptions((value) => !value);
+                setShowStorageOptions(false);
+              }}
+            >
+              <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>
+                {category ?? (storageId ? 'Escolher categoria' : 'Escolha um compartimento primeiro')}
+              </Text>
+              <Feather name={showCategoryOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+            {showCategoryOptions && storageId && (
+            <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
+            <TouchableOpacity
+              style={[styles.selectOption, !category && styles.selectOptionActive]}
               onPress={() => {
                 setCategory(null);
                 setShowCategoryOptions(false);
               }}
             >
-              <Text style={[styles.compactChipText, !category && styles.compactChipTextActive]}>Sem categoria</Text>
+              <Text style={[styles.selectOptionText, !category && styles.selectOptionTextActive]}>Sem categoria</Text>
+              {!category && <Feather name="check" size={16} color={Colors.accent} />}
             </TouchableOpacity>
             {(categories ?? []).map((c) => (
               <TouchableOpacity
                 key={c.id}
-                style={[styles.compactChip, category === c.label && styles.compactChipActive]}
+                style={[styles.selectOption, category === c.label && styles.selectOptionActive]}
                 onPress={() => {
                   setCategory(c.label);
                   setShowCategoryOptions(false);
@@ -243,22 +248,27 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
                 onLongPress={() => handleCategoryLongPress(c)}
                 delayLongPress={500}
               >
-                <Text style={[styles.compactChipText, category === c.label && styles.compactChipTextActive]}>
-                  {c.emoji} {c.label}
-                </Text>
+                <Text style={[styles.selectOptionText, category === c.label && styles.selectOptionTextActive]}>{c.label}</Text>
+                {category === c.label && <Feather name="check" size={16} color={Colors.accent} />}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity
-              style={styles.compactAddChip}
-              onPress={() => setNewCatModal(true)}
-            >
-              <Text style={styles.addCategoryText}>+ Nova</Text>
+            <TouchableOpacity style={styles.selectOption} onPress={() => setNewCatModal(true)}>
+              <Text style={styles.selectOptionText}>Nova categoria</Text>
+              <Feather name="plus" size={16} color={Colors.accent} />
             </TouchableOpacity>
+            </ScrollView>
+            )}
           </View>
-          )}
 
           <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
-          <DateField value={expirationDate} onChange={setExpirationDate} />
+          <TouchableOpacity style={styles.selectRow} onPress={() => setExpirationPickerVisible(true)}>
+            <Text style={[styles.selectRowText, !expirationDate && styles.selectRowPlaceholder]}>
+              {expirationDate ? expirationDate.toLocaleDateString('pt-BR') : 'Selecionar data'}
+            </Text>
+            <Feather name="calendar" size={17} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          {expirationDate && <TouchableOpacity onPress={() => setExpirationDate(null)} style={styles.clearDateButton}><Text style={styles.clearDateText}>Limpar data</Text></TouchableOpacity>}
+          <DatePickerModal visible={expirationPickerVisible} value={expirationDate ?? new Date()} onChange={setExpirationDate} onClose={() => setExpirationPickerVisible(false)} />
 
           <TouchableOpacity
             style={[styles.button, (!storageId || addItem.isPending) && styles.buttonDisabled]}
@@ -274,8 +284,15 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
 
         {/* Modal nova categoria */}
         <Modal visible={newCatModal} transparent animationType="fade" onRequestClose={() => setNewCatModal(false)}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setNewCatModal(false)}>
-            <TouchableOpacity style={styles.modalBox} activeOpacity={1}>
+          <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setNewCatModal(false)}>
+              <ScrollView
+                style={styles.modalBox}
+                contentContainerStyle={styles.modalContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+                showsVerticalScrollIndicator={false}
+              >
               <Text style={styles.modalTitle}>Nova categoria</Text>
 
               <TextInput
@@ -317,8 +334,9 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
                   }
                 </TouchableOpacity>
               </View>
+              </ScrollView>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </KeyboardAvoidingView>
         </Modal>
 
       </KeyboardAvoidingView>
@@ -356,6 +374,16 @@ const styles = StyleSheet.create({
   selectRowDisabled: { opacity: 0.65 },
   selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
+  selectField: { position: 'relative' },
+  selectFieldOpen: { zIndex: 30, elevation: 30 },
+  selectOptions: { position: 'absolute', top: 52, left: 0, right: 0, zIndex: 40, elevation: 40, maxHeight: 260, overflow: 'hidden', borderWidth: 1, borderColor: Colors.separator, borderRadius: 12, backgroundColor: Colors.card, shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  selectOptionsContent: { paddingBottom: 1 },
+  selectOption: { minHeight: 42, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  selectOptionActive: { backgroundColor: Colors.accent + '12' },
+  selectOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+  selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
+  clearDateButton: { alignSelf: 'flex-end', paddingVertical: 4, paddingHorizontal: 2 },
+  clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
   selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
   compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
   compactChip: {
@@ -404,11 +432,13 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 20, textAlign: 'center' },
 
   // Modal
+  modalKeyboard: { flex: 1 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalBox: {
-    backgroundColor: Colors.card, borderRadius: 16, padding: 20, width: '90%',
+    backgroundColor: Colors.card, borderRadius: 16, width: '90%', maxHeight: '82%',
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 10,
   },
+  modalContent: { padding: 20 },
   modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14 },
   modalInput: {
     borderWidth: 1, borderColor: Colors.separator, borderRadius: 10,

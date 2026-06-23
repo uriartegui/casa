@@ -49,6 +49,7 @@ export function useHouseholdSync(households: Household[] | undefined) {
       queryClient.refetchQueries({ queryKey: ['shopping-activity', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['fridge', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['shopping-lists', householdId], type: 'active' });
+      queryClient.refetchQueries({ queryKey: ['shopping-list-items', householdId], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['house-tasks', householdId], type: 'active' });
     }
 

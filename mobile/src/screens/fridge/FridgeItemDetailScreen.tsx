@@ -4,7 +4,7 @@ import {
   StyleSheet, ActivityIndicator, ScrollView, Alert,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
-import DateField from '../../components/DateField';
+import DatePickerModal from '../../components/DatePickerModal';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useUpdateFridgeItem, useRemoveFridgeItem, useFridgeItem } from '../../hooks/useFridge';
@@ -17,6 +17,7 @@ import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
+import { Feather } from '@expo/vector-icons';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'FridgeItemDetail'>;
@@ -50,6 +51,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
+  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
+  const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
   const { data: categories } = useCategories(householdId, item?.storageId ?? item?.storage?.id ?? null);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
@@ -236,22 +239,39 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
-        <View style={styles.unitRow}>
-          {(categories ?? []).map((c) => (
+        <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
+          <TouchableOpacity style={styles.selectRow} onPress={() => setShowCategoryOptions((value) => !value)}>
+            <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>{category ?? 'Escolher categoria'}</Text>
+            <Feather name={showCategoryOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          {showCategoryOptions && <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
+            <TouchableOpacity
+              style={[styles.selectOption, !category && styles.selectOptionActive]}
+              onPress={() => { markEditing('category'); setCategory(null); setShowCategoryOptions(false); }}
+            >
+              <Text style={[styles.selectOptionText, !category && styles.selectOptionTextActive]}>Sem categoria</Text>
+              {!category && <Feather name="check" size={16} color={Colors.accent} />}
+            </TouchableOpacity>
+            {(categories ?? []).map((c) => (
             <TouchableOpacity
               key={c.id}
-              style={[styles.unitChip, category === c.label && styles.unitChipActive]}
-              onPress={() => { markEditing('category'); setCategory(category === c.label ? null : c.label); }}
+              style={[styles.selectOption, category === c.label && styles.selectOptionActive]}
+              onPress={() => { markEditing('category'); setCategory(c.label); setShowCategoryOptions(false); }}
             >
-              <Text style={[styles.unitChipText, category === c.label && styles.unitChipTextActive]}>
-                {c.emoji} {c.label}
-              </Text>
+              <Text style={[styles.selectOptionText, category === c.label && styles.selectOptionTextActive]}>{c.label}</Text>
+              {category === c.label && <Feather name="check" size={16} color={Colors.accent} />}
             </TouchableOpacity>
           ))}
+          </ScrollView>}
         </View>
 
         <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
-        <DateField value={expirationDate} onChange={(value) => { markEditing('expirationDate'); setExpirationDate(value); }} />
+        <TouchableOpacity style={styles.selectRow} onPress={() => setExpirationPickerVisible(true)}>
+          <Text style={[styles.selectRowText, !expirationDate && styles.selectRowPlaceholder]}>{expirationDate ? expirationDate.toLocaleDateString('pt-BR') : 'Selecionar data'}</Text>
+          <Feather name="calendar" size={17} color={Colors.textSecondary} />
+        </TouchableOpacity>
+        {expirationDate && <TouchableOpacity onPress={() => { markEditing('expirationDate'); setExpirationDate(null); }} style={styles.clearDateButton}><Text style={styles.clearDateText}>Limpar data</Text></TouchableOpacity>}
+        <DatePickerModal visible={expirationPickerVisible} value={expirationDate ?? new Date()} onChange={(value) => { markEditing('expirationDate'); setExpirationDate(value); }} onClose={() => setExpirationPickerVisible(false)} />
         <TouchableOpacity style={styles.button} onPress={handleSave} disabled={updateItem.isPending}>
           {updateItem.isPending
             ? <ActivityIndicator color="#fff" />
@@ -285,6 +305,19 @@ const styles = StyleSheet.create({
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   unitChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
+  selectRow: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
+  selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
+  selectField: { position: 'relative' },
+  selectFieldOpen: { zIndex: 30, elevation: 30 },
+  selectOptions: { position: 'absolute', top: 52, left: 0, right: 0, zIndex: 40, elevation: 40, maxHeight: 260, overflow: 'hidden', borderWidth: 1, borderColor: Colors.separator, borderRadius: 12, backgroundColor: Colors.card, shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  selectOptionsContent: { paddingBottom: 1 },
+  selectOption: { minHeight: 42, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  selectOptionActive: { backgroundColor: Colors.accent + '12' },
+  selectOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+  selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
+  clearDateButton: { alignSelf: 'flex-end', paddingVertical: 4, paddingHorizontal: 2 },
+  clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   removeButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },

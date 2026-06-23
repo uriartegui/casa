@@ -521,8 +521,14 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       <Modal visible={!!editingList} transparent animationType="slide" onRequestClose={() => setEditingList(null)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setEditingList(null)} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.sheet}>
+          <KeyboardAvoidingView style={styles.sheetKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView
+              style={styles.sheet}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.sheetHandle} />
               <Text style={styles.sheetTitle}>Editar lista</Text>
 
@@ -573,7 +579,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
                   : <Text style={styles.buttonText}>Salvar alterações</Text>
                 }
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
@@ -747,11 +753,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopLeftRadius: 22,
     borderTopRightRadius: 22,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 28,
-    gap: 8,
+    maxHeight: '94%',
   },
+  sheetKeyboard: { justifyContent: 'flex-end', maxHeight: '100%' },
+  sheetContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 8 },
   sheetHandle: {
     width: 40,
     height: 4,

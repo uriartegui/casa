@@ -768,6 +768,7 @@ export class HouseholdsService {
       .select('item.shoppingListId', 'listId')
       .addSelect('COUNT(*)', 'count')
       .where('item.householdId = :householdId', { householdId })
+      .andWhere('item.deletedAt IS NULL')
       .groupBy('item.shoppingListId')
       .getRawMany<{ listId: string; count: string }>();
     const countMap = Object.fromEntries(counts.map((c) => [c.listId, Number(c.count)]));

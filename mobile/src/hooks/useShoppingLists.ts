@@ -12,7 +12,9 @@ export function useShoppingLists(householdId: string | null) {
     enabled: !!householdId,
     staleTime: 0,
     refetchOnMount: 'always',
-    refetchInterval: 5000,
+    // O WebSocket atualiza imediatamente quando disponivel. Este intervalo
+    // curto cobre reconexoes e garante que uma lista aberta nao fique velha.
+    refetchInterval: 2500,
   });
 }
 
@@ -67,6 +69,9 @@ export function useListItems(householdId: string | null, listId: string | null) 
       return res.data;
     },
     enabled: !!householdId && !!listId,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchInterval: 2500,
   });
 }
 

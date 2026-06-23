@@ -3,13 +3,13 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
-  KeyboardAvoidingView, Platform, ScrollView, Share,
+  KeyboardAvoidingView, Keyboard, Platform, ScrollView, Share,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import {
-  useListItems, useToggleListItem, useRemoveListItem, useAddListItem,
+  useListItems, useShoppingLists, useToggleListItem, useRemoveListItem, useAddListItem,
   useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
 } from '../../hooks/useShoppingLists';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -47,6 +47,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [currentCategory, setCurrentCategory] = useState(listCategory ?? '');
   const [urgent, setUrgent] = useState(listUrgent);
   const updateList = useUpdateShoppingList(householdId);
+  const { data: shoppingLists = [] } = useShoppingLists(householdId);
   const { data: items, isLoading, refetch } = useListItems(householdId, listId);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -82,6 +83,40 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
   const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [footerHeight, setFooterHeight] = useState(0);
+  const footerKeyboardOffset = Platform.OS === 'ios' ? keyboardHeight : 0;
+
+  useEffect(() => {
+    const updateKeyboardHeight = (event: { endCoordinates: { height: number } }) => {
+      if (event.endCoordinates.height > 0) setKeyboardHeight(event.endCoordinates.height);
+    };
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSubscription = Keyboard.addListener(showEvent, updateKeyboardHeight);
+    const frameSubscription = Platform.OS === 'ios'
+      ? Keyboard.addListener('keyboardWillChangeFrame', updateKeyboardHeight)
+      : null;
+    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+
+    return () => {
+      showSubscription.remove();
+      frameSubscription?.remove();
+      hideSubscription.remove();
+    };
+  }, []);
+
+  const activeList = shoppingLists.find((list) => list.id === listId);
+
+  useEffect(() => {
+    if (!activeList) return;
+
+    setCurrentName(activeList.name);
+    setCurrentPlace(activeList.place ?? '');
+    setCurrentCategory(activeList.category ?? '');
+    setUrgent(activeList.urgent);
+    navigation.setOptions({ title: activeList.name });
+  }, [activeList?.category, activeList?.name, activeList?.place, activeList?.urgent, navigation]);
 
   useEffect(() => {
     if (!isFocused || sendQueue.length === 0) return;
@@ -336,11 +371,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   ];
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       {isFocused && <KeepAwakeWhileFocused />}
+      <View style={[styles.contentArea, { paddingBottom: footerHeight + footerKeyboardOffset }]}>
       {total > 0 && (
         <View style={styles.progressContainer}>
           <View style={styles.progressTopRow}>
@@ -400,15 +433,14 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         />
       )}
+      </View>
 
-      <Modal visible={showSendModal} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowSendModal(false)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Guardar no estoque</Text>
-            <TouchableOpacity onPress={() => setShowSendModal(false)}>
-              <Text style={styles.modalClose}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
+      <Modal visible={showSendModal} transparent animationType="slide" onRequestClose={() => setShowSendModal(false)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setShowSendModal(false)} />
+          <View style={styles.sendSheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Guardar no estoque</Text>
           <View style={styles.modalSummary}>
             <Text style={styles.modalSummaryTitle}>
               {bought.length} {bought.length === 1 ? 'item comprado pronto' : 'itens comprados prontos'}
@@ -422,31 +454,33 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
           <Text style={styles.modalSubtitle}>Escolha o que voce quer guardar agora.</Text>
-          {bought.map((item) => {
-            const selected = selectedToSend.has(item.id);
-            return (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.modalItem}
-                onPress={() => {
-                  setSelectedToSend((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(item.id)) next.delete(item.id);
-                    else next.add(item.id);
-                    return next;
-                  });
-                }}
-              >
-                <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
-                  {selected && <Text style={styles.modalCheckmark}>{'\u2713'}</Text>}
-                </View>
-                <Text style={styles.modalItemName}>{item.name}</Text>
-                <Text style={styles.modalItemQty}>{item.quantity} {item.unit ?? ''}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          <ScrollView style={styles.sendItemsScroll} contentContainerStyle={styles.sendItemsContent} showsVerticalScrollIndicator={false}>
+            {bought.map((item) => {
+              const selected = selectedToSend.has(item.id);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSelectedToSend((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(item.id)) next.delete(item.id);
+                      else next.add(item.id);
+                      return next;
+                    });
+                  }}
+                >
+                  <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
+                    {selected && <Text style={styles.modalCheckmark}>{'\u2713'}</Text>}
+                  </View>
+                  <Text style={styles.modalItemName}>{item.name}</Text>
+                  <Text style={styles.modalItemQty}>{item.quantity} {item.unit ?? ''}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
           <TouchableOpacity
-            style={[styles.button, { margin: 16, marginTop: 24 }]}
+            style={[styles.button, styles.sendButton, selectedToSend.size === 0 && styles.buttonDisabled]}
             disabled={selectedToSend.size === 0}
             onPress={confirmSendToFridge}
           >
@@ -455,13 +489,20 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
             </Text>
           </TouchableOpacity>
         </View>
+        </View>
       </Modal>
 
       <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setEditModal(false)} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.sheet}>
+          <KeyboardAvoidingView style={styles.sheetKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <ScrollView
+              style={styles.sheet}
+              contentContainerStyle={styles.sheetContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={styles.sheetHandle} />
               <Text style={styles.sheetTitle}>Editar lista</Text>
 
@@ -512,55 +553,59 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                   : <Text style={styles.buttonText}>Salvar alterações</Text>
                 }
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </KeyboardAvoidingView>
         </View>
       </Modal>
 
-      <View style={styles.footer}>
-        {quickSuggestions.length > 0 && (
-          <View style={styles.suggestionsRow}>
-            {quickSuggestions.map((s) => (
-              <TouchableOpacity key={s} style={styles.suggestionChip} onPress={() => openAddModal(s)}>
-                <Text style={styles.suggestionChipText}>{s}</Text>
-              </TouchableOpacity>
-            ))}
+      <View
+        style={[styles.footer, styles.footerFloating, { bottom: footerKeyboardOffset }]}
+        onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+      >
+          {quickSuggestions.length > 0 && (
+            <View style={styles.suggestionsRow}>
+              {quickSuggestions.map((s) => (
+                <TouchableOpacity key={s} style={styles.suggestionChip} onPress={() => openAddModal(s)}>
+                  <Text style={styles.suggestionChipText}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          <View style={styles.quickAddRow}>
+            <TextInput
+              style={styles.quickAddInput}
+              placeholder="Adicionar item..."
+              placeholderTextColor={Colors.textSecondary}
+              value={quickName}
+              onChangeText={setQuickName}
+              onSubmitEditing={() => openAddModal()}
+              returnKeyType="done"
+              blurOnSubmit={false}
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[styles.quickAddBtn, !quickName.trim() && { opacity: 0.4 }]}
+              onPress={() => openAddModal()}
+              disabled={!quickName.trim()}
+            >
+              <Text style={styles.quickAddBtnText}>+</Text>
+            </TouchableOpacity>
           </View>
-        )}
-        <View style={styles.quickAddRow}>
-          <TextInput
-            style={styles.quickAddInput}
-            placeholder="Adicionar item..."
-            placeholderTextColor={Colors.textSecondary}
-            value={quickName}
-            onChangeText={setQuickName}
-            onSubmitEditing={() => openAddModal()}
-            returnKeyType="done"
-            blurOnSubmit={false}
-            autoCorrect={false}
-          />
-          <TouchableOpacity
-            style={[styles.quickAddBtn, !quickName.trim() && { opacity: 0.4 }]}
-            onPress={() => openAddModal()}
-            disabled={!quickName.trim()}
-          >
-            <Text style={styles.quickAddBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-        {bought.length > 0 && (
-          <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
-          <Text style={styles.buttonSecondaryText}>{storeBoughtButtonLabel}</Text>
-          </TouchableOpacity>
-        )}
+          {bought.length > 0 && (
+            <TouchableOpacity style={styles.buttonSecondary} onPress={handleSendAllToFridge}>
+              <Text style={styles.buttonSecondaryText}>{storeBoughtButtonLabel}</Text>
+            </TouchableOpacity>
+          )}
       </View>
 
       {/* Bottom sheet: quantidade e unidade do item novo */}
       <Modal visible={addModal} transparent animationType="slide" onRequestClose={() => setAddModal(false)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setAddModal(false)} />
-          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={styles.sheet}>
+          <KeyboardAvoidingView style={styles.addSheetKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+            <View style={[styles.sheetStatic, styles.addSheet]}>
               <View style={styles.sheetHandle} />
+              <ScrollView contentContainerStyle={styles.addSheetContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.sheetTitle}>{quickName.trim()}</Text>
 
               <Text style={styles.sheetLabel}>Quantidade</Text>
@@ -595,6 +640,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               </View>
 
               <Text style={styles.sheetLabel}>Estoque</Text>
+              <View style={[styles.selectField, showAddStorageOptions && styles.selectFieldOpen]}>
               <TouchableOpacity
                 style={styles.selectRow}
                 onPress={() => {
@@ -607,32 +653,33 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                     ? `${selectedAddStorage.storageEmoji} ${selectedAddStorage.storageName}`
                     : 'Escolher estoque'}
                 </Text>
-                <Text style={styles.selectRowToggle}>{showAddStorageOptions ? '-' : '+'}</Text>
+                <Feather name={showAddStorageOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
                 <Text style={styles.selectRowChevron}>›</Text>
               </TouchableOpacity>
 
               {showAddStorageOptions && (
-                <View style={styles.compactOptions}>
+                  <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
                   {categoryGroups.map((group) => (
                     <TouchableOpacity
                       key={group.storageId}
-                      style={[styles.compactChip, addStorageId === group.storageId && styles.compactChipActive]}
+                      style={[styles.selectOption, addStorageId === group.storageId && styles.selectOptionActive]}
                       onPress={() => {
                         setAddStorageId(group.storageId);
                         setAddCategory(null);
                         setShowAddStorageOptions(false);
-                        setShowAddCategoryOptions(true);
+                        setShowAddCategoryOptions(false);
                       }}
                     >
-                      <Text style={[styles.compactChipText, addStorageId === group.storageId && styles.compactChipTextActive]}>
-                        {group.storageEmoji} {group.storageName}
-                      </Text>
+                      <Text style={[styles.selectOptionText, addStorageId === group.storageId && styles.selectOptionTextActive]}>{group.storageName}</Text>
+                      {addStorageId === group.storageId && <Feather name="check" size={16} color={Colors.accent} />}
                     </TouchableOpacity>
                   ))}
-                </View>
+                  </ScrollView>
               )}
+              </View>
 
               <Text style={styles.sheetLabel}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+              <View style={[styles.selectField, showAddCategoryOptions && styles.selectFieldOpen]}>
               <TouchableOpacity
                 style={[styles.selectRow, !addStorageId && styles.selectRowDisabled]}
                 onPress={() => {
@@ -644,37 +691,38 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                 <Text style={[styles.selectRowText, !addCategory && styles.selectRowPlaceholder]}>
                   {addCategory ?? (addStorageId ? 'Escolher categoria' : 'Escolha um estoque primeiro')}
                 </Text>
-                <Text style={styles.selectRowToggle}>{showAddCategoryOptions ? '-' : '+'}</Text>
+                <Feather name={showAddCategoryOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
                 <Text style={styles.selectRowChevron}>›</Text>
               </TouchableOpacity>
 
               {showAddCategoryOptions && addStorageId && (
-                <View style={styles.compactOptions}>
+                  <ScrollView style={[styles.selectOptions, styles.selectOptionsAbove]} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
                   <TouchableOpacity
-                    style={[styles.compactChip, !addCategory && styles.compactChipActive]}
+                    style={[styles.selectOption, !addCategory && styles.selectOptionActive]}
                     onPress={() => {
                       setAddCategory(null);
                       setShowAddCategoryOptions(false);
                     }}
                   >
-                    <Text style={[styles.compactChipText, !addCategory && styles.compactChipTextActive]}>Sem categoria</Text>
+                    <Text style={[styles.selectOptionText, !addCategory && styles.selectOptionTextActive]}>Sem categoria</Text>
+                    {!addCategory && <Feather name="check" size={16} color={Colors.accent} />}
                   </TouchableOpacity>
                   {(selectedAddStorage?.categories ?? []).map((category) => (
                     <TouchableOpacity
                       key={category.id}
-                      style={[styles.compactChip, addCategory === category.label && styles.compactChipActive]}
+                      style={[styles.selectOption, addCategory === category.label && styles.selectOptionActive]}
                       onPress={() => {
                         setAddCategory(category.label);
                         setShowAddCategoryOptions(false);
                       }}
                     >
-                      <Text style={[styles.compactChipText, addCategory === category.label && styles.compactChipTextActive]}>
-                        {category.emoji} {category.label}
-                      </Text>
+                      <Text style={[styles.selectOptionText, addCategory === category.label && styles.selectOptionTextActive]}>{category.label}</Text>
+                      {addCategory === category.label && <Feather name="check" size={16} color={Colors.accent} />}
                     </TouchableOpacity>
                   ))}
-                </View>
+                  </ScrollView>
               )}
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={confirmAdd} disabled={addItem.isPending}>
                 {addItem.isPending
@@ -682,19 +730,21 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                   : <Text style={styles.buttonText}>Adicionar à lista</Text>
                 }
               </TouchableOpacity>
+              </ScrollView>
             </View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  contentArea: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  metaRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
-  metaChip: { fontSize: 13, color: Colors.textSecondary },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
+  metaChip: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary },
   progressContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, gap: 8 },
   progressTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   progressFraction: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
@@ -739,6 +789,7 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
   footer: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
+  footerFloating: { position: 'absolute', left: 0, right: 0, zIndex: 10 },
   button: {
     backgroundColor: Colors.accent,
     borderRadius: 14,
@@ -777,9 +828,19 @@ const styles = StyleSheet.create({
   sheet: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    maxHeight: '94%',
+  },
+  sheetStatic: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
     paddingHorizontal: 20, paddingTop: 10, paddingBottom: 28,
     gap: 8,
   },
+  sheetKeyboard: { justifyContent: 'flex-end', maxHeight: '100%' },
+  sheetContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 8 },
+  addSheetKeyboard: { justifyContent: 'flex-end' },
+  addSheet: { minHeight: '84%', maxHeight: '94%' },
+  addSheetContent: { gap: 8, paddingBottom: 8 },
   sheetHandle: {
     width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.separator,
     alignSelf: 'center', marginBottom: 8,
@@ -839,6 +900,15 @@ const styles = StyleSheet.create({
   selectRowDisabled: { opacity: 0.65 },
   selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
+  selectField: { position: 'relative' },
+  selectFieldOpen: { zIndex: 30, elevation: 30 },
+  selectOptions: { position: 'absolute', top: 52, left: 0, right: 0, zIndex: 40, elevation: 40, maxHeight: 260, overflow: 'hidden', borderWidth: 1, borderColor: Colors.separator, borderRadius: 12, backgroundColor: Colors.card, shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  selectOptionsAbove: { top: undefined, bottom: 52 },
+  selectOptionsContent: { paddingBottom: 1 },
+  selectOption: { minHeight: 42, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  selectOptionActive: { backgroundColor: Colors.accent + '12' },
+  selectOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+  selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
   selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
   selectRowChevron: { width: 0, height: 0, opacity: 0 },
   compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
@@ -880,16 +950,15 @@ const styles = StyleSheet.create({
   headerShareText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {
-    alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 6,
+    paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: 20, borderWidth: 1, borderColor: '#F0A500', backgroundColor: 'transparent',
   },
   urgentChipActive: { backgroundColor: '#F0A500' },
   urgentChipText: { fontSize: 13, fontWeight: '600', color: '#F0A500' },
   urgentChipTextActive: { color: '#fff' },
-  modalContainer: { flex: 1, backgroundColor: Colors.background },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: Colors.separator },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  modalClose: { fontSize: 16, color: Colors.accent, fontWeight: '500' },
+  sendSheet: { maxHeight: '84%', backgroundColor: Colors.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+  sendItemsScroll: { maxHeight: 300, marginTop: 4 },
+  sendItemsContent: { paddingBottom: 4 },
   modalSummary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 16, paddingTop: 16 },
   modalSummaryTitle: { flex: 1, fontSize: 14, color: Colors.textPrimary, fontWeight: '700' },
   modalToggleAll: { fontSize: 13, color: Colors.accent, fontWeight: '700' },
@@ -900,4 +969,6 @@ const styles = StyleSheet.create({
   modalCheckmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
   modalItemName: { flex: 1, fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
   modalItemQty: { fontSize: 13, color: Colors.textSecondary },
+  sendButton: { marginTop: 14 },
+  buttonDisabled: { opacity: 0.45 },
 });

@@ -10,6 +10,26 @@ jobs:
   backend:
     name: Backend build and tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: casa
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: casa_ci
+        options: >-
+          --health-cmd "pg_isready -U casa -d casa_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    env:
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: 5432
+      DATABASE_USER: casa
+      DATABASE_PASSWORD: ci_password
+      DATABASE_NAME: casa_ci
     defaults:
       run:
         working-directory: backend
@@ -24,6 +44,8 @@ jobs:
         run: npm ci
       - name: Build backend
         run: npm run build
+      - name: Apply migrations on a clean database
+        run: npm run migration:run
       - name: Run backend tests
         run: npm test
       - name: Publish CI summary
@@ -36,6 +58,7 @@ jobs:
             echo "|---|---|"
             echo "| Job status | ${{ job.status }} |"
             echo "| Scope | backend |"
+            echo "| Migrations | applied on clean PostgreSQL |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   mobile:
