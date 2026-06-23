@@ -22,9 +22,20 @@ import { NotificationsModule } from './notifications/notifications.module';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
-        transport: process.env.NODE_ENV === 'development'
-          ? { target: 'pino-pretty', options: { colorize: true, singleLine: true } }
-          : undefined,
+        transport: process.env.BETTER_STACK_SOURCE_TOKEN
+          ? {
+              targets: [
+                { target: 'pino/file', options: { destination: 1 } },
+                {
+                  target: '@logtail/pino',
+                  level: 'info',
+                  options: { sourceToken: process.env.BETTER_STACK_SOURCE_TOKEN, options: {} },
+                },
+              ],
+            }
+          : process.env.NODE_ENV === 'development'
+            ? { target: 'pino-pretty', options: { colorize: true, singleLine: true } }
+            : undefined,
       },
     }),
     TypeOrmModule.forRootAsync({

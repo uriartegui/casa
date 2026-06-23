@@ -29,6 +29,7 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
       DATABASE_NAME: ${POSTGRES_DB:-casa}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no deploy/.env}
+      BETTER_STACK_SOURCE_TOKEN: ${BETTER_STACK_SOURCE_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
