@@ -6,7 +6,7 @@ export class SeedDefaultTaskCategories1781680000000 implements MigrationInterfac
   async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       INSERT INTO "task_categories" ("householdId", "name", "position")
-      SELECT households.id, defaults.name, defaults.position
+      SELECT households.id::text, defaults.name, defaults.position
       FROM "households" households
       CROSS JOIN (
         VALUES
@@ -20,7 +20,7 @@ export class SeedDefaultTaskCategories1781680000000 implements MigrationInterfac
           ('Outros', 7)
       ) AS defaults(name, position)
       WHERE NOT EXISTS (
-        SELECT 1 FROM "task_categories" categories WHERE categories."householdId" = households.id
+        SELECT 1 FROM "task_categories" categories WHERE categories."householdId" = households.id::text
       )
     `);
   }
