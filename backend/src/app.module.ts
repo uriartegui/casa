@@ -22,6 +22,15 @@ import { NotificationsModule } from './notifications/notifications.module';
     LoggerModule.forRoot({
       pinoHttp: {
         level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        redact: {
+          paths: [
+            'req.headers.authorization',
+            'req.headers.cookie',
+            'req.headers["x-api-key"]',
+            'req.headers["x-auth-token"]',
+          ],
+          censor: '[REDACTED]',
+        },
         transport: process.env.BETTER_STACK_SOURCE_TOKEN
           ? {
               targets: [
