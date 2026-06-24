@@ -11,6 +11,7 @@ import { useCategories, useHouseholdCategoryGroups } from '../../hooks/useCatego
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
 import { useToast } from '../../context/ToastContext';
 import DatePickerModal from '../../components/DatePickerModal';
+import NativeSelect from '../../components/NativeSelect';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { Feather } from '@expo/vector-icons';
@@ -102,6 +103,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
             {!selectedStorageId && (
               <Text style={styles.helperText}>Escolha onde guardar este item.</Text>
             )}
+            {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
             <View style={[styles.selectField, showStorageOptions && styles.selectFieldOpen]}>
               <TouchableOpacity style={styles.selectRow} onPress={() => { setShowStorageOptions((value) => !value); setShowCategoryOptions(false); }}>
                 <Text style={[styles.selectRowText, !selectedStorageId && styles.selectRowPlaceholder]}>{storages.find((storage) => storage.id === selectedStorageId)?.name ?? 'Escolher compartimento'}</Text>
@@ -120,12 +122,23 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
               ))}
               </ScrollView>}
             </View>
+            */}
+            <NativeSelect
+              value={selectedStorageId ?? ''}
+              placeholder="Escolher compartimento"
+              options={storages.map((storage) => ({ label: storage.name, value: storage.id }))}
+              onChange={(storageId) => {
+                setSelectedStorageId(storageId || null);
+                setCategory('');
+              }}
+            />
           </>
         )}
 
         {(categories?.length ?? 0) > 0 && (
           <>
             <Text style={styles.label}>Categoria (opcional)</Text>
+            {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
             <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
               <TouchableOpacity style={styles.selectRow} onPress={() => { setShowCategoryOptions((value) => !value); setShowStorageOptions(false); }}>
                 <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>{category || 'Escolher categoria'}</Text>
@@ -148,6 +161,15 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
               ))}
               </ScrollView>}
             </View>
+            */}
+            <NativeSelect
+              value={category || '__none__'}
+              options={[
+                { label: 'Sem categoria', value: '__none__' },
+                ...(categories ?? []).map((item) => ({ label: item.label, value: item.label })),
+              ]}
+              onChange={(nextCategory) => setCategory(nextCategory === '__none__' ? '' : nextCategory)}
+            />
           </>
         )}
 

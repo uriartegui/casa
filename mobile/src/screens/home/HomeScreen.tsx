@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Animated, Dimensions, Modal, PanResponder, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActionSheetIOS, Alert, Animated, Dimensions, Modal, PanResponder, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
@@ -89,7 +89,6 @@ export default function HomeScreen() {
   const { data: houseTasks = [] } = useHouseTasks(effectiveId);
   const { data: taskActivity = [] } = useHouseTaskActivity(effectiveId);
 
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [activityModalVisible, setActivityModalVisible] = useState(false);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -220,8 +219,31 @@ export default function HomeScreen() {
   }
 
   function selectHousehold(householdId: string) {
-    setDropdownOpen(false);
     requestAnimationFrame(() => setSelectedHouseholdId(householdId));
+  }
+
+  function openHouseholdSelector() {
+    const options = households ?? [];
+    if (options.length <= 1) return;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options.map((item) => item.name), 'Cancelar'],
+          cancelButtonIndex: options.length,
+          userInterfaceStyle: 'light',
+        },
+        (index) => {
+          if (index < options.length) selectHousehold(options[index].id);
+        },
+      );
+      return;
+    }
+
+    Alert.alert('Escolher casa', undefined, options.map((item) => ({
+      text: item.name,
+      onPress: () => selectHousehold(item.id),
+    })), { cancelable: true });
   }
 
   function resetActivityFilters() {
@@ -371,15 +393,7 @@ export default function HomeScreen() {
       style={styles.container}
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
-      onScrollBeginDrag={() => setDropdownOpen(false)}
     >
-      {dropdownOpen && (
-        <TouchableOpacity
-          style={styles.dropdownBackdrop}
-          activeOpacity={1}
-          onPress={() => setDropdownOpen(false)}
-        />
-      )}
       <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
         <View style={styles.homeHeaderBar}>
           <View style={styles.homeHeaderIdentity}>
@@ -420,47 +434,19 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <View style={styles.hero} pointerEvents="box-none">
-        {dropdownOpen && (
-          <TouchableOpacity
-            style={styles.heroDropdownBackdrop}
-            activeOpacity={1}
-            onPress={() => setDropdownOpen(false)}
-          />
-        )}
+      <View style={styles.hero}>
         {household && (
           <View style={styles.householdWrapper}>
             <TouchableOpacity
               style={styles.householdRow}
               activeOpacity={(households?.length ?? 0) > 1 ? 0.7 : 1}
-              onPress={() => {
-                if ((households?.length ?? 0) <= 1) return;
-                setDropdownOpen((o) => !o);
-              }}
+              onPress={openHouseholdSelector}
             >
               <Text style={styles.householdName}>🏠 {household.name}</Text>
               {(households?.length ?? 0) > 1 && (
-                <Feather name={dropdownOpen ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.accent} />
+                <Feather name="chevron-down" size={16} color={Colors.accent} />
               )}
             </TouchableOpacity>
-
-            {dropdownOpen && (
-              <View style={styles.householdDropdown}>
-                {(households ?? []).map((h) => {
-                  return (
-                    <TouchableOpacity
-                      key={h.id}
-                      style={[styles.householdOption, h.id === effectiveId && styles.householdOptionActive]}
-                      onPress={() => selectHousehold(h.id)}
-                    >
-                      <Text style={[styles.householdOptionText, h.id === effectiveId && styles.householdOptionTextActive]}>
-                        {h.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
           </View>
         )}
 
@@ -927,11 +913,6 @@ const styles = StyleSheet.create({
   helpSectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
   helpSectionText: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
   hero: { marginTop: -4, marginBottom: 22, zIndex: 20 },
-  heroDropdownBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 25,
-    elevation: 10,
-  },
   greeting: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: 10 },
   dashboardCard: {
     backgroundColor: Colors.card,
@@ -987,46 +968,7 @@ const styles = StyleSheet.create({
   },
   householdName: { fontSize: 14, fontWeight: '600', color: Colors.accent },
   householdMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 8 },
-  dropdownBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    elevation: 6,
-  },
-  householdWrapper: { alignSelf: 'flex-start', minWidth: 162, zIndex: 30, elevation: 12 },
-  householdDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: 5,
-    minWidth: 162,
-    backgroundColor: Colors.background,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.accent + '22',
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 8,
-    zIndex: 999,
-  },
-  householdOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    marginHorizontal: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  householdOptionActive: { backgroundColor: Colors.accent + '15' },
-  householdOptionText: { fontSize: 13, color: Colors.textPrimary },
-  householdOptionTextActive: { color: Colors.accent, fontWeight: '600' },
+  householdWrapper: { alignSelf: 'flex-start' },
 
   quickActions: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   quickBtn: {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Platform,
 } from 'react-native';
@@ -13,12 +13,18 @@ interface Props {
 }
 
 export default function DatePickerField({ visible, value, onChange, onClose }: Props) {
+  const [selectedDate, setSelectedDate] = useState(value);
+
+  useEffect(() => {
+    if (visible) setSelectedDate(value);
+  }, [value, visible]);
+
   if (!visible) return null;
 
   if (Platform.OS === 'android') {
     return (
       <DateTimePicker
-        value={value}
+        value={selectedDate}
         mode="date"
         display="default"
         minimumDate={new Date()}
@@ -33,16 +39,23 @@ export default function DatePickerField({ visible, value, onChange, onClose }: P
   return (
     <View style={styles.container}>
       <DateTimePicker
-        value={value}
+        value={selectedDate}
         mode="date"
-        display="spinner"
+        display="inline"
         minimumDate={new Date()}
-        style={styles.spinner}
+        themeVariant="light"
+        style={styles.calendar}
         onChange={(_, date) => {
-          if (date) onChange(date);
+          if (date) setSelectedDate(date);
         }}
       />
-      <TouchableOpacity style={styles.doneBtn} onPress={onClose}>
+      <TouchableOpacity
+        style={styles.doneBtn}
+        onPress={() => {
+          onChange(selectedDate);
+          onClose();
+        }}
+      >
         <Text style={styles.doneBtnText}>Confirmar</Text>
       </TouchableOpacity>
     </View>
@@ -58,8 +71,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginTop: 4,
   },
-  spinner: {
-    height: 180,
+  calendar: {
+    alignSelf: 'stretch',
   },
   doneBtn: {
     backgroundColor: Colors.accent,

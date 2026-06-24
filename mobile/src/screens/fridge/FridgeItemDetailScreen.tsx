@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import DatePickerModal from '../../components/DatePickerModal';
+import NativeSelect from '../../components/NativeSelect';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useUpdateFridgeItem, useRemoveFridgeItem, useFridgeItem } from '../../hooks/useFridge';
@@ -239,6 +240,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+        {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
         <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
           <TouchableOpacity style={styles.selectRow} onPress={() => setShowCategoryOptions((value) => !value)}>
             <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>{category ?? 'Escolher categoria'}</Text>
@@ -264,6 +266,18 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
           ))}
           </ScrollView>}
         </View>
+        */}
+        <NativeSelect
+          value={category ?? '__none__'}
+          options={[
+            { label: 'Sem categoria', value: '__none__' },
+            ...(categories ?? []).map((item) => ({ label: item.label, value: item.label })),
+          ]}
+          onChange={(nextCategory) => {
+            markEditing('category');
+            setCategory(nextCategory === '__none__' ? null : nextCategory);
+          }}
+        />
 
         <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
         <TouchableOpacity style={styles.selectRow} onPress={() => setExpirationPickerVisible(true)}>

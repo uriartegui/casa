@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Animated, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { ActionSheetIOS, Alert, Animated, Platform, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -148,28 +148,47 @@ function HeaderMenuButton() {
 function StorageHouseholdHeader({ navigation, storageName, householdName }: { navigation: any; storageName: string; householdName: string }) {
   const { data: households } = useHouseholds();
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
-  const [open, setOpen] = React.useState(false);
   const activeName = households?.find((household) => household.id === selectedHouseholdId)?.name ?? householdName;
 
   async function changeHousehold(householdId: string) {
-    setOpen(false);
     setSelectedHouseholdId(householdId);
     const response = await api.get<{ id: string; name: string; emoji: string }[]>(`/households/${householdId}/storages`);
     const storage = response.data.find((item) => item.name === storageName) ?? response.data[0];
     if (storage) navigation.replace('Fridge', { householdId, storageId: storage.id, storageName: storage.name, storageEmoji: storage.emoji });
   }
 
+  function openHouseholdSelector() {
+    const options = households ?? [];
+    if (options.length <= 1) return;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options.map((household) => household.name), 'Cancelar'],
+          cancelButtonIndex: options.length,
+          userInterfaceStyle: 'light',
+        },
+        (index) => {
+          if (index < options.length) void changeHousehold(options[index].id);
+        },
+      );
+      return;
+    }
+
+    Alert.alert('Escolher casa', undefined, options.map((household) => ({
+      text: household.name,
+      onPress: () => void changeHousehold(household.id),
+    })), { cancelable: true });
+  }
+
   return <View style={{ position: 'relative', minWidth: 150 }}>
-    <TouchableOpacity onPress={() => setOpen((value) => !value)} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
+    <TouchableOpacity onPress={openHouseholdSelector} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
       <Text style={styles.storageHeaderTitle}>{storageName}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
         <Text style={styles.storageHeaderSubtitle}>{activeName}</Text>
-        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={13} color={Colors.textSecondary} />
+        <Feather name="chevron-down" size={13} color={Colors.textSecondary} />
       </View>
     </TouchableOpacity>
-    {open && <View style={{ position: 'absolute', top: 40, left: -6, minWidth: 180, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator, borderRadius: 8, zIndex: 20, elevation: 8, overflow: 'hidden' }}>
-      {(households ?? []).map((household) => <TouchableOpacity key={household.id} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: household.id === selectedHouseholdId ? Colors.accent + '12' : Colors.card }} onPress={() => changeHousehold(household.id)}><Text style={{ fontSize: 13, fontWeight: household.id === selectedHouseholdId ? '800' : '500', color: household.id === selectedHouseholdId ? Colors.accent : Colors.textPrimary }}>{household.name}</Text></TouchableOpacity>)}
-    </View>}
   </View>;
 }
 

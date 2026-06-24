@@ -21,6 +21,7 @@ import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
 import { ShoppingItemSkeleton } from '../../components/Skeleton';
+import NativeSelect from '../../components/NativeSelect';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -66,8 +67,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [addUnit, setAddUnit] = useState<Unit>('un');
   const [addStorageId, setAddStorageId] = useState<string | null>(null);
   const [addCategory, setAddCategory] = useState<string | null>(null);
-  const [showAddStorageOptions, setShowAddStorageOptions] = useState(false);
-  const [showAddCategoryOptions, setShowAddCategoryOptions] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [editName, setEditName] = useState(listName);
   const [editPlace, setEditPlace] = useState(listPlace ?? '');
@@ -165,8 +164,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     const matchingCategory = availableCategories.find((category) => category.label === suggested);
     setAddStorageId(matchingCategory?.storageId ?? null);
     setAddCategory(matchingCategory?.label ?? null);
-    setShowAddStorageOptions(false);
-    setShowAddCategoryOptions(false);
     setAddModal(true);
   }
 
@@ -602,8 +599,15 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       <Modal visible={addModal} transparent animationType="slide" onRequestClose={() => setAddModal(false)}>
         <View style={styles.sheetOverlay}>
           <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setAddModal(false)} />
-          <KeyboardAvoidingView style={styles.addSheetKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <View style={[styles.sheetStatic, styles.addSheet]}>
+          <KeyboardAvoidingView
+            style={styles.addSheetKeyboard}
+            behavior="padding"
+            enabled={Platform.OS === 'ios'}
+          >
+            <View style={[
+              styles.sheetStatic,
+              styles.addSheet,
+            ]}>
               <View style={styles.sheetHandle} />
               <ScrollView contentContainerStyle={styles.addSheetContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.sheetTitle}>{quickName.trim()}</Text>
@@ -640,6 +644,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               </View>
 
               <Text style={styles.sheetLabel}>Estoque</Text>
+              {/* Dropdown anterior mantido apenas como referencia durante a troca para o seletor nativo.
               <View style={[styles.selectField, showAddStorageOptions && styles.selectFieldOpen]}>
               <TouchableOpacity
                 style={styles.selectRow}
@@ -677,8 +682,19 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                   </ScrollView>
               )}
               </View>
+              */}
+              <NativeSelect
+                value={addStorageId ?? ''}
+                placeholder="Escolher estoque"
+                options={categoryGroups.map((group) => ({ label: group.storageName, value: group.storageId }))}
+                onChange={(storageId) => {
+                  setAddStorageId(storageId || null);
+                  setAddCategory(null);
+                }}
+              />
 
               <Text style={styles.sheetLabel}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
+              {/* Dropdown anterior mantido apenas como referencia durante a troca para o seletor nativo.
               <View style={[styles.selectField, showAddCategoryOptions && styles.selectFieldOpen]}>
               <TouchableOpacity
                 style={[styles.selectRow, !addStorageId && styles.selectRowDisabled]}
@@ -723,6 +739,17 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                   </ScrollView>
               )}
               </View>
+              */}
+              <NativeSelect
+                value={addStorageId ? addCategory ?? '__none__' : ''}
+                placeholder={addStorageId ? 'Escolher categoria' : 'Escolha um estoque primeiro'}
+                disabled={!addStorageId}
+                options={[
+                  { label: 'Sem categoria', value: '__none__' },
+                  ...(selectedAddStorage?.categories ?? []).map((category) => ({ label: category.label, value: category.label })),
+                ]}
+                onChange={(category) => setAddCategory(category === '__none__' ? null : category)}
+              />
 
               <TouchableOpacity style={styles.button} onPress={confirmAdd} disabled={addItem.isPending}>
                 {addItem.isPending
@@ -812,6 +839,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: Colors.card, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 15,
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    letterSpacing: 0, textAlign: 'left', fontWeight: '400',
   },
   quickAddBtn: {
     width: 44, height: 44, borderRadius: 22,
@@ -838,8 +866,9 @@ const styles = StyleSheet.create({
   },
   sheetKeyboard: { justifyContent: 'flex-end', maxHeight: '100%' },
   sheetContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40, gap: 8 },
-  addSheetKeyboard: { justifyContent: 'flex-end' },
-  addSheet: { minHeight: '84%', maxHeight: '94%' },
+  addSheetKeyboard: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', justifyContent: 'flex-end' },
+  addSheet: { maxHeight: '94%' },
+  addSheetExpanded: { minHeight: '94%' },
   addSheetContent: { gap: 8, paddingBottom: 8 },
   sheetHandle: {
     width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.separator,

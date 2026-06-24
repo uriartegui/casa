@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { filterItems } from '../../constants/commonItems';
 import DatePickerModal from '../../components/DatePickerModal';
+import NativeSelect from '../../components/NativeSelect';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
@@ -170,6 +171,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
           {(storages?.length ?? 0) > 0 && (
             <>
               <Text style={styles.label}>Compartimento</Text>
+              {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
               <View style={[styles.selectField, showStorageOptions && styles.selectFieldOpen]}>
                 <TouchableOpacity
                   style={[styles.selectRow, routeStorageId ? styles.selectRowLocked : null]}
@@ -205,12 +207,24 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
                   </ScrollView>
                 )}
               </View>
+              */}
+              <NativeSelect
+                value={storageId ?? ''}
+                placeholder="Escolher compartimento"
+                disabled={!!routeStorageId}
+                options={(storages ?? []).map((storage) => ({ label: storage.name, value: storage.id }))}
+                onChange={(nextStorageId) => {
+                  setPickedStorageId(nextStorageId || null);
+                  setCategory(null);
+                }}
+              />
             </>
           )}
 
           <Text style={styles.label}>
             Categoria <Text style={styles.optional}>(opcional · segure para excluir)</Text>
           </Text>
+          {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
           <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
             <TouchableOpacity
               style={[styles.selectRow, !storageId && styles.selectRowDisabled]}
@@ -259,6 +273,17 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
             </ScrollView>
             )}
           </View>
+          */}
+          <NativeSelect
+            value={storageId ? category ?? '__none__' : ''}
+            placeholder={storageId ? 'Escolher categoria' : 'Escolha um compartimento primeiro'}
+            disabled={!storageId}
+            options={[
+              { label: 'Sem categoria', value: '__none__' },
+              ...(categories ?? []).map((item) => ({ label: item.label, value: item.label })),
+            ]}
+            onChange={(nextCategory) => setCategory(nextCategory === '__none__' ? null : nextCategory)}
+          />
 
           <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
           <TouchableOpacity style={styles.selectRow} onPress={() => setExpirationPickerVisible(true)}>

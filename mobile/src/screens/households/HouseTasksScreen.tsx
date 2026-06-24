@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  ActionSheetIOS,
   Alert,
   FlatList,
   KeyboardAvoidingView,
@@ -19,6 +20,7 @@ import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import NativeSelect from '../../components/NativeSelect';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import {
@@ -90,28 +92,10 @@ function DropdownField({ label, value, options, onChange }: {
   options: DropdownOption[];
   onChange: (value: string) => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const selected = options.find((option) => option.value === value)?.label ?? 'Selecionar';
-
   return (
-    <View style={[styles.dropdownField, open && styles.dropdownFieldOpen]}>
+    <View style={styles.dropdownField}>
       <Text style={styles.sheetLabel}>{label}</Text>
-      <TouchableOpacity style={styles.selectRow} onPress={() => setOpen((current) => !current)} activeOpacity={0.75}>
-        <Text style={styles.selectValue} numberOfLines={1}>{selected}</Text>
-        <Feather name={open ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
-      </TouchableOpacity>
-      {open && <View style={styles.dropdownPanel}>
-        {options.map((option) => (
-          <TouchableOpacity
-            key={option.value}
-            style={[styles.dropdownOption, option.value === value && styles.dropdownOptionActive]}
-            onPress={() => { onChange(option.value); setOpen(false); }}
-          >
-            <Text style={[styles.dropdownOptionText, option.value === value && styles.dropdownOptionTextActive]}>{option.label}</Text>
-            {option.value === value && <Feather name="check" size={16} color={Colors.accent} />}
-          </TouchableOpacity>
-        ))}
-      </View>}
+      <NativeSelect value={value} options={options} onChange={onChange} />
     </View>
   );
 }
@@ -134,21 +118,45 @@ function DateField({ value, onPress, onClear }: { value: string | null; onPress:
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
   const { data: households } = useHouseholds();
   const { selectedHouseholdId, setSelectedHouseholdId } = useSelectedHousehold();
-  const [open, setOpen] = useState(false);
   const activeHouseholdName = households?.find((household) => household.id === selectedHouseholdId)?.name ?? householdName;
+
+  function selectHousehold(householdId: string) {
+    setSelectedHouseholdId(householdId);
+  }
+
+  function openHouseholdSelector() {
+    const options = households ?? [];
+    if (options.length <= 1) return;
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [...options.map((household) => household.name), 'Cancelar'],
+          cancelButtonIndex: options.length,
+          userInterfaceStyle: 'light',
+        },
+        (index) => {
+          if (index < options.length) selectHousehold(options[index].id);
+        },
+      );
+      return;
+    }
+
+    Alert.alert('Escolher casa', undefined, options.map((household) => ({
+      text: household.name,
+      onPress: () => selectHousehold(household.id),
+    })), { cancelable: true });
+  }
 
   return (
     <View style={{ position: 'relative', minWidth: 150 }}>
-      <TouchableOpacity onPress={() => setOpen((value) => !value)} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
+      <TouchableOpacity onPress={openHouseholdSelector} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
         <Text style={{ fontSize: 17, fontWeight: '800', color: Colors.textPrimary, lineHeight: 20 }}>{category}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
           <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.textSecondary, lineHeight: 14 }}>{activeHouseholdName}</Text>
-          <Feather name={open ? 'chevron-up' : 'chevron-down'} size={13} color={Colors.textSecondary} />
+          <Feather name="chevron-down" size={13} color={Colors.textSecondary} />
         </View>
       </TouchableOpacity>
-      {open && <View style={{ position: 'absolute', top: 40, left: -6, minWidth: 180, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator, borderRadius: 8, zIndex: 20, elevation: 8, overflow: 'hidden' }}>
-        {(households ?? []).map((household) => <TouchableOpacity key={household.id} style={{ paddingHorizontal: 12, paddingVertical: 10, backgroundColor: household.id === selectedHouseholdId ? Colors.accent + '12' : Colors.card }} onPress={() => { setSelectedHouseholdId(household.id); setOpen(false); }}><Text style={{ fontSize: 13, fontWeight: household.id === selectedHouseholdId ? '800' : '500', color: household.id === selectedHouseholdId ? Colors.accent : Colors.textPrimary }}>{household.name}</Text></TouchableOpacity>)}
-      </View>}
     </View>
   );
 }
