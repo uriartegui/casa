@@ -7,7 +7,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
-import { useCategories, useHouseholdCategoryGroups } from '../../hooks/useCategories';
 import { useRemoveListItem } from '../../hooks/useShoppingLists';
 import { useToast } from '../../context/ToastContext';
 import DatePickerModal from '../../components/DatePickerModal';
@@ -22,35 +21,13 @@ type Props = {
 };
 
 export default function SendToFridgeScreen({ navigation, route }: Props) {
-  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit, prefillCategory, listName } = route.params;
+  const { householdId, listId, itemId, prefillName, prefillQuantity, prefillUnit, listName } = route.params;
 
   const { data: storages } = useStorages(householdId);
-  const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
-  const [category, setCategory] = useState(prefillCategory ?? '');
   const [showStorageOptions, setShowStorageOptions] = useState(false);
-  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
-  const [didApplyPrefill, setDidApplyPrefill] = useState(false);
-  const { data: categories } = useCategories(householdId, selectedStorageId);
   const { showToast } = useToast();
-
-  React.useEffect(() => {
-    if (!prefillCategory || !storages || storages.length === 0 || selectedStorageId !== null) return;
-
-    const categoryStorage = categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory));
-    if (categoryStorage) setSelectedStorageId(categoryStorage.storageId);
-  }, [storages, selectedStorageId, categoryGroups, prefillCategory]);
-
-  React.useEffect(() => {
-    if (!prefillCategory || didApplyPrefill || !categoryGroups.length) return;
-    const categoryStorage = categoryGroups.find((group) => group.categories.some((cat) => cat.label === prefillCategory));
-    if (categoryStorage) {
-      setSelectedStorageId(categoryStorage.storageId);
-      setCategory(prefillCategory);
-      setDidApplyPrefill(true);
-    }
-  }, [prefillCategory, didApplyPrefill, categoryGroups]);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
 
   const addToFridge = useAddFridgeItem(householdId);
@@ -69,7 +46,6 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
         quantity: Number(prefillQuantity),
         unit: prefillUnit ?? 'un',
         storageId: selectedStorageId ?? undefined,
-        category: category.trim() || undefined,
         expirationDate: expStr,
         fromShoppingListName: listName,
       });
@@ -105,7 +81,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
             )}
             {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
             <View style={[styles.selectField, showStorageOptions && styles.selectFieldOpen]}>
-              <TouchableOpacity style={styles.selectRow} onPress={() => { setShowStorageOptions((value) => !value); setShowCategoryOptions(false); }}>
+              <TouchableOpacity style={styles.selectRow} onPress={() => { setShowStorageOptions((value) => !value); }}>
                 <Text style={[styles.selectRowText, !selectedStorageId && styles.selectRowPlaceholder]}>{storages.find((storage) => storage.id === selectedStorageId)?.name ?? 'Escolher compartimento'}</Text>
                 <Feather name={showStorageOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
               </TouchableOpacity>
@@ -114,7 +90,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   key={s.id}
                   style={[styles.selectOption, selectedStorageId === s.id && styles.selectOptionActive]}
-                  onPress={() => { setSelectedStorageId(s.id); setCategory(''); setShowStorageOptions(false); }}
+                  onPress={() => { setSelectedStorageId(s.id); setShowStorageOptions(false); }}
                 >
                   <Text style={[styles.selectOptionText, selectedStorageId === s.id && styles.selectOptionTextActive]}>{s.name}</Text>
                   {selectedStorageId === s.id && <Feather name="check" size={16} color={Colors.accent} />}
@@ -129,46 +105,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
               options={storages.map((storage) => ({ label: storage.name, value: storage.id }))}
               onChange={(storageId) => {
                 setSelectedStorageId(storageId || null);
-                setCategory('');
               }}
-            />
-          </>
-        )}
-
-        {(categories?.length ?? 0) > 0 && (
-          <>
-            <Text style={styles.label}>Categoria (opcional)</Text>
-            {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
-            <View style={[styles.selectField, showCategoryOptions && styles.selectFieldOpen]}>
-              <TouchableOpacity style={styles.selectRow} onPress={() => { setShowCategoryOptions((value) => !value); setShowStorageOptions(false); }}>
-                <Text style={[styles.selectRowText, !category && styles.selectRowPlaceholder]}>{category || 'Escolher categoria'}</Text>
-                <Feather name={showCategoryOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
-              </TouchableOpacity>
-              {showCategoryOptions && <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
-                <TouchableOpacity style={[styles.selectOption, !category && styles.selectOptionActive]} onPress={() => { setCategory(''); setShowCategoryOptions(false); }}>
-                  <Text style={[styles.selectOptionText, !category && styles.selectOptionTextActive]}>Sem categoria</Text>
-                  {!category && <Feather name="check" size={16} color={Colors.accent} />}
-                </TouchableOpacity>
-              {(categories ?? []).map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.selectOption, category === cat.label && styles.selectOptionActive]}
-                  onPress={() => { setCategory(cat.label); setShowCategoryOptions(false); }}
-                >
-                  <Text style={[styles.selectOptionText, category === cat.label && styles.selectOptionTextActive]}>{cat.label}</Text>
-                  {category === cat.label && <Feather name="check" size={16} color={Colors.accent} />}
-                </TouchableOpacity>
-              ))}
-              </ScrollView>}
-            </View>
-            */}
-            <NativeSelect
-              value={category || '__none__'}
-              options={[
-                { label: 'Sem categoria', value: '__none__' },
-                ...(categories ?? []).map((item) => ({ label: item.label, value: item.label })),
-              ]}
-              onChange={(nextCategory) => setCategory(nextCategory === '__none__' ? '' : nextCategory)}
             />
           </>
         )}

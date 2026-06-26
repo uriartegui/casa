@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   ActionSheetIOS,
   Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -45,6 +46,7 @@ type StatusFilter = 'open' | 'mine' | 'late' | 'done' | 'all';
 type DropdownOption = { label: string; value: string };
 
 const NONE_VALUE = '__none__';
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 const CATEGORIES = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
@@ -162,7 +164,7 @@ function TaskHouseholdHeader({ category, householdName }: { category: string; ho
 }
 
 export default function HouseTasksScreen({ navigation, route }: Props) {
-  const { householdId, householdName, initialCategory } = route.params;
+  const { householdId, householdName, initialCategory, highlightTaskId } = route.params;
   const isCategoryPage = !!initialCategory;
   const { user } = useAuth();
   const { data: households } = useHouseholds();
@@ -190,6 +192,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [newTaskDatePickerVisible, setNewTaskDatePickerVisible] = useState(false);
   const [detailDatePickerVisible, setDetailDatePickerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const highlightAnim = React.useRef(new Animated.Value(0)).current;
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
 
   React.useEffect(() => {
@@ -302,6 +305,16 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     }
   }
 
+  React.useEffect(() => {
+    if (!highlightTaskId || !tasks?.some((task) => task.id === highlightTaskId)) return;
+    highlightAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+      Animated.delay(650),
+      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+    ]).start();
+  }, [highlightAnim, highlightTaskId, tasks]);
+
   function createKanbanMoveGesture(task: HouseTask) {
     return Gesture.Pan()
       .activateAfterLongPress(380)
@@ -328,10 +341,23 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   function renderTask({ item }: { item: HouseTask }) {
     const label = dueLabel(item.dueDate);
     const late = isLate(item);
+    const isHighlighted = item.id === highlightTaskId;
+    const highlightStyle = isHighlighted
+      ? {
+        backgroundColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [Colors.card, Colors.accent + '24'],
+        }),
+        borderColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [late ? Colors.destructive : Colors.separator, Colors.accent],
+        }),
+      }
+      : null;
 
     return (
-      <TouchableOpacity
-        style={[styles.taskCard, item.done && styles.taskCardDone, late && styles.taskCardLate]}
+      <AnimatedTouchableOpacity
+        style={[styles.taskCard, item.done && styles.taskCardDone, late && styles.taskCardLate, highlightStyle]}
         onPress={() => setSelectedTask(item)}
         activeOpacity={0.78}
       >
@@ -366,7 +392,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         >
           <Text style={styles.deleteButtonText}>X</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </AnimatedTouchableOpacity>
     );
   }
 

@@ -68,6 +68,9 @@ export function useListItems(householdId: string | null, listId: string | null) 
       );
       return res.data;
     },
+    select: (data: ShoppingItem[] | { items?: ShoppingItem[] }) => (
+      Array.isArray(data) ? data : data.items ?? []
+    ),
     enabled: !!householdId && !!listId,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -139,6 +142,41 @@ export function useToggleListItem(householdId: string, listId: string) {
       const previous = queryClient.getQueryData<ShoppingItem[]>(queryKey);
       queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) =>
         old?.map((i) => (i.id === itemId ? { ...i, checked } : i)),
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ['shopping-activity', householdId] });
+    },
+  });
+}
+
+export function useUpdateListItem(householdId: string, listId: string) {
+  const queryClient = useQueryClient();
+  const queryKey = ['shopping-list-items', householdId, listId];
+  return useMutation({
+    mutationFn: async ({ itemId, ...data }: {
+      itemId: string;
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      category?: string | null;
+    }) => {
+      const res = await api.patch<ShoppingItem>(
+        `/households/${householdId}/shopping-lists/${listId}/items/${itemId}`,
+        data,
+      );
+      return res.data;
+    },
+    onMutate: async ({ itemId, ...data }) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) =>
+        old?.map((item) => (item.id === itemId ? { ...item, ...data } : item)),
       );
       return { previous };
     },

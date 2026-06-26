@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  Animated, View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, ScrollView, Alert,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -44,7 +44,7 @@ const cleanDirtyFields: DirtyFields = {
 };
 
 export default function FridgeItemDetailScreen({ navigation, route }: Props) {
-  const { itemId, householdId } = route.params;
+  const { itemId, householdId, highlight } = route.params;
   const { data: item, isLoading, isError, refetch } = useFridgeItem(householdId, itemId);
   const [dirtyFields, setDirtyFields] = useState<DirtyFields>(cleanDirtyFields);
   const [name, setName] = useState('');
@@ -60,6 +60,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const { data: shoppingLists, isLoading: loadingShoppingLists } = useShoppingLists(householdId);
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const highlightAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!item) return;
@@ -75,6 +76,16 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     ));
     setCategory((current) => (dirtyFields.category ? current : item.category ?? null));
   }, [item, dirtyFields]);
+
+  useEffect(() => {
+    if (!highlight || !item) return;
+    highlightAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+      Animated.delay(650),
+      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+    ]).start();
+  }, [highlight, highlightAnim, item]);
 
   function markEditing(field: keyof DirtyFields) {
     setDirtyFields((current) => ({ ...current, [field]: true }));
@@ -205,6 +216,21 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <Animated.View
+          style={[
+            styles.highlightWrap,
+            {
+              backgroundColor: highlightAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [Colors.background, Colors.accent + '18'],
+              }),
+              borderColor: highlightAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['transparent', Colors.accent],
+              }),
+            },
+          ]}
+        >
         <Text style={styles.label}>Nome do item</Text>
         <TextInput
           style={styles.input}
@@ -296,6 +322,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
           <Text style={styles.removeButtonText}>Remover item</Text>
         </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -305,6 +332,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 10, padding: 24 },
   content: { padding: 24, gap: 10, paddingBottom: 140 },
+  highlightWrap: { borderWidth: 1, borderRadius: 16, padding: 10, margin: -10, gap: 10 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   retryButton: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginTop: 6 },

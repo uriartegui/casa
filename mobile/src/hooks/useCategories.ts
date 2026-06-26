@@ -58,7 +58,7 @@ export function useHouseholdCategoryGroups(householdId: string | null) {
 export function useCreateCategory(householdId: string, storageId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: { label: string; emoji: string }) => {
+    mutationFn: async (payload: { label: string; emoji?: string }) => {
       const response = await api.post<HouseholdCategory>(
         `/households/${householdId}/storages/${storageId}/categories`,
         payload,

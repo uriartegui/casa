@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import {
-  View, Text, SectionList, TouchableOpacity, Modal, TextInput,
+  Animated, View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
   KeyboardAvoidingView, Keyboard, Platform, ScrollView, Share,
 } from 'react-native';
@@ -10,7 +10,7 @@ import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import {
   useListItems, useShoppingLists, useToggleListItem, useRemoveListItem, useAddListItem,
-  useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList,
+  useClearCheckedListItems, useDeleteShoppingList, useUpdateShoppingList, useUpdateListItem,
 } from '../../hooks/useShoppingLists';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useHouseholdCategoryGroups } from '../../hooks/useCategories';
@@ -22,6 +22,7 @@ import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
 import { ShoppingItemSkeleton } from '../../components/Skeleton';
 import NativeSelect from '../../components/NativeSelect';
+import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -36,13 +37,14 @@ function KeepAwakeWhileFocused() {
 }
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 function compareNames(a: ShoppingItem, b: ShoppingItem) {
   return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
 }
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
-  const { householdId, listId, listName, listUrgent, listPlace, listCategory } = route.params;
+  const { householdId, listId, listName, listUrgent, listPlace, listCategory, highlightItemId, highlightList } = route.params;
   const [currentName, setCurrentName] = useState(listName);
   const [currentPlace, setCurrentPlace] = useState(listPlace ?? '');
   const [currentCategory, setCurrentCategory] = useState(listCategory ?? '');
@@ -57,9 +59,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const removeItem = useRemoveListItem(householdId, listId);
   const clearChecked = useClearCheckedListItems(householdId, listId);
   const deleteList = useDeleteShoppingList(householdId);
+  const updateItem = useUpdateListItem(householdId, listId);
   const prevItemCount = useRef<number | undefined>(undefined);
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
-  const [showSendModal, setShowSendModal] = useState(false);
   const addItem = useAddListItem(householdId, listId);
   const [quickName, setQuickName] = useState('');
   const [addModal, setAddModal] = useState(false);
@@ -80,11 +82,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     navigation.getParent()?.navigate('Menu' as never);
   }, [navigation]);
   const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
-  const [selectedToSend, setSelectedToSend] = useState<Set<string>>(new Set());
   const isFocused = useIsFocused();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
   const footerKeyboardOffset = Platform.OS === 'ios' ? keyboardHeight : 0;
+  const highlightAnim = useRef(new Animated.Value(0)).current;
+  const listHighlightAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const updateKeyboardHeight = (event: { endCoordinates: { height: number } }) => {
@@ -128,20 +131,13 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       prefillName: next.name,
       prefillQuantity: Number(next.quantity),
       prefillUnit: next.unit ?? null,
-      prefillCategory: next.category ?? null,
+      prefillCategory: null,
       listName: currentName,
     });
   }, [isFocused, sendQueue, currentName]);
 
   function handleSendAllToFridge() {
-    setSelectedToSend(new Set(bought.map((i) => i.id)));
-    setShowSendModal(true);
-  }
-
-  function confirmSendToFridge() {
-    const toSend = bought.filter((i) => selectedToSend.has(i.id));
-    setShowSendModal(false);
-    setSendQueue(toSend);
+    setSendQueue(bought);
   }
 
   async function handleRefresh() {
@@ -167,6 +163,23 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     setAddModal(true);
   }
 
+  function addSeparateItem(name: string, qty: number) {
+    addItem.mutate({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
+    setQuickName('');
+    setAddModal(false);
+  }
+
+  function mergeWithExistingItem(existingItem: ShoppingItem, qty: number) {
+    updateItem.mutate({
+      itemId: existingItem.id,
+      quantity: mergedShoppingQuantity(existingItem, qty),
+      unit: existingItem.unit ?? addUnit,
+      category: existingItem.category ?? addCategory,
+    });
+    setQuickName('');
+    setAddModal(false);
+  }
+
   function confirmAdd() {
     const name = quickName.trim();
     const qty = parseFloat(addQty.replace(',', '.'));
@@ -175,9 +188,21 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
-    addItem.mutate({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
-    setQuickName('');
-    setAddModal(false);
+    const similarItem = findSimilarShoppingItem(items, name);
+    if (!similarItem) {
+      addSeparateItem(name, qty);
+      return;
+    }
+
+    const nextQuantity = mergedShoppingQuantity(similarItem, qty);
+    Alert.alert(
+      'Item parecido encontrado',
+      `"${similarItem.name}" ja esta na lista com ${similarItem.quantity} ${similarItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${similarItem.unit ?? addUnit}?`,
+      [
+        { text: 'Adicionar separado', style: 'cancel', onPress: () => addSeparateItem(name, qty) },
+        { text: 'Juntar', onPress: () => mergeWithExistingItem(similarItem, qty) },
+      ],
+    );
   }
 
   async function handleShareList() {
@@ -275,7 +300,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     bought.length === 1
       ? `Guardar ${bought[0].name}`
       : `Guardar ${bought.length} comprados`;
-  const selectedAllBought = bought.length > 0 && selectedToSend.size === bought.length;
   const selectedAddStorage = categoryGroups.find((group) => group.storageId === addStorageId);
 
   // Detect transition to empty list
@@ -314,9 +338,43 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     });
   }, [currentName, handleShareList, pending, bought, openMenu]);
 
+  useEffect(() => {
+    if (!highlightItemId || !items?.some((item) => item.id === highlightItemId)) return;
+    highlightAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+      Animated.delay(650),
+      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+    ]).start();
+  }, [highlightAnim, highlightItemId, items]);
+
+  useEffect(() => {
+    if (!highlightList) return;
+    listHighlightAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(listHighlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+      Animated.delay(650),
+      Animated.timing(listHighlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+    ]).start();
+  }, [highlightList, listHighlightAnim]);
+
   function renderItem({ item }: { item: ShoppingItem }) {
+    const isHighlighted = item.id === highlightItemId;
+    const highlightStyle = isHighlighted
+      ? {
+        backgroundColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [Colors.card, Colors.accent + '24'],
+        }),
+        borderColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [Colors.separator, Colors.accent],
+        }),
+      }
+      : null;
+
     return (
-      <TouchableOpacity style={styles.itemRow} onPress={() => handleToggle(item)} activeOpacity={0.7}>
+      <AnimatedTouchableOpacity style={[styles.itemRow, highlightStyle]} onPress={() => handleToggle(item)} activeOpacity={0.7}>
         <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
           {item.checked && <Text style={styles.checkmark}>✓</Text>}
         </View>
@@ -337,7 +395,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         >
           <Text style={styles.removeButtonText}>X</Text>
         </TouchableOpacity>
-      </TouchableOpacity>
+      </AnimatedTouchableOpacity>
     );
   }
 
@@ -371,6 +429,21 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       {isFocused && <KeepAwakeWhileFocused />}
       <View style={[styles.contentArea, { paddingBottom: footerHeight + footerKeyboardOffset }]}>
+      <Animated.View
+        style={[
+          styles.listFocusBand,
+          {
+            backgroundColor: listHighlightAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [Colors.background, Colors.accent + '18'],
+            }),
+            borderColor: listHighlightAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['transparent', Colors.accent],
+            }),
+          },
+        ]}
+      >
       {total > 0 && (
         <View style={styles.progressContainer}>
           <View style={styles.progressTopRow}>
@@ -398,6 +471,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         {!!currentPlace && <Text style={styles.metaChip}>{currentPlace}</Text>}
         {!!currentCategory && <Text style={styles.metaChip}>{currentCategory}</Text>}
       </View>
+      </Animated.View>
 
       {isLoading ? (
         <View style={{ backgroundColor: Colors.background }}>
@@ -431,63 +505,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         />
       )}
       </View>
-
-      <Modal visible={showSendModal} transparent animationType="slide" onRequestClose={() => setShowSendModal(false)}>
-        <View style={styles.sheetOverlay}>
-          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setShowSendModal(false)} />
-          <View style={styles.sendSheet}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>Guardar no estoque</Text>
-          <View style={styles.modalSummary}>
-            <Text style={styles.modalSummaryTitle}>
-              {bought.length} {bought.length === 1 ? 'item comprado pronto' : 'itens comprados prontos'}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setSelectedToSend(selectedAllBought ? new Set() : new Set(bought.map((item) => item.id)))}
-            >
-              <Text style={styles.modalToggleAll}>
-                {selectedAllBought ? 'Desmarcar todos' : 'Selecionar todos'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.modalSubtitle}>Escolha o que voce quer guardar agora.</Text>
-          <ScrollView style={styles.sendItemsScroll} contentContainerStyle={styles.sendItemsContent} showsVerticalScrollIndicator={false}>
-            {bought.map((item) => {
-              const selected = selectedToSend.has(item.id);
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={styles.modalItem}
-                  onPress={() => {
-                    setSelectedToSend((prev) => {
-                      const next = new Set(prev);
-                      if (next.has(item.id)) next.delete(item.id);
-                      else next.add(item.id);
-                      return next;
-                    });
-                  }}
-                >
-                  <View style={[styles.modalCheckbox, selected && styles.modalCheckboxChecked]}>
-                    {selected && <Text style={styles.modalCheckmark}>{'\u2713'}</Text>}
-                  </View>
-                  <Text style={styles.modalItemName}>{item.name}</Text>
-                  <Text style={styles.modalItemQty}>{item.quantity} {item.unit ?? ''}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <TouchableOpacity
-            style={[styles.button, styles.sendButton, selectedToSend.size === 0 && styles.buttonDisabled]}
-            disabled={selectedToSend.size === 0}
-            onPress={confirmSendToFridge}
-          >
-            <Text style={styles.buttonText}>
-              Guardar {selectedToSend.size} {selectedToSend.size === 1 ? 'item' : 'itens'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        </View>
-      </Modal>
 
       <Modal visible={editModal} transparent animationType="slide" onRequestClose={() => setEditModal(false)}>
         <View style={styles.sheetOverlay}>
@@ -769,6 +786,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   contentArea: { flex: 1 },
+  listFocusBand: { borderWidth: 1, borderRadius: 14, margin: 10, marginBottom: 0, paddingBottom: 10 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
   metaChip: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary },

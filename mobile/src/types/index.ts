@@ -157,3 +157,26 @@ export interface HouseTaskActivityEvent {
   details: string | null;
   createdAt: string;
 }
+
+export type GlobalSearchResultType = 'stock_item' | 'shopping_list' | 'shopping_item' | 'task';
+
+export interface GlobalSearchResult {
+  id: string;
+  type: GlobalSearchResultType;
+  title: string;
+  subtitle: string;
+  target: {
+    householdId: string;
+    itemId?: string;
+    storageId?: string | null;
+    storageName?: string | null;
+    storageEmoji?: string | null;
+    listId?: string | null;
+    listName?: string;
+    listUrgent?: boolean;
+    listPlace?: string | null;
+    listCategory?: string | null;
+    taskId?: string;
+    category?: string | null;
+  };
+}

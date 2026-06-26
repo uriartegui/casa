@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity,
-  StyleSheet, RefreshControl,
-} from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
@@ -17,8 +15,8 @@ type Props = {
 
 export default function HouseholdListScreen({ navigation }: Props) {
   const { data: households, isLoading, refetch } = useHouseholds();
-  useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  useRefreshOnFocus(refetch);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -26,40 +24,23 @@ export default function HouseholdListScreen({ navigation }: Props) {
     setManualRefreshing(false);
   }
 
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.list}>
-          {Array.from({ length: 4 }).map((_, index) => <HouseholdCardSkeleton key={index} />)}
-        </View>
-      </View>
-    );
-  }
-
   function renderItem({ item }: { item: Household }) {
     const memberCount = item.members?.length ?? 0;
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={styles.houseTile}
+        activeOpacity={0.72}
         onPress={() => navigation.navigate('HouseholdDetail', { householdId: item.id, householdName: item.name })}
-        activeOpacity={0.7}
       >
-        <View style={styles.cardLeft}>
-          <View style={styles.cardIconWrap}>
-            <Text style={styles.cardIconEmoji}>🏠</Text>
-          </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle}>{item.name}</Text>
-            {memberCount > 0 && (
-              <Text style={styles.cardMeta}>
-                {memberCount} {memberCount === 1 ? 'membro' : 'membros'}
-              </Text>
-            )}
-          </View>
-        </View>
-        <Text style={styles.cardChevron}>›</Text>
+        <View style={styles.houseIcon}><Feather name="home" size={25} color={Colors.accent} /></View>
+        <Text style={styles.houseName} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.houseMeta}>{memberCount} {memberCount === 1 ? 'pessoa' : 'pessoas'}</Text>
       </TouchableOpacity>
     );
+  }
+
+  if (isLoading) {
+    return <View style={styles.loadingGrid}>{Array.from({ length: 4 }).map((_, index) => <HouseholdCardSkeleton key={index} />)}</View>;
   }
 
   return (
@@ -68,22 +49,31 @@ export default function HouseholdListScreen({ navigation }: Props) {
         data={households ?? []}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🏠</Text>
-            <Text style={styles.emptyTitle}>Nenhuma casa ainda</Text>
-            <Text style={styles.emptySubtitle}>Crie uma casa ou entre com um código de convite</Text>
+        numColumns={2}
+        columnWrapperStyle={styles.row}
+        contentContainerStyle={styles.grid}
+        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
+        ListHeaderComponent={
+          <View style={styles.intro}>
+            <Text style={styles.kicker}>SUAS CASAS</Text>
+            <Text style={styles.title}>Escolha uma casa</Text>
+            <Text style={styles.subtitle}>Cada casa mantém seus próprios estoques, listas, tarefas e pessoas.</Text>
           </View>
         }
-        refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Feather name="home" size={42} color={Colors.accent} />
+            <Text style={styles.emptyTitle}>Nenhuma casa ainda</Text>
+            <Text style={styles.emptySubtitle}>Crie uma casa ou entre usando um código de convite.</Text>
+          </View>
+        }
       />
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CreateHousehold')}>
-          <Text style={styles.buttonText}>+ Nova casa</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('CreateHousehold')}>
+          <Text style={styles.primaryText}>+ Nova casa</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.buttonSecondary]} onPress={() => navigation.navigate('JoinHousehold')}>
-          <Text style={[styles.buttonText, styles.buttonTextSecondary]}>Entrar com código</Text>
+        <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('JoinHousehold')}>
+          <Text style={styles.secondaryText}>Entrar com código</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -92,39 +82,23 @@ export default function HouseholdListScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  list: { padding: 16, gap: 10, flexGrow: 1 },
-
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: Colors.separator,
-  },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 },
-  cardIconWrap: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: Colors.accent + '18',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  cardIconEmoji: { fontSize: 20 },
-  cardInfo: { flex: 1, gap: 2 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  cardMeta: { fontSize: 13, color: Colors.textSecondary },
-  cardChevron: { fontSize: 22, color: Colors.textSecondary, fontWeight: '300' },
-
-  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8, paddingTop: 80 },
-  emptyEmoji: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
-
+  loadingGrid: { flex: 1, padding: 16, gap: 10, backgroundColor: Colors.background },
+  grid: { padding: 16, paddingBottom: 24, flexGrow: 1 },
+  intro: { marginBottom: 22 },
+  kicker: { color: Colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 5 },
+  title: { color: Colors.textPrimary, fontSize: 24, fontWeight: '800' },
+  subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 6 },
+  row: { gap: 12, marginBottom: 12 },
+  houseTile: { flex: 1, minHeight: 166, borderRadius: 10, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, padding: 14, justifyContent: 'flex-end' },
+  houseIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: Colors.accent + '18', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 14, left: 14 },
+  houseName: { color: Colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  houseMeta: { color: Colors.textSecondary, fontSize: 13, marginTop: 4 },
+  empty: { flex: 1, minHeight: 300, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  emptyTitle: { color: Colors.textPrimary, fontSize: 17, fontWeight: '800', marginTop: 12 },
+  emptySubtitle: { color: Colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 6 },
   footer: { padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  button: { backgroundColor: Colors.accent, borderRadius: 28, padding: 14, alignItems: 'center' },
-  buttonSecondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accent },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  buttonTextSecondary: { color: Colors.accent },
+  primaryButton: { minHeight: 50, borderRadius: 10, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  secondaryButton: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '700' },
 });

@@ -101,7 +101,7 @@ export default function ManageStoragesScreen({ route }: Props) {
       {orderedStorages.map((storage) => (
         <View key={storage.id} style={[styles.row, storage.hidden && styles.rowHidden]}>
           <View style={styles.info}>
-            <Text style={styles.storageName}>{storage.emoji} {storage.name}</Text>
+            <Text style={styles.storageName}>{storage.name}</Text>
             <Text style={styles.storageStatus}>{storage.hidden ? 'Oculto' : 'Visivel'}</Text>
           </View>
 

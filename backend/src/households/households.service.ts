@@ -875,7 +875,19 @@ export class HouseholdsService {
     return saved;
   }
 
-  async toggleListItem(householdId: string, listId: string, itemId: string, userId: string, dto: { checked?: boolean }): Promise<ShoppingItem> {
+  async toggleListItem(
+    householdId: string,
+    listId: string,
+    itemId: string,
+    userId: string,
+    dto: {
+      checked?: boolean;
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      category?: string | null;
+    },
+  ): Promise<ShoppingItem> {
     await this.assertMember(householdId, userId);
     const item = await this.shoppingRepo.findOne({
       where: { id: itemId, shoppingListId: listId, householdId },
@@ -883,7 +895,13 @@ export class HouseholdsService {
     });
     if (!item) throw new NotFoundException('Item não encontrado');
     const previousChecked = item.checked;
+    const previousQuantity = Number(item.quantity);
+    const previousName = item.name;
     if (dto.checked !== undefined) item.checked = dto.checked;
+    if (dto.name !== undefined) item.name = dto.name.trim();
+    if (dto.quantity !== undefined) item.quantity = dto.quantity;
+    if (dto.unit !== undefined) item.unit = dto.unit;
+    if (dto.category !== undefined) item.category = dto.category;
     const saved = await this.shoppingRepo.save(item);
     if (dto.checked !== undefined && dto.checked !== previousChecked) {
       const userName = await this.getHouseholdUserName(householdId, userId);
@@ -891,6 +909,23 @@ export class HouseholdsService {
         householdId,
         shoppingListId: listId,
         action: dto.checked ? 'checked' : 'unchecked',
+        itemName: saved.name,
+        listName: item.shoppingList?.name ?? 'lista',
+        quantity: saved.quantity,
+        unit: saved.unit,
+        userId,
+        userName,
+      });
+    }
+    if (
+      (dto.quantity !== undefined && Number(dto.quantity) !== previousQuantity) ||
+      (dto.name !== undefined && dto.name.trim() !== previousName)
+    ) {
+      const userName = await this.getHouseholdUserName(householdId, userId);
+      await this.logShoppingActivity({
+        householdId,
+        shoppingListId: listId,
+        action: 'added',
         itemName: saved.name,
         listName: item.shoppingList?.name ?? 'lista',
         quantity: saved.quantity,
@@ -1105,6 +1140,134 @@ export class HouseholdsService {
     });
 
     return { items: items.slice(0, 6) };
+  }
+
+  async searchHousehold(householdId: string, userId: string, query: string) {
+    await this.assertMember(householdId, userId);
+
+    const term = query.trim();
+    if (term.length < 2) return { results: [] };
+
+    const like = `%${term.toLocaleLowerCase('pt-BR')}%`;
+    const [fridgeItems, shoppingLists, shoppingItems, tasks] = await Promise.all([
+      this.fridgeRepo
+        .createQueryBuilder('item')
+        .leftJoinAndSelect('item.storage', 'storage')
+        .where('item.householdId = :householdId', { householdId })
+        .andWhere(
+          '(LOWER(item.name) LIKE :like OR LOWER(COALESCE(item.category, \'\')) LIKE :like OR LOWER(COALESCE(storage.name, \'\')) LIKE :like)',
+          { like },
+        )
+        .orderBy('item.createdAt', 'DESC')
+        .take(8)
+        .getMany(),
+      this.shoppingListsRepo
+        .createQueryBuilder('list')
+        .where('list.householdId = :householdId', { householdId })
+        .andWhere(
+          '(LOWER(list.name) LIKE :like OR LOWER(COALESCE(list.place, \'\')) LIKE :like OR LOWER(COALESCE(list.category, \'\')) LIKE :like)',
+          { like },
+        )
+        .orderBy('list.createdAt', 'DESC')
+        .take(6)
+        .getMany(),
+      this.shoppingRepo
+        .createQueryBuilder('item')
+        .leftJoinAndSelect('item.shoppingList', 'list')
+        .where('item.householdId = :householdId', { householdId })
+        .andWhere('item.shoppingListId IS NOT NULL')
+        .andWhere(
+          '(LOWER(item.name) LIKE :like OR LOWER(COALESCE(item.category, \'\')) LIKE :like OR LOWER(COALESCE(list.name, \'\')) LIKE :like)',
+          { like },
+        )
+        .orderBy('item.createdAt', 'DESC')
+        .take(8)
+        .getMany(),
+      this.houseTasksRepo
+        .createQueryBuilder('task')
+        .leftJoinAndSelect('task.assignedTo', 'assignedTo')
+        .leftJoinAndSelect('task.shoppingList', 'shoppingList')
+        .where('task.householdId = :householdId', { householdId })
+        .andWhere(
+          '(LOWER(task.title) LIKE :like OR LOWER(COALESCE(task.description, \'\')) LIKE :like OR LOWER(COALESCE(task.category, \'\')) LIKE :like OR LOWER(COALESCE(assignedTo.name, \'\')) LIKE :like OR LOWER(COALESCE(shoppingList.name, \'\')) LIKE :like)',
+          { like },
+        )
+        .orderBy('task.updatedAt', 'DESC')
+        .take(8)
+        .getMany(),
+    ]);
+
+    const results = [
+      ...fridgeItems.map((item) => ({
+        id: `stock:${item.id}`,
+        type: 'stock_item',
+        title: item.name,
+        subtitle: [
+          item.storage ? `${item.storage.emoji} ${item.storage.name}` : 'Estoque',
+          item.category,
+          `${item.quantity} ${item.unit ?? 'un'}`,
+        ].filter(Boolean).join(' - '),
+        target: {
+          itemId: item.id,
+          householdId,
+          storageId: item.storageId,
+          storageName: item.storage?.name ?? null,
+          storageEmoji: item.storage?.emoji ?? null,
+        },
+      })),
+      ...shoppingLists.map((list) => ({
+        id: `list:${list.id}`,
+        type: 'shopping_list',
+        title: list.name,
+        subtitle: [list.urgent ? 'Urgente' : null, list.place, list.category, 'Lista de compras'].filter(Boolean).join(' - '),
+        target: {
+          householdId,
+          listId: list.id,
+          listName: list.name,
+          listUrgent: list.urgent,
+          listPlace: list.place,
+          listCategory: list.category,
+        },
+      })),
+      ...shoppingItems.map((item) => ({
+        id: `shopping-item:${item.id}`,
+        type: 'shopping_item',
+        title: item.name,
+        subtitle: [
+          item.checked ? 'Comprado' : 'Pendente',
+          item.shoppingList?.name ?? 'Lista',
+          item.category,
+          `${item.quantity} ${item.unit ?? 'un'}`,
+        ].filter(Boolean).join(' - '),
+        target: {
+          householdId,
+          itemId: item.id,
+          listId: item.shoppingListId,
+          listName: item.shoppingList?.name ?? 'Lista',
+          listUrgent: item.shoppingList?.urgent ?? false,
+          listPlace: item.shoppingList?.place ?? null,
+          listCategory: item.shoppingList?.category ?? null,
+        },
+      })),
+      ...tasks.map((task) => ({
+        id: `task:${task.id}`,
+        type: 'task',
+        title: task.title,
+        subtitle: [
+          task.done ? 'Concluida' : task.status === 'in_progress' ? 'Em andamento' : 'Pendente',
+          task.category,
+          task.assignedTo?.name ? `Responsavel: ${task.assignedTo.name}` : null,
+          task.shoppingList?.name ? `Lista: ${task.shoppingList.name}` : null,
+        ].filter(Boolean).join(' - '),
+        target: {
+          householdId,
+          taskId: task.id,
+          category: task.category,
+        },
+      })),
+    ];
+
+    return { results: results.slice(0, 24) };
   }
 
   async getFridgeActivity(householdId: string, userId: string) {

@@ -9,6 +9,8 @@ import { Colors } from '../constants/colors';
 import HouseholdListScreen from '../screens/households/HouseholdListScreen';
 import CreateHouseholdScreen from '../screens/households/CreateHouseholdScreen';
 import HouseholdDetailScreen from '../screens/households/HouseholdDetailScreen';
+import HouseholdMembersScreen from '../screens/households/HouseholdMembersScreen';
+import HouseholdSettingsScreen from '../screens/households/HouseholdSettingsScreen';
 import InviteScreen from '../screens/households/InviteScreen';
 import JoinHouseholdScreen from '../screens/households/JoinHouseholdScreen';
 import MemberDetailScreen from '../screens/households/MemberDetailScreen';
@@ -33,17 +35,21 @@ import { useSelectedHousehold } from '../context/SelectedHouseholdContext';
 import { useStorages } from '../hooks/useStorages';
 import { useTaskCategories } from '../hooks/useHouseTasks';
 import { api } from '../services/api';
+import GlobalSearchModal from '../components/GlobalSearchModal';
+import { GlobalSearchProvider, useGlobalSearchModal } from '../context/GlobalSearchContext';
 
 export type HouseholdStackParamList = {
   HouseholdList: undefined;
   CreateHousehold: undefined;
   HouseholdDetail: { householdId: string; householdName: string };
+  HouseholdMembers: { householdId: string; householdName: string };
+  HouseholdSettings: { householdId: string; householdName: string };
   Invite: { householdId: string };
   JoinHousehold: { initialCode?: string } | undefined;
   MemberDetail: { householdId: string; memberId: string };
   ManageCategories: { householdId: string; householdName: string };
   ManageStorages: { householdId: string; householdName: string };
-  HouseTasks: { householdId: string; householdName: string; initialCategory?: string };
+  HouseTasks: { householdId: string; householdName: string; initialCategory?: string; highlightTaskId?: string };
 };
 
 export type RootStackParamList = {
@@ -51,7 +57,7 @@ export type RootStackParamList = {
   Menu: undefined;
   StorageFlow: { screen?: keyof FridgeStackParamList; params?: any } | undefined;
   ShoppingFlow: undefined;
-  TasksFlow: { screen?: 'TasksEntry' | 'TaskCategory'; params?: { category: string } } | undefined;
+  TasksFlow: { screen?: 'TasksEntry' | 'TaskCategory'; params?: { category?: string; highlightTaskId?: string } } | undefined;
   HouseholdFlow: undefined;
   ProfileFlow: undefined;
 };
@@ -59,16 +65,16 @@ export type RootStackParamList = {
 export type FridgeStackParamList = {
   StorageOverview: undefined;
   StorageActivity: { householdId: string };
-  Fridge: { householdId: string; storageId: string; storageName: string; storageEmoji: string };
+  Fridge: { householdId: string; storageId: string; storageName: string; storageEmoji: string; highlightItemId?: string };
   AddFridgeItem: { householdId: string; storageId?: string };
-  FridgeItemDetail: { itemId: string; householdId: string };
+  FridgeItemDetail: { itemId: string; householdId: string; highlight?: boolean };
   CreateStorage: { householdId: string };
 };
 
 export type ShoppingStackParamList = {
   ShoppingLists: undefined;
   ShoppingActivity: { householdId: string };
-  ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; listPlace?: string | null; listCategory?: string | null };
+  ShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; listPlace?: string | null; listCategory?: string | null; highlightItemId?: string; highlightList?: boolean };
   CreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
@@ -92,7 +98,7 @@ export type ShoppingStackParamList = {
 export type HomeStackParamList = {
   Home: undefined;
   AddFridgeItem: { householdId: string };
-  HomeShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean };
+  HomeShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; highlightList?: boolean };
   HomeCreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
@@ -141,6 +147,19 @@ function HeaderMenuButton() {
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       <Feather name="menu" size={30} color={Colors.textPrimary} />
+    </TouchableOpacity>
+  );
+}
+
+function HeaderSearchButton() {
+  const { openSearch } = useGlobalSearchModal();
+  return (
+    <TouchableOpacity
+      onPress={openSearch}
+      style={styles.headerSearchButton}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+    >
+      <Feather name="search" size={23} color={Colors.textPrimary} />
     </TouchableOpacity>
   );
 }
@@ -208,25 +227,29 @@ function AppHeader({ navigation, route, options, back }: any) {
     );
 
   return (
-    <View style={[styles.appHeader, { paddingTop: insets.top + 6 }]}>
-      <View style={styles.appHeaderRow}>
-        {showBack && (
-          <TouchableOpacity
-            style={styles.appHeaderBack}
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="chevron-left" size={26} color={Colors.accent} />
-          </TouchableOpacity>
-        )}
-        <View style={[styles.appHeaderTitleWrap, !showBack && styles.appHeaderTitleWrapNoBack]}>
-          {titleContent}
-        </View>
-        <View style={styles.appHeaderRight}>
-          {headerRight ? headerRight({ tintColor: Colors.textPrimary }) : <HeaderMenuButton />}
+    <>
+      <View style={[styles.appHeader, { paddingTop: insets.top + 6 }]}>
+        <View style={styles.appHeaderRow}>
+          {showBack && (
+            <TouchableOpacity
+              style={styles.appHeaderBack}
+              onPress={() => navigation.goBack()}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Feather name="chevron-left" size={26} color={Colors.accent} />
+            </TouchableOpacity>
+          )}
+          <View style={[styles.appHeaderTitleWrap, !showBack && styles.appHeaderTitleWrapNoBack]}>
+            {titleContent}
+          </View>
+          <View style={styles.appHeaderRight}>
+            <HeaderSearchButton />
+            {headerRight ? headerRight({ tintColor: Colors.textPrimary }) : <HeaderMenuButton />}
+          </View>
         </View>
       </View>
-    </View>
+      <GlobalSearchModal navigation={navigation.getParent?.() ?? navigation} />
+    </>
   );
 }
 
@@ -250,9 +273,11 @@ function HomeNavigator() {
 function HouseholdNavigator() {
   return (
     <HouseholdStack.Navigator screenOptions={stackScreenOptions}>
-      <HouseholdStack.Screen name="HouseholdList" component={HouseholdListScreen} options={{ title: 'Minhas Casas' }} />
+      <HouseholdStack.Screen name="HouseholdList" component={HouseholdListScreen} options={{ title: 'Minhas Casas', headerBackVisible: false }} />
       <HouseholdStack.Screen name="CreateHousehold" component={CreateHouseholdScreen} options={{ title: 'Nova Casa', presentation: 'modal' }} />
       <HouseholdStack.Screen name="HouseholdDetail" component={HouseholdDetailScreen} options={({ route }) => ({ title: route.params.householdName })} />
+      <HouseholdStack.Screen name="HouseholdMembers" component={HouseholdMembersScreen} options={({ route }) => ({ title: `Pessoas - ${route.params.householdName}` })} />
+      <HouseholdStack.Screen name="HouseholdSettings" component={HouseholdSettingsScreen} options={{ title: 'Configurações' }} />
       <HouseholdStack.Screen name="Invite" component={InviteScreen} options={{ title: 'Convidar' }} />
       <HouseholdStack.Screen name="JoinHousehold" component={JoinHouseholdScreen} options={{ title: 'Entrar com Codigo' }} />
       <HouseholdStack.Screen name="MemberDetail" component={MemberDetailScreen} options={{ title: 'Membro' }} />
@@ -271,7 +296,7 @@ function ProfileNavigator() {
   );
 }
 
-function TasksEntryScreen({ navigation, initialCategory }: any) {
+function TasksEntryScreen({ navigation, route, initialCategory }: any) {
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
   const { data: households, isLoading } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
@@ -300,7 +325,7 @@ function TasksEntryScreen({ navigation, initialCategory }: any) {
       route={{
         key: 'TasksEntry',
         name: 'HouseTasks',
-        params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory },
+        params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory, highlightTaskId: route?.params?.highlightTaskId },
       } as any}
     />
   );
@@ -316,7 +341,7 @@ function TaskCategoryScreen({ navigation, route }: any) {
     return <View style={styles.center}><Text style={styles.mutedText}>{isLoading ? 'Carregando...' : 'Nenhuma casa selecionada'}</Text></View>;
   }
 
-  return <HouseTasksScreen key={`task-category-${route.params.category}`} navigation={navigation} route={{ key: `TaskCategory-${route.params.category}`, name: 'HouseTasks', params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory: route.params.category } } as any} />;
+  return <HouseTasksScreen key={`task-category-${route.params.category}`} navigation={navigation} route={{ key: `TaskCategory-${route.params.category}`, name: 'HouseTasks', params: { householdId: effectiveId, householdName: household?.name ?? 'Casa', initialCategory: route.params.category, highlightTaskId: route.params.highlightTaskId } } as any} />;
 }
 
 function TasksNavigator() {
@@ -504,7 +529,6 @@ function SideMenuScreen({ navigation }: any) {
     ? taskCategories.map((category) => category.name)
     : defaultTaskCategoryNames;
   const entries = [
-    { label: 'Lista de compras', icon: 'shopping-cart', route: 'ShoppingFlow' },
     { label: 'Casa', icon: 'home', route: 'HouseholdFlow' },
     { label: 'Perfil', icon: 'user', route: 'ProfileFlow' },
   ];
@@ -685,6 +709,17 @@ function SideMenuScreen({ navigation }: any) {
             </Animated.View>
           )}
 
+          <TouchableOpacity
+            style={[styles.sideMenuItem, previousRoute === 'ShoppingFlow' && styles.sideMenuItemActive]}
+            activeOpacity={0.78}
+            onPress={() => goTo('ShoppingFlow')}
+          >
+            <View style={styles.sideMenuIconWrap}>
+              <Feather name="shopping-cart" size={21} color={previousRoute === 'ShoppingFlow' ? '#fff' : Colors.textSecondary} />
+            </View>
+            <Text style={[styles.sideMenuText, previousRoute === 'ShoppingFlow' && styles.sideMenuTextActive]}>Lista de compras</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity style={styles.sideMenuItem} activeOpacity={0.78} onPress={toggleTasks}>
             <View style={styles.sideMenuIconWrap}><Feather name="check-square" size={21} color={Colors.textSecondary} /></View>
             <Text style={styles.sideMenuText}>Tarefas</Text>
@@ -726,7 +761,7 @@ function SideMenuScreen({ navigation }: any) {
   );
 }
 
-export default function AppTabs() {
+function AppTabsInner() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="HomeFlow">
       <RootStack.Screen name="HomeFlow" component={HomeNavigator} />
@@ -744,9 +779,23 @@ export default function AppTabs() {
   );
 }
 
+export default function AppTabs() {
+  return (
+    <GlobalSearchProvider>
+      <AppTabsInner />
+    </GlobalSearchProvider>
+  );
+}
+
 const styles = StyleSheet.create({
   menuButton: { paddingHorizontal: 12, paddingVertical: 4 },
   headerMenuButton: {
+    width: 28,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerSearchButton: {
     width: 28,
     height: 36,
     alignItems: 'center',
@@ -790,6 +839,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: 12,
   },
   storageHeaderTitle: {
     fontSize: 17,

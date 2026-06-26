@@ -16,8 +16,6 @@ type Props = {
   route: RouteProp<HouseholdStackParamList, 'ManageCategories'>;
 };
 
-const EMOJI_OPTIONS = ['📦', '🥛', '🍖', '🍎', '🥦', '🌾', '🥤', '🧊', '🍕', '🧀', '🥫', '🍞', '🧂', '🍽️', '🍦', '🧃', '🥩', '🍪', '🍝'];
-
 function StorageSection({ householdId, storage }: { householdId: string; storage: Storage }) {
   const { data: categories, isLoading } = useCategories(householdId, storage.id);
   const createCategory = useCreateCategory(householdId, storage.id);
@@ -25,16 +23,14 @@ function StorageSection({ householdId, storage }: { householdId: string; storage
 
   const [modal, setModal] = useState(false);
   const [label, setLabel] = useState('');
-  const [emoji, setEmoji] = useState('📦');
 
   async function handleCreate() {
     const trimmed = label.trim();
     if (!trimmed) return;
     try {
-      await createCategory.mutateAsync({ label: trimmed, emoji });
+      await createCategory.mutateAsync({ label: trimmed });
       setModal(false);
       setLabel('');
-      setEmoji('📦');
     } catch {
       Alert.alert('Erro', 'Não foi possível criar a categoria.');
     }
@@ -59,14 +55,14 @@ function StorageSection({ householdId, storage }: { householdId: string; storage
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{storage.emoji} {storage.name}</Text>
+      <Text style={styles.sectionTitle}>{storage.name}</Text>
       {isLoading ? (
         <ActivityIndicator size="small" color={Colors.accent} style={{ marginVertical: 8 }} />
       ) : (
         <View style={styles.chips}>
           {(categories ?? []).map((cat) => (
             <TouchableOpacity key={cat.id} style={styles.chip} onPress={() => handleDelete(cat)}>
-              <Text style={styles.chipText}>{cat.emoji} {cat.label}</Text>
+              <Text style={styles.chipText}>{cat.label}</Text>
               <Text style={styles.chipX}>×</Text>
             </TouchableOpacity>
           ))}
@@ -97,17 +93,6 @@ function StorageSection({ householdId, storage }: { householdId: string; storage
               autoCapitalize="words"
               maxLength={40}
             />
-            <View style={styles.emojiGrid}>
-              {EMOJI_OPTIONS.map((e) => (
-                <TouchableOpacity
-                  key={e}
-                  style={[styles.emojiBtn, e === emoji && styles.emojiBtnActive]}
-                  onPress={() => setEmoji(e)}
-                >
-                  <Text style={styles.emojiText}>{e}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={() => setModal(false)}>
                 <Text style={styles.cancelText}>Cancelar</Text>
@@ -193,14 +178,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, fontSize: 16,
     color: Colors.textPrimary, backgroundColor: Colors.background, marginBottom: 12,
   },
-  emojiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  emojiBtn: {
-    width: 40, height: 40, borderRadius: 8,
-    backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  emojiBtnActive: { borderColor: Colors.accent, borderWidth: 2, backgroundColor: Colors.accent + '18' },
-  emojiText: { fontSize: 20 },
   modalActions: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
     flex: 1, paddingVertical: 11, borderRadius: 10,

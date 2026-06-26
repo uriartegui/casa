@@ -7,10 +7,11 @@ import {
 import { filterItems, categoryFor } from '../../constants/commonItems';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAddListItem } from '../../hooks/useShoppingLists';
+import { useAddListItem, useListItems, useUpdateListItem } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
-import { Unit } from '../../types';
+import { ShoppingItem, Unit } from '../../types';
+import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
 
 type Params = {
   householdId: string;
@@ -35,6 +36,22 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
   const [quantity, setQuantity] = useState(prefillQuantity ? String(prefillQuantity) : '1');
   const [unit, setUnit] = useState<Unit>((prefillUnit as Unit) ?? 'un');
   const addItem = useAddListItem(householdId, listId ?? '');
+  const updateItem = useUpdateListItem(householdId, listId ?? '');
+  const { data: existingItems } = useListItems(householdId, listId ?? null);
+
+  function askMerge(existingItem: ShoppingItem, qty: number) {
+    const nextQuantity = mergedShoppingQuantity(existingItem, qty);
+    return new Promise<'merge' | 'separate'>((resolve) => {
+      Alert.alert(
+        'Item parecido encontrado',
+        `"${existingItem.name}" ja esta na lista com ${existingItem.quantity} ${existingItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${existingItem.unit ?? unit}?`,
+        [
+          { text: 'Adicionar separado', style: 'cancel', onPress: () => resolve('separate') },
+          { text: 'Juntar', onPress: () => resolve('merge') },
+        ],
+      );
+    });
+  }
 
   async function handleAdd() {
     if (!name.trim()) {
@@ -48,6 +65,20 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
     }
     try {
       const trimmedName = name.trim();
+      const similarItem = listId ? findSimilarShoppingItem(existingItems, trimmedName) : null;
+      if (similarItem) {
+        const choice = await askMerge(similarItem, qty);
+        if (choice === 'merge') {
+          await updateItem.mutateAsync({
+            itemId: similarItem.id,
+            quantity: mergedShoppingQuantity(similarItem, qty),
+            unit: similarItem.unit ?? unit,
+            category: similarItem.category ?? categoryFor(trimmedName) ?? null,
+          });
+          navigation.goBack();
+          return;
+        }
+      }
       await addItem.mutateAsync({
         name: trimmedName,
         quantity: qty,

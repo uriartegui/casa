@@ -94,7 +94,6 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
                   onPress={() => toggleStorage(storage.id, storage.hidden)}
                   disabled={updateStorage.isPending}
                 >
-                  <Text style={styles.storageEmoji}>{storage.emoji}</Text>
                   <Text style={[styles.storageText, active && styles.storageTextActive]}>{storage.name}</Text>
                 </TouchableOpacity>
               );
@@ -174,7 +173,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  storageEmoji: { fontSize: 15 },
   storageText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   storageTextActive: { color: '#fff' },
   inviteBox: {

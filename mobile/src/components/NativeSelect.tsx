@@ -1,6 +1,5 @@
 import React from 'react';
-import { ActionSheetIOS, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import { ActionSheetIOS, NativeModules, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
@@ -16,9 +15,10 @@ type Props = {
 
 export default function NativeSelect({ value, options, placeholder = 'Selecionar', disabled = false, onChange }: Props) {
   const selectedLabel = options.find((option) => option.value === value)?.label ?? placeholder;
+  const isDisabled = disabled || options.length === 0;
 
   function openIOSSelector() {
-    if (disabled) return;
+    if (isDisabled) return;
     ActionSheetIOS.showActionSheetWithOptions(
       {
         options: [...options.map((option) => option.label), 'Cancelar'],
@@ -31,9 +31,30 @@ export default function NativeSelect({ value, options, placeholder = 'Selecionar
     );
   }
 
+  function openAndroidSelector() {
+    if (isDisabled) return;
+
+    const dialogManager = NativeModules.DialogManagerAndroid;
+    if (!dialogManager) return;
+
+    dialogManager.showAlert(
+      {
+        title: placeholder,
+        items: options.map((option) => option.label),
+        cancelable: true,
+      },
+      () => undefined,
+      (action: string, index?: number) => {
+        if (action === 'buttonClicked' && typeof index === 'number' && index >= 0 && index < options.length) {
+          onChange(options[index].value);
+        }
+      },
+    );
+  }
+
   if (Platform.OS === 'ios') {
     return (
-      <TouchableOpacity style={[styles.iosField, disabled && styles.disabled]} onPress={openIOSSelector} activeOpacity={disabled ? 1 : 0.75}>
+      <TouchableOpacity style={[styles.field, isDisabled && styles.disabled]} onPress={openIOSSelector} activeOpacity={isDisabled ? 1 : 0.75}>
         <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>{selectedLabel}</Text>
         <Feather name="chevron-down" size={18} color={Colors.textSecondary} />
       </TouchableOpacity>
@@ -41,19 +62,15 @@ export default function NativeSelect({ value, options, placeholder = 'Selecionar
   }
 
   return (
-    <View style={[styles.androidField, disabled && styles.disabled]} pointerEvents={disabled ? 'none' : 'auto'}>
-      <Picker selectedValue={value} onValueChange={(nextValue) => onChange(String(nextValue))} mode="dropdown" dropdownIconColor={Colors.textSecondary} style={styles.picker}>
-        {!value && <Picker.Item label={placeholder} value="" enabled={false} color={Colors.textSecondary} />}
-        {options.map((option) => <Picker.Item key={option.value} label={option.label} value={option.value} color={Colors.textPrimary} />)}
-      </Picker>
-    </View>
+    <TouchableOpacity style={[styles.field, isDisabled && styles.disabled]} onPress={openAndroidSelector} activeOpacity={isDisabled ? 1 : 0.75}>
+      <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1}>{selectedLabel}</Text>
+      <Feather name="chevron-down" size={18} color={Colors.textSecondary} />
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  iosField: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  androidField: { height: 54, borderRadius: 14, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, justifyContent: 'center' },
-  picker: { height: 54, color: Colors.textPrimary },
+  field: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   value: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
   placeholder: { color: Colors.textSecondary, fontWeight: '500' },
   disabled: { opacity: 0.65 },

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, ScrollView, TouchableOpacity,
-  StyleSheet, RefreshControl,
+  Animated, View, Text, FlatList, ScrollView, TouchableOpacity,
+  StyleSheet, RefreshControl, Modal, ActivityIndicator, Alert,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useFridge, useRemoveFridgeItem } from '../../hooks/useFridge';
+import { useFridge, useRemoveFridgeItem, useUpdateFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { useCategories } from '../../hooks/useCategories';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../context/ToastContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
@@ -17,6 +18,9 @@ import { expirationLabel } from '../../utils/expiration';
 import { formatBrDate } from '../../utils/dateUtils';
 import { FridgeItemSkeleton } from '../../components/Skeleton';
 import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
+import NativeSelect from '../../components/NativeSelect';
+
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -29,11 +33,17 @@ export default function FridgeScreen({ navigation, route }: Props) {
     storageId: effectiveStorageId,
     storageName,
     storageEmoji,
+    highlightItemId,
   } = route.params;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const highlightAnim = React.useRef(new Animated.Value(0)).current;
+  const [categorizeVisible, setCategorizeVisible] = useState(false);
+  const [categoryDraft, setCategoryDraft] = useState<Record<string, string>>({});
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
+  const updateItem = useUpdateFridgeItem(effectiveId ?? '');
+  const { data: categories } = useCategories(effectiveId, effectiveStorageId);
   const { data: shoppingLists, isLoading: loadingShoppingLists } = useShoppingLists(effectiveId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -45,6 +55,16 @@ export default function FridgeScreen({ navigation, route }: Props) {
     await refetch();
     setManualRefreshing(false);
   }
+
+  React.useEffect(() => {
+    if (!highlightItemId || !items?.some((item) => item.id === highlightItemId)) return;
+    highlightAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+      Animated.delay(650),
+      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+    ]).start();
+  }, [highlightAnim, highlightItemId, items]);
 
   const availableCategories = React.useMemo(() => {
     if (!items) return [];
@@ -92,6 +112,10 @@ export default function FridgeScreen({ navigation, route }: Props) {
   }, [sections]);
   const categoryCount = availableCategories.length;
   const summaryText = `${filteredItems.length} ${filteredItems.length === 1 ? 'item cadastrado' : 'itens cadastrados'}${categoryCount > 0 ? ` em ${categoryCount} ${categoryCount === 1 ? 'categoria' : 'categorias'}` : ''}`;
+  const uncategorizedItems = React.useMemo(
+    () => (items ?? []).filter((item) => !item.category),
+    [items],
+  );
 
   function confirmItemFinished(item: FridgeItem) {
     showFinishedFridgeItemAlert({
@@ -103,6 +127,29 @@ export default function FridgeScreen({ navigation, route }: Props) {
       queryClient,
       showToast,
     });
+  }
+
+  function openCategorizeModal() {
+    setCategoryDraft({});
+    setCategorizeVisible(true);
+  }
+
+  async function handleSaveCategories() {
+    const entries = Object.entries(categoryDraft).filter(([, category]) => !!category);
+    if (entries.length === 0) {
+      setCategorizeVisible(false);
+      return;
+    }
+
+    try {
+      await Promise.all(entries.map(([itemId, category]) => (
+        updateItem.mutateAsync({ itemId, category })
+      )));
+      setCategorizeVisible(false);
+      setCategoryDraft({});
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel categorizar os itens.');
+    }
   }
 
   function renderItem({ item }: { item: FridgeItem }) {
@@ -126,10 +173,23 @@ export default function FridgeScreen({ navigation, route }: Props) {
       : exp?.status === 'warning'
         ? '#F59E0B'
         : Colors.success;
+    const isHighlighted = item.id === highlightItemId;
+    const highlightStyle = isHighlighted
+      ? {
+        backgroundColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [Colors.card, Colors.accent + '24'],
+        }),
+        borderColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [Colors.separator, Colors.accent],
+        }),
+      }
+      : null;
 
     return (
-        <TouchableOpacity
-          style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }]}
+        <AnimatedTouchableOpacity
+          style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }, highlightStyle]}
           onPress={() => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! })}
           activeOpacity={0.7}
         >
@@ -161,7 +221,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
               <Text style={styles.finishedButtonText}>X</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </AnimatedTouchableOpacity>
     );
   }
 
@@ -213,7 +273,17 @@ export default function FridgeScreen({ navigation, route }: Props) {
           }}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={styles.sectionLabel}>{summaryText}</Text>
+            <View style={styles.listHeader}>
+              <Text style={styles.sectionLabel}>{summaryText}</Text>
+              {uncategorizedItems.length > 0 && (
+                <TouchableOpacity style={styles.categorizeButton} onPress={openCategorizeModal} activeOpacity={0.78}>
+                  <Text style={styles.categorizeButtonText}>Categorizar itens</Text>
+                  <View style={styles.categorizeBadge}>
+                    <Text style={styles.categorizeBadgeText}>{uncategorizedItems.length}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
@@ -236,6 +306,52 @@ export default function FridgeScreen({ navigation, route }: Props) {
           <Text style={styles.buttonText}>+ Adicionar item</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={categorizeVisible} transparent animationType="slide" onRequestClose={() => setCategorizeVisible(false)}>
+        <View style={styles.sheetOverlay}>
+          <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={() => setCategorizeVisible(false)} />
+          <View style={styles.categorizeSheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.sheetTitle}>Categorizar itens</Text>
+            <Text style={styles.sheetSubtitle}>Escolha uma categoria para os itens que chegaram sem categoria.</Text>
+
+            {(categories ?? []).length === 0 ? (
+              <View style={styles.categorizeEmpty}>
+                <Text style={styles.emptyTitle}>Nenhuma categoria criada</Text>
+                <Text style={styles.emptySubtitle}>Crie categorias na area Casa para organizar este estoque.</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.categorizeList} contentContainerStyle={styles.categorizeContent} showsVerticalScrollIndicator={false}>
+                {uncategorizedItems.map((item) => (
+                  <View key={item.id} style={styles.categorizeItem}>
+                    <View style={styles.categorizeItemHeader}>
+                      <Text style={styles.categorizeItemName}>{item.name}</Text>
+                      <Text style={styles.categorizeItemQty}>{item.quantity} {item.unit ?? 'un'}</Text>
+                    </View>
+                    <NativeSelect
+                      value={categoryDraft[item.id] ?? ''}
+                      placeholder="Escolher categoria"
+                      options={(categories ?? []).map((category) => ({ label: category.label, value: category.label }))}
+                      onChange={(category) => setCategoryDraft((current) => ({ ...current, [item.id]: category }))}
+                    />
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              style={[styles.button, updateItem.isPending && styles.buttonDisabled]}
+              onPress={handleSaveCategories}
+              disabled={updateItem.isPending}
+            >
+              {updateItem.isPending
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.buttonText}>Salvar categorias</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -269,7 +385,31 @@ const styles = StyleSheet.create({
   },
   storageAddChipText: { fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
   list: { padding: 16, gap: 2, flexGrow: 1, paddingBottom: 24 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  listHeader: { gap: 10, marginBottom: 10 },
+  sectionLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  categorizeButton: {
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.accent,
+    backgroundColor: Colors.accent + '12',
+    paddingHorizontal: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  categorizeButtonText: { fontSize: 14, fontWeight: '800', color: Colors.accent },
+  categorizeBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 7,
+  },
+  categorizeBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   sectionGroupHeader: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 16, marginBottom: 4 },
   itemRow: {
     backgroundColor: Colors.card, borderRadius: 10, padding: 14,
@@ -319,5 +459,55 @@ const styles = StyleSheet.create({
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
+  sheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(61,32,0,0.42)',
+  },
+  categorizeSheet: {
+    maxHeight: '88%',
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 28,
+    gap: 10,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.separator,
+    alignSelf: 'center',
+    marginBottom: 6,
+  },
+  sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  sheetSubtitle: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  categorizeList: { maxHeight: 440 },
+  categorizeContent: { gap: 10, paddingBottom: 8 },
+  categorizeItem: {
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    padding: 12,
+    gap: 9,
+  },
+  categorizeItemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  categorizeItemName: { flex: 1, fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
+  categorizeItemQty: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  categorizeEmpty: {
+    minHeight: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 18,
+  },
 });

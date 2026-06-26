@@ -15,6 +15,9 @@ import { HomeStackParamList } from '../../navigation/AppTabs';
 import ActivityTimeline from '../../components/ActivityTimeline';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useHouseTasks, useHouseTaskActivity } from '../../hooks/useHouseTasks';
+import { FridgeItem } from '../../types';
+import GlobalSearchModal from '../../components/GlobalSearchModal';
+import { useGlobalSearchModal } from '../../context/GlobalSearchContext';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 type ActivityPeriodFilter = 'all' | 'today' | '7d' | '30d';
@@ -77,6 +80,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { openSearch } = useGlobalSearchModal();
   const { selectedHouseholdId, isSelectedHouseholdReady, setSelectedHouseholdId } = useSelectedHousehold();
   const { data: households } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
@@ -192,8 +196,26 @@ export default function HomeScreen() {
     navigation.getParent()?.navigate('ShoppingFlow' as never);
   }
 
-  function openStock() {
-    navigation.getParent()?.navigate('Menu' as never);
+  function openExpiringItem(item: FridgeItem) {
+    const storage = item.storage ?? (storages ?? []).find((candidate) => candidate.id === item.storageId);
+    if (!effectiveId || !storage) return;
+
+    (navigation.getParent() as any)?.navigate('StorageFlow', {
+      screen: 'Fridge',
+      params: {
+        householdId: effectiveId,
+        storageId: storage.id,
+        storageName: storage.name,
+        storageEmoji: storage.emoji,
+        highlightItemId: item.id,
+      },
+    });
+  }
+
+  function openTask(task: { id: string; category?: string | null }) {
+    (navigation.getParent() as any)?.navigate('TasksFlow', task.category
+      ? { screen: 'TaskCategory', params: { category: task.category, highlightTaskId: task.id } }
+      : { screen: 'TasksEntry', params: { highlightTaskId: task.id } });
   }
 
   function openActivityStock(event: { storageId?: string | null; storageName?: string | null; storageEmoji?: string | null }) {
@@ -409,11 +431,11 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.homeHeaderActions}>
+            <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={openSearch}>
+              <Feather name="search" size={23} color={Colors.textPrimary} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={openHelpModal}>
               <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7}>
-              <Feather name="message-square" size={23} color={Colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconButton}
@@ -442,7 +464,7 @@ export default function HomeScreen() {
               activeOpacity={(households?.length ?? 0) > 1 ? 0.7 : 1}
               onPress={openHouseholdSelector}
             >
-              <Text style={styles.householdName}>🏠 {household.name}</Text>
+              <Text style={styles.householdName}>{household.name}</Text>
               {(households?.length ?? 0) > 1 && (
                 <Feather name="chevron-down" size={16} color={Colors.accent} />
               )}
@@ -457,31 +479,11 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      <View style={styles.quickActions}>
-        <TouchableOpacity
-          style={styles.quickBtn}
-          onPress={() => effectiveId && navigation.navigate('AddFridgeItem', { householdId: effectiveId })}
-          disabled={!effectiveId}
-        >
-          <Text style={styles.quickBtnIcon}>{'\u{1F4E6}'}</Text>
-          <Text style={styles.quickBtnText}>+ Estoque</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.quickBtn}
-          onPress={() => effectiveId && navigation.navigate('HomeCreateShoppingList', { householdId: effectiveId })}
-          disabled={!effectiveId}
-        >
-          <Text style={styles.quickBtnIcon}>{'\u{1F6D2}'}</Text>
-          <Text style={styles.quickBtnText}>+ Lista</Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.card}>
-        <View style={styles.cardHeader}>
+          <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>{'\u{1F6A8}'}</Text>
-            <Text style={styles.cardTitle}>Urgente</Text>
+            <Feather name="alert-octagon" size={17} color={Colors.destructive} />
+            <Text style={styles.cardTitle}>Lista Urgente</Text>
           </View>
           <TouchableOpacity activeOpacity={0.7} onPress={openShopping}>
             <Text style={styles.cardLink}>Ver lista {'->'}</Text>
@@ -499,6 +501,7 @@ export default function HomeScreen() {
                 listId: list.id,
                 listName: list.name,
                 listUrgent: list.urgent,
+                highlightList: true,
               })}
             >
               <View style={styles.itemDot} />
@@ -515,30 +518,27 @@ export default function HomeScreen() {
 
       <View style={styles.card}>
         <View style={styles.cardHeader}><View style={styles.cardTitleRow}><Text style={styles.cardTitle}>Tarefas de hoje</Text></View><TouchableOpacity onPress={() => navigation.getParent()?.navigate('TasksFlow' as never)}><Text style={styles.cardLink}>Ver tarefas {'->'}</Text></TouchableOpacity></View>
-        {priorityTasks.length ? priorityTasks.map((task) => <TouchableOpacity key={task.id} style={styles.itemRow} onPress={() => navigation.getParent()?.navigate('TasksFlow' as never)}><View style={[styles.itemDot, { backgroundColor: task.dueDate && task.dueDate < todayKey ? Colors.destructive : Colors.accent }]} /><View style={{ flex: 1 }}><Text style={styles.itemName}>{task.title}</Text><Text style={styles.itemStorage}>{task.assignedTo?.name ? task.assignedTo.name : task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel'}</Text></View></TouchableOpacity>) : <Text style={styles.emptyCardText}>Nenhuma tarefa importante hoje.</Text>}
+        {priorityTasks.length ? priorityTasks.map((task) => <TouchableOpacity key={task.id} style={styles.itemRow} onPress={() => openTask(task)}><View style={[styles.itemDot, { backgroundColor: task.dueDate && task.dueDate < todayKey ? Colors.destructive : Colors.accent }]} /><View style={{ flex: 1 }}><Text style={styles.itemName}>{task.title}</Text><Text style={styles.itemStorage}>{task.assignedTo?.name ? task.assignedTo.name : task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel'}</Text></View></TouchableOpacity>) : <Text style={styles.emptyCardText}>Nenhuma tarefa importante hoje.</Text>}
       </View>
 
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardTitleRow}>
-            <Text style={styles.cardTitleIcon}>{'\u26A0'}</Text>
+            <Feather name="alert-triangle" size={17} color="#F0A500" />
             <Text style={styles.cardTitle}>Vencendo</Text>
           </View>
-          <TouchableOpacity activeOpacity={0.7} onPress={openStock}>
-            <Text style={styles.cardLink}>Ver estoque {'->'}</Text>
-          </TouchableOpacity>
         </View>
 
         {expiringItems.length > 0 ? (
           expiringItems.slice(0, 3).map((item) => (
-            <View key={item.id} style={styles.itemRow}>
+            <TouchableOpacity key={item.id} style={styles.itemRow} activeOpacity={0.72} onPress={() => openExpiringItem(item)}>
               <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName}>{item.name}</Text>
                 <Text style={styles.itemStorage}>{item.storage?.name ?? 'Estoque'}</Text>
               </View>
               <Text style={styles.itemQty}>{item.expirationDate ? formatShortDate(item.expirationDate) : ''}</Text>
-            </View>
+            </TouchableOpacity>
           ))
         ) : (
           <Text style={styles.emptyCardText}>Nenhum item proximo do vencimento.</Text>
@@ -810,6 +810,8 @@ export default function HomeScreen() {
       </View>
     </Modal>
 
+    <GlobalSearchModal navigation={navigation.getParent?.() ?? navigation} />
+
     </View>
   );
 }
@@ -970,18 +972,6 @@ const styles = StyleSheet.create({
   householdMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 8 },
   householdWrapper: { alignSelf: 'flex-start' },
 
-  quickActions: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  quickBtn: {
-    flex: 1,
-    backgroundColor: Colors.accent,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    gap: 4,
-  },
-  quickBtnIcon: { fontSize: 22 },
-  quickBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
-
   card: {
     backgroundColor: Colors.card,
     borderRadius: 14,
@@ -998,7 +988,6 @@ const styles = StyleSheet.create({
     minHeight: 24,
   },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 24 },
-  cardTitleIcon: { fontSize: 16, lineHeight: 20 },
   cardTitle: { fontSize: 16, lineHeight: 20, fontWeight: '700', color: Colors.textPrimary },
   cardLink: { fontSize: 13, color: Colors.accent, fontWeight: '500' },
   emptyCardText: { fontSize: 14, color: Colors.textSecondary, paddingTop: 10 },

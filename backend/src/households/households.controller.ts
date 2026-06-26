@@ -255,6 +255,16 @@ export class HouseholdsController {
     return this.householdsService.getHouseholdAttention(id, req.user.id);
   }
 
+  @Get(':id/search')
+  @ApiOperation({ summary: 'Busca global da casa' })
+  searchHousehold(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('q') query: string | undefined,
+    @Request() req,
+  ) {
+    return this.householdsService.searchHousehold(id, req.user.id, query ?? '');
+  }
+
   // House Tasks
 
   @Get(':id/task-categories')
