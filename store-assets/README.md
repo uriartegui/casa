@@ -1,56 +1,86 @@
-# Assets das lojas — Colmeia
+# Assets das lojas - Colmeia
 
-Gerador: `powershell -ExecutionPolicy Bypass -File store-assets\generate.ps1`
-Textos, legendas e cores ficam em [config.json](config.json) — edite e rode de novo.
+Esta pasta guarda materiais usados no Google Play e na App Store: screenshots,
+feature graphics, icones e textos de listagem.
 
-## Como gerar os screenshots de marketing
+## Gerar assets
 
-Dois caminhos (podem ser combinados; `ai-final\` tem prioridade):
+Execute na raiz do projeto:
 
-**A) Arte pronta do ChatGPT** — gere a imagem de marketing completa no ChatGPT (fundo + moldura de celular + título) e salve em `store-assets\ai-final\` como `01-home.png` … `06-household.png` (+ `feature-graphic.png`). As mesmas artes servem para App Store e Google Play.
+```powershell
+powershell -ExecutionPolicy Bypass -File store-assets\generate.ps1
+```
 
-**B) Captura crua + moldura automática** — salve a captura de tela pura do app em `store-assets\raw\` com os mesmos nomes; o gerador monta fundo, moldura e legenda (textos em `config.json`).
+Textos, legendas e cores ficam em:
 
-Telas: `01-home` (inicial), `02-fridge` (geladeira com itens), `03-expiry` (item com validade), `04-shopping` (lista de compras), `05-send-to-fridge` (mandar pra geladeira), `06-household` (casa/membros).
+```txt
+store-assets/config.json
+```
 
-Rode o gerador. Saída:
-   - `play\screenshots\` — 1080×1920 (Google Play)
-   - `appstore\iphone-6.9\` — 1320×2868 (App Store)
+## Fontes e saidas
 
-## Checklist Google Play (Play Console)
+```txt
+ai-final/              Artes finais feitas manualmente ou por IA
+play/                  Saidas para Google Play
+appstore/              Saidas para App Store
+config.json            Configuracao do gerador
+store-listing.md       Textos de loja
+generate.ps1           Gerador dos assets
+```
 
-| Item | Status |
-|---|---|
-| Ícone 512×512 | ✅ `play\icon-512.png` |
-| Feature graphic 1024×500 | ✅ `play\feature-graphic-1024x500.png` |
-| Screenshots celular (mín. 2, máx. 8) | ✅ `play\screenshots\` |
-| Título / descrições | ✅ ver [store-listing.md](store-listing.md) |
-| URL da política de privacidade | ✅ https://uriartegui.github.io/casa/privacy-policy.html |
-| Formulário Data Safety (dados coletados) | declarar: e-mail, nome, conteúdo do usuário, identificadores (push token) |
-| Classificação de conteúdo (questionário) | preencher |
-| Categoria | Casa e decoração ou Produtividade |
-| E-mail de contato | preencher |
-| Conta de teste para revisão | criar usuário demo (app exige login) |
+Regra atual:
 
-## Checklist App Store (App Store Connect)
+- `ai-final/` tem prioridade quando existir.
+- `play/` e `appstore/` sao saidas finais usadas nas lojas.
+- Se a politica mudar no futuro, podemos ignorar saidas geradas e manter apenas
+  fontes editaveis.
 
-| Item | Status |
-|---|---|
-| Ícone 1024×1024 | ✅ vai no build (`mobile/assets/icon.png`) |
-| Screenshots iPhone 6.9" (1320×2868, mín. 1, máx. 10) | ✅ `appstore\iphone-6.9\` |
-| Screenshots iPad | ✅ não exigidos (`supportsTablet: false`) |
-| Nome / subtítulo / descrição / keywords | ✅ ver [store-listing.md](store-listing.md) |
-| URL da política de privacidade | ✅ https://uriartegui.github.io/casa/privacy-policy.html |
-| URL de suporte | obrigatória |
-| App Privacy (nutrition labels) | declarar mesmos dados do Data Safety |
-| Classificação etária | questionário (provavelmente 4+) |
-| Conta demo para revisão da Apple | obrigatória (app exige login) |
-| Preço/disponibilidade | definir |
+## Telas esperadas
 
-## Observações
+```txt
+01-home
+02-fridge
+03-expiry
+04-shopping
+05-send-to-fridge
+06-household
+```
 
-- **Política de privacidade**: as duas lojas exigem URL pública. Uma página estática (GitHub Pages, Vercel) com o mesmo texto que já está no app resolve.
-- As capturas cruas podem vir de qualquer iPhone/Android — o gerador redimensiona para os tamanhos exatos exigidos.
-- **iPad desligado** (`supportsTablet: false` no app.json) — não precisa de screenshots de iPad, mas exige novo build iOS antes de submeter.
-- Nas artes do ChatGPT, confira sempre: a UI da captura não foi redesenhada e a ortografia dos títulos está exata.
-- Para mudar legenda/título de qualquer screenshot, edite `captions` em `config.json` e rode de novo.
+## Google Play
+
+Checklist:
+
+- icone 512 x 512: `play/icon-512.png`;
+- feature graphic 1024 x 500: `play/feature-graphic-1024x500.png`;
+- screenshots: `play/screenshots/`;
+- textos: `store-listing.md`;
+- URL de privacidade publica;
+- formulario Data Safety;
+- classificacao de conteudo;
+- categoria;
+- e-mail de contato;
+- conta demo para revisao.
+
+## App Store
+
+Checklist:
+
+- icone no build: `mobile/assets/icon.png`;
+- screenshots iPhone: `appstore/iphone-6.9/`;
+- nome, subtitulo, descricao e keywords em `store-listing.md`;
+- URL de privacidade publica;
+- URL de suporte;
+- App Privacy;
+- classificacao etaria;
+- conta demo para revisao;
+- preco e disponibilidade.
+
+## Observacoes
+
+- O app esta com `supportsTablet: false`, entao screenshots de iPad nao sao
+  obrigatorios.
+- As capturas podem vir de Android ou iPhone; o gerador ajusta os tamanhos.
+- Ao gerar artes com IA, conferir se a interface, os textos e a ortografia
+  continuam fieis ao app real.
+- Para mudar legenda ou titulo de screenshot, edite `captions` em
+  `config.json` e rode o gerador de novo.

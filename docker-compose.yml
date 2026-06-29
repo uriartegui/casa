@@ -1,13 +1,14 @@
-version: "3.8"
+# Compose local para subir apenas um Postgres de desenvolvimento.
+# Producao usa deploy/docker-compose.yml.
 
 services:
   postgres:
     image: postgres:16
     container_name: casa_db
     environment:
-      POSTGRES_USER: casa
-      POSTGRES_PASSWORD: casa123
-      POSTGRES_DB: casa
+      POSTGRES_USER: ${POSTGRES_USER:-casa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-casa_local_dev_only}
+      POSTGRES_DB: ${POSTGRES_DB:-casa}
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5433:5432"

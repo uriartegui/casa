@@ -30,6 +30,11 @@ services:
       DATABASE_NAME: ${POSTGRES_DB:-casa}
       JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no deploy/.env}
       BETTER_STACK_SOURCE_TOKEN: ${BETTER_STACK_SOURCE_TOKEN:-}
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
+      SWAGGER_USER: ${SWAGGER_USER:-}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD:-}
+      ENABLE_TEST_ALERTS: ${ENABLE_TEST_ALERTS:-false}
+      TEST_ALERT_TOKEN: ${TEST_ALERT_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
