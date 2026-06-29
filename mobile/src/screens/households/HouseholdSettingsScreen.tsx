@@ -20,8 +20,9 @@ export default function HouseholdSettingsScreen({ navigation, route }: Props) {
   const { setSelectedHouseholdId } = useSelectedHousehold();
   const deleteHousehold = useDeleteHousehold();
   const leaveHousehold = useLeaveHousehold();
-  const household = households?.find((item) => item.id === householdId)!;
+  const household = households?.find((item) => item.id === householdId);
   const isAdmin = household?.members?.some((member) => member.userId === user?.id && member.role === 'admin') ?? false;
+  const householdName = household?.name ?? '';
 
   if (isLoading) return <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>;
   if (!household) return <View style={styles.center}><Text style={styles.message}>Casa não encontrada.</Text></View>;
@@ -46,7 +47,7 @@ export default function HouseholdSettingsScreen({ navigation, route }: Props) {
   }
 
   function handleDelete() {
-    Alert.alert(`Excluir "${household.name}"?`, 'Todos os dados desta casa serão apagados definitivamente.', [
+    Alert.alert(`Excluir "${householdName}"?`, 'Todos os dados desta casa serão apagados definitivamente.', [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Excluir casa',
@@ -68,7 +69,7 @@ export default function HouseholdSettingsScreen({ navigation, route }: Props) {
     <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.sectionLabel}>ZONA DE PERIGO</Text>
-        <Text style={styles.description}>Estas ações afetam seu acesso ou todos os dados de {household.name}.</Text>
+        <Text style={styles.description}>Estas ações afetam seu acesso ou todos os dados de {householdName}.</Text>
         <TouchableOpacity style={styles.dangerButton} onPress={handleLeave} disabled={leaveHousehold.isPending}>
           {leaveHousehold.isPending ? <ActivityIndicator color={Colors.destructive} /> : <Text style={styles.dangerText}>Sair da casa</Text>}
         </TouchableOpacity>

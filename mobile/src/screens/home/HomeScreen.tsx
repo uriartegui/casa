@@ -1,32 +1,41 @@
 import React, { useState } from 'react';
-import { ActionSheetIOS, Alert, Animated, Dimensions, Modal, PanResponder, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActionSheetIOS, Alert, Animated, Dimensions, PanResponder, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useFridge, useFridgeActivity } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
-import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { useShoppingActivity, useShoppingLists } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
-import ActivityTimeline from '../../components/ActivityTimeline';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useHouseTasks, useHouseTaskActivity } from '../../hooks/useHouseTasks';
 import { FridgeItem } from '../../types';
 import GlobalSearchModal from '../../components/GlobalSearchModal';
+import AlertsSheet from '../../components/AlertsSheet';
 import { useGlobalSearchModal } from '../../context/GlobalSearchContext';
+import HomeHeader from './components/HomeHeader';
+import { ExpiringItemsCard, QuickActionsCard, TodayIntro, TodayTasksCard, UrgentListsCard } from './components/HomeCards';
+import { AttentionSummaryModal, HelpSheet } from './components/HomeSheets';
+import {
+  buildShoppingActivityAlerts,
+  buildShoppingAttention,
+  buildStockActivityAlerts,
+  buildStockAttention,
+  buildTaskActivityAlerts,
+  buildTaskAttention,
+  countAlerts,
+} from '../../utils/alertCenter';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
-type ActivityPeriodFilter = 'all' | 'today' | '7d' | '30d';
-type ActivityKindFilter = 'all' | 'added' | 'removed' | 'updated' | 'from_list' | 'to_list';
 
 const HELP_SECTIONS = [
   {
     title: 'Home',
-    body: 'Escolha a casa ativa, veja os totais do estoque e das listas, crie itens rapidamente e acompanhe alertas urgentes ou produtos vencendo.',
+    body: 'Veja o que precisa de atenção hoje, crie itens ou listas rapidamente e acompanhe as últimas movimentações da casa.',
   },
   {
     title: 'Estoques',
@@ -90,16 +99,13 @@ export default function HomeScreen() {
   const { data: fridgeActivity } = useFridgeActivity(effectiveId);
   const { data: storages } = useStorages(effectiveId, { includeHidden: true });
   const { data: shoppingLists } = useShoppingLists(effectiveId);
+  const { data: shoppingActivity = [] } = useShoppingActivity(effectiveId);
   const { data: houseTasks = [] } = useHouseTasks(effectiveId);
   const { data: taskActivity = [] } = useHouseTaskActivity(effectiveId);
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [activityModalVisible, setActivityModalVisible] = useState(false);
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
-  const [activityNewSince, setActivityNewSince] = useState<string | null>(null);
-  const [activityPeriod, setActivityPeriod] = useState<ActivityPeriodFilter>('all');
-  const [activityStorageId, setActivityStorageId] = useState<string>('all');
-  const [activityKind, setActivityKind] = useState<ActivityKindFilter>('all');
+  const [attentionModalVisible, setAttentionModalVisible] = useState(false);
   const screenHeight = Dimensions.get('window').height;
   const activityCollapsedHeight = Math.round(screenHeight * 0.74);
   const activityExpandedHeight = Math.round(screenHeight - 64);
@@ -127,66 +133,64 @@ export default function HomeScreen() {
     return () => helpSheetHeight.removeListener(listener);
   }, [helpSheetHeight]);
 
-  const firstName = user?.name?.split(' ')[0] ?? 'voce';
-  const today = new Date();
+  const firstName = user?.name?.split(' ')[0] ?? 'você';
+  const today = React.useMemo(() => new Date(), []);
   const todayLabel = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-  const urgentLists = (shoppingLists ?? []).filter((list) => list.urgent);
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const priorityTasks = houseTasks.filter((task) => !task.done && (task.dueDate === todayKey || (task.dueDate && task.dueDate < todayKey) || task.assignedToId === user?.id)).slice(0, 3);
-  const expiringItems = (fridgeItems ?? [])
-    .filter((item) => {
-      if (!item.expirationDate) return false;
-      const expiration = new Date(`${item.expirationDate}T00:00:00`);
-      const todayAtStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const diffDays = Math.ceil((expiration.getTime() - todayAtStart.getTime()) / 86400000);
-      return diffDays <= 7;
-    })
-    .sort((a, b) => {
-      const aTime = a.expirationDate ? new Date(`${a.expirationDate}T00:00:00`).getTime() : Infinity;
-      const bTime = b.expirationDate ? new Date(`${b.expirationDate}T00:00:00`).getTime() : Infinity;
-      return aTime - bTime;
-    });
-  const filteredFridgeActivity = React.useMemo(() => {
-    const now = new Date();
-    const todayAtStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const cutoff = activityPeriod === 'today'
-      ? todayAtStart
-      : activityPeriod === '7d'
-        ? Date.now() - 7 * 86400000
-        : activityPeriod === '30d'
-          ? Date.now() - 30 * 86400000
-          : null;
-
-    return (fridgeActivity ?? []).filter((event) => {
-      if (cutoff && new Date(event.createdAt).getTime() < cutoff) return false;
-
-      if (activityStorageId !== 'all') {
-        const storage = (storages ?? []).find((item) => item.id === activityStorageId);
-        const matchesById = event.storageId === activityStorageId;
-        const matchesLegacyName = storage?.name && event.storageName === storage.name;
-        if (!matchesById && !matchesLegacyName) return false;
-      }
-
-      if (activityKind === 'added') return event.action === 'added' && !event.fromShoppingListName;
-      if (activityKind === 'from_list') return event.action === 'added' && !!event.fromShoppingListName;
-      if (activityKind === 'removed') return event.action === 'removed' && !event.toShoppingListName;
-      if (activityKind === 'to_list') return event.action === 'removed' && !!event.toShoppingListName;
-      if (activityKind === 'updated') return event.action === 'updated';
-      return true;
-    });
-  }, [activityKind, activityPeriod, activityStorageId, fridgeActivity, storages]);
-  const activeActivityFilterCount = [
-    activityPeriod !== 'all',
-    activityStorageId !== 'all',
-    activityKind !== 'all',
-  ].filter(Boolean).length;
+  const urgentLists = React.useMemo(() => (shoppingLists ?? []).filter((list) => list.urgent), [shoppingLists]);
+  const todayKey = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const priorityTasks = React.useMemo(() => (
+    houseTasks
+      .filter((task) => !task.done && (task.dueDate === todayKey || (task.dueDate && task.dueDate < todayKey) || task.assignedToId === user?.id))
+      .slice(0, 3)
+  ), [houseTasks, todayKey, user?.id]);
+  const expiringItems = React.useMemo(() => {
+    const todayAtStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return (fridgeItems ?? [])
+      .filter((item) => {
+        if (!item.expirationDate) return false;
+        const expiration = new Date(`${item.expirationDate}T00:00:00`);
+        const diffDays = Math.ceil((expiration.getTime() - todayAtStart.getTime()) / 86400000);
+        return diffDays <= 7;
+      })
+      .sort((a, b) => {
+        const aTime = a.expirationDate ? new Date(`${a.expirationDate}T00:00:00`).getTime() : Infinity;
+        const bTime = b.expirationDate ? new Date(`${b.expirationDate}T00:00:00`).getTime() : Infinity;
+        return aTime - bTime;
+      });
+  }, [fridgeItems, today]);
+  const todayAttentionCount = expiringItems.length + priorityTasks.length + urgentLists.length;
   const {
     lastSeenAt: stockActivitySeenAt,
     markSeen: markStockActivitySeen,
-    unseenCount: stockActivityUnreadCount,
   } = useActivitySeen('stock', effectiveId, fridgeActivity ?? [], user?.id);
-  const { unseenCount: taskActivityUnreadCount, markSeen: markTaskActivitySeen, lastSeenAt: taskActivitySeenAt } = useActivitySeen('tasks', effectiveId, taskActivity, user?.id);
-  const activityUnreadCount = stockActivityUnreadCount + taskActivityUnreadCount;
+  const { markSeen: markTaskActivitySeen, lastSeenAt: taskActivitySeenAt } = useActivitySeen('tasks', effectiveId, taskActivity, user?.id);
+  const { markSeen: markShoppingActivitySeen, lastSeenAt: shoppingActivitySeenAt } = useActivitySeen('shopping', effectiveId, shoppingActivity, user?.id);
+  const alertSections = React.useMemo(() => {
+    const attentionItems = [
+      ...buildStockAttention(fridgeItems ?? [], { onOpenItem: openExpiringItem }),
+      ...buildTaskAttention(houseTasks, { userId: user?.id, onOpenTask: openTask }),
+      ...buildShoppingAttention(shoppingLists ?? [], {
+        onOpenList: (list) => navigation.navigate('HomeShoppingListDetail', {
+          householdId: list.householdId,
+          listId: list.id,
+          listName: list.name,
+          listUrgent: list.urgent,
+          highlightList: true,
+        }),
+      }),
+    ].slice(0, 16);
+    const activityItems = [
+      ...buildStockActivityAlerts(fridgeActivity ?? [], { localUserId: user?.id, since: stockActivitySeenAt, onOpenEvent: openActivityStock }),
+      ...buildShoppingActivityAlerts(shoppingActivity, { localUserId: user?.id, since: shoppingActivitySeenAt }),
+      ...buildTaskActivityAlerts(taskActivity, { localUserId: user?.id, since: taskActivitySeenAt }),
+    ].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()).slice(0, 12);
+
+    return [
+      { title: 'Precisa de atenção', items: attentionItems, emptyText: 'Nenhuma urgência na casa agora.' },
+      { title: 'Atividades novas', items: activityItems, emptyText: 'Nenhuma atividade nova desde a última vez.' },
+    ];
+  }, [fridgeActivity, fridgeItems, houseTasks, navigation, shoppingActivity, shoppingActivitySeenAt, shoppingLists, stockActivitySeenAt, taskActivity, taskActivitySeenAt, user?.id]);
+  const activityUnreadCount = countAlerts(alertSections);
 
   function openMenu() {
     navigation.getParent()?.navigate('Menu' as never);
@@ -194,6 +198,16 @@ export default function HomeScreen() {
 
   function openShopping() {
     navigation.getParent()?.navigate('ShoppingFlow' as never);
+  }
+
+  function openAddStockItem() {
+    if (!effectiveId) return;
+    navigation.navigate('AddFridgeItem', { householdId: effectiveId });
+  }
+
+  function openCreateShoppingList() {
+    if (!effectiveId) return;
+    navigation.navigate('HomeCreateShoppingList', { householdId: effectiveId });
   }
 
   function openExpiringItem(item: FridgeItem) {
@@ -268,12 +282,6 @@ export default function HomeScreen() {
     })), { cancelable: true });
   }
 
-  function resetActivityFilters() {
-    setActivityPeriod('all');
-    setActivityStorageId('all');
-    setActivityKind('all');
-  }
-
   function animateActivitySheet(toValue: number, onEnd?: () => void) {
     Animated.spring(activitySheetHeight, {
       toValue,
@@ -321,13 +329,13 @@ export default function HomeScreen() {
   }
 
   function openActivityModal() {
-    setActivityNewSince([stockActivitySeenAt, taskActivitySeenAt].filter(Boolean).sort()[0] ?? null);
     activitySheetHeight.setValue(activityCollapsedHeight);
     activitySheetTranslateY.setValue(activityCollapsedHeight);
     activityHeightRef.current = activityCollapsedHeight;
     setActivityModalVisible(true);
     markStockActivitySeen();
     markTaskActivitySeen();
+    markShoppingActivitySeen();
     requestAnimationFrame(() => {
       Animated.spring(activitySheetTranslateY, {
         toValue: 0,
@@ -416,399 +424,94 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.header, { paddingTop: insets.top + 6 }]}>
-        <View style={styles.homeHeaderBar}>
-          <View style={styles.homeHeaderIdentity}>
-            <View style={styles.avatarCircle}>
-              <Feather name="user" size={25} color="#fff" />
-            </View>
-            <View style={styles.homeHeaderTextBlock}>
-              <Text style={styles.homeHeaderDate}>{todayLabel}</Text>
-              <Text style={styles.headerGreeting}>
-                Ola, <Text style={styles.headerGreetingName}>{firstName}</Text>
-              </Text>
-            </View>
-          </View>
+      <HomeHeader
+        topInset={insets.top}
+        todayLabel={todayLabel}
+        firstName={firstName}
+        activityUnreadCount={activityUnreadCount}
+        onSearch={openSearch}
+        onHelp={openHelpModal}
+        onActivity={() => effectiveId && openActivityModal()}
+        onMenu={openMenu}
+      />
 
-          <View style={styles.homeHeaderActions}>
-            <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={openSearch}>
-              <Feather name="search" size={23} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={openHelpModal}>
-              <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.headerIconButton}
-              activeOpacity={0.7}
-              onPress={() => effectiveId && openActivityModal()}
-            >
-              <Feather name="bell" size={23} color={Colors.textPrimary} />
-              {activityUnreadCount > 0 && (
-                <View style={styles.headerBadge}>
-                  <Text style={styles.headerBadgeText}>{activityUnreadCount > 99 ? '99+' : activityUnreadCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIconButton} onPress={openMenu} activeOpacity={0.7}>
-              <Feather name="menu" size={30} color={Colors.textPrimary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+      <TodayIntro
+        householdName={household?.name}
+        householdCount={households?.length ?? 0}
+        attentionCount={todayAttentionCount}
+        onSelectHousehold={openHouseholdSelector}
+        onOpenAttention={() => setAttentionModalVisible(true)}
+      />
 
-      <View style={styles.hero}>
-        {household && (
-          <View style={styles.householdWrapper}>
-            <TouchableOpacity
-              style={styles.householdRow}
-              activeOpacity={(households?.length ?? 0) > 1 ? 0.7 : 1}
-              onPress={openHouseholdSelector}
-            >
-              <Text style={styles.householdName}>{household.name}</Text>
-              {(households?.length ?? 0) > 1 && (
-                <Feather name="chevron-down" size={16} color={Colors.accent} />
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
+      <QuickActionsCard
+        disabled={!effectiveId}
+        onAddStockItem={openAddStockItem}
+        onCreateShoppingList={openCreateShoppingList}
+      />
 
-        <Text style={styles.householdMeta}>
-          {fridgeItems?.length ?? 0} itens no estoque
-          {'  ·  '}
-          {shoppingLists?.length ?? 0} {shoppingLists?.length === 1 ? 'lista pendente' : 'listas pendentes'}
-        </Text>
-      </View>
+      <ExpiringItemsCard
+        items={expiringItems}
+        formatDate={formatShortDate}
+        onOpenItem={openExpiringItem}
+      />
 
-      <View style={styles.card}>
-          <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <Feather name="alert-octagon" size={17} color={Colors.destructive} />
-            <Text style={styles.cardTitle}>Lista Urgente</Text>
-          </View>
-          <TouchableOpacity activeOpacity={0.7} onPress={openShopping}>
-            <Text style={styles.cardLink}>Ver lista {'->'}</Text>
-          </TouchableOpacity>
-        </View>
+      <TodayTasksCard
+        tasks={priorityTasks}
+        todayKey={todayKey}
+        onOpenTasks={() => navigation.getParent()?.navigate('TasksFlow' as never)}
+        onOpenTask={openTask}
+      />
 
-        {urgentLists.length > 0 ? (
-          urgentLists.slice(0, 3).map((list) => (
-            <TouchableOpacity
-              key={list.id}
-              style={styles.itemRow}
-              activeOpacity={0.75}
-              onPress={() => navigation.navigate('HomeShoppingListDetail', {
-                householdId: list.householdId,
-                listId: list.id,
-                listName: list.name,
-                listUrgent: list.urgent,
-                highlightList: true,
-              })}
-            >
-              <View style={styles.itemDot} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{list.name}</Text>
-                <Text style={styles.itemStorage}>{list.itemCount} {list.itemCount === 1 ? 'item' : 'itens'}</Text>
-              </View>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.emptyCardText}>Nenhuma lista urgente.</Text>
-        )}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}><View style={styles.cardTitleRow}><Text style={styles.cardTitle}>Tarefas de hoje</Text></View><TouchableOpacity onPress={() => navigation.getParent()?.navigate('TasksFlow' as never)}><Text style={styles.cardLink}>Ver tarefas {'->'}</Text></TouchableOpacity></View>
-        {priorityTasks.length ? priorityTasks.map((task) => <TouchableOpacity key={task.id} style={styles.itemRow} onPress={() => openTask(task)}><View style={[styles.itemDot, { backgroundColor: task.dueDate && task.dueDate < todayKey ? Colors.destructive : Colors.accent }]} /><View style={{ flex: 1 }}><Text style={styles.itemName}>{task.title}</Text><Text style={styles.itemStorage}>{task.assignedTo?.name ? task.assignedTo.name : task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel'}</Text></View></TouchableOpacity>) : <Text style={styles.emptyCardText}>Nenhuma tarefa importante hoje.</Text>}
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardTitleRow}>
-            <Feather name="alert-triangle" size={17} color="#F0A500" />
-            <Text style={styles.cardTitle}>Vencendo</Text>
-          </View>
-        </View>
-
-        {expiringItems.length > 0 ? (
-          expiringItems.slice(0, 3).map((item) => (
-            <TouchableOpacity key={item.id} style={styles.itemRow} activeOpacity={0.72} onPress={() => openExpiringItem(item)}>
-              <View style={[styles.itemDot, { backgroundColor: '#F0A500' }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <Text style={styles.itemStorage}>{item.storage?.name ?? 'Estoque'}</Text>
-              </View>
-              <Text style={styles.itemQty}>{item.expirationDate ? formatShortDate(item.expirationDate) : ''}</Text>
-            </TouchableOpacity>
-          ))
-        ) : (
-          <Text style={styles.emptyCardText}>Nenhum item proximo do vencimento.</Text>
-        )}
-      </View>
-
+      <UrgentListsCard
+        lists={urgentLists}
+        onOpenShopping={openShopping}
+        onOpenList={(list) => navigation.navigate('HomeShoppingListDetail', {
+          householdId: list.householdId,
+          listId: list.id,
+          listName: list.name,
+          listUrgent: list.urgent,
+          highlightList: true,
+        })}
+      />
 
     </ScrollView>
 
-    <Modal
+    <HelpSheet
       visible={helpVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={closeHelpModal}
-    >
-      <View style={styles.activityOverlay}>
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={closeHelpModal}
-        />
-        <Animated.View style={[styles.activitySheetMotion, { transform: [{ translateY: helpSheetTranslateY }] }]}>
-          <Animated.View style={[styles.activitySheet, { height: helpSheetHeight }]}>
-        <View style={styles.sheetDragArea} {...helpSheetPanResponder.panHandlers}>
-          <View style={styles.sheetHandle} />
-          <View style={styles.sheetDragHint} />
-        </View>
-        <View style={styles.helpHeader}>
-          <View>
-            <Text style={styles.helpTitle}>Ajuda</Text>
-            <Text style={styles.helpSubtitle}>Guia rápido da Colmeia</Text>
-          </View>
-        </View>
+      height={helpSheetHeight}
+      translateY={helpSheetTranslateY}
+      panHandlers={helpSheetPanResponder.panHandlers}
+      sections={HELP_SECTIONS}
+      onClose={closeHelpModal}
+    />
 
-        <ScrollView
-          style={styles.helpScroll}
-          contentContainerStyle={styles.helpContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.helpIntroCard}>
-            <Text style={styles.helpIntroTitle}>Como a casa fica organizada</Text>
-            <Text style={styles.helpIntroText}>
-              A Colmeia junta estoque, lista de compras, tarefas e atividades da casa para todo mundo saber o que tem, o que acabou e quem mexeu.
-            </Text>
-          </View>
-
-          {HELP_SECTIONS.map((section, index) => (
-            <View key={section.title} style={styles.helpSection}>
-              <View style={styles.helpSectionNumber}>
-                <Text style={styles.helpSectionNumberText}>{index + 1}</Text>
-              </View>
-              <View style={styles.helpSectionBody}>
-                <Text style={styles.helpSectionTitle}>{section.title}</Text>
-                <Text style={styles.helpSectionText}>{section.body}</Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-          </Animated.View>
-        </Animated.View>
-      </View>
-    </Modal>
-
-    <Modal
+    <AlertsSheet
       visible={activityModalVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={closeActivityModal}
-    >
-      <View style={styles.activityOverlay}>
-        <TouchableOpacity
-          style={styles.sheetBackdrop}
-          activeOpacity={1}
-          onPress={closeActivityModal}
-        />
-        <Animated.View style={[styles.activitySheetMotion, { transform: [{ translateY: activitySheetTranslateY }] }]}>
-          <Animated.View style={[styles.activitySheet, { height: activitySheetHeight }]}>
-          <View style={styles.sheetDragArea} {...activitySheetPanResponder.panHandlers}>
-            <View style={styles.sheetHandle} />
-            <View style={styles.sheetDragHint} />
-          </View>
-          <View style={styles.activitySheetHeader}>
-            <Text style={styles.activitySheetTitle}>Atividades da casa</Text>
-            <View style={styles.activityHeaderActions}>
-              <TouchableOpacity
-                style={[styles.filterButton, activeActivityFilterCount > 0 && styles.filterButtonActive]}
-                onPress={() => setFilterModalVisible(true)}
-                activeOpacity={0.75}
-              >
-                <Feather name="filter" size={14} color={activeActivityFilterCount > 0 ? '#fff' : Colors.accent} />
-                <Text style={[styles.filterButtonText, activeActivityFilterCount > 0 && styles.filterButtonTextActive]}>
-                  Filtros{activeActivityFilterCount > 0 ? ` (${activeActivityFilterCount})` : ''}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          {false && (
-            <View style={styles.filtersPanel}>
-              <View style={styles.filterSectionHeader}>
-                <Text style={styles.filterSectionTitle}>Filtrar por</Text>
-                {activeActivityFilterCount > 0 && (
-                  <TouchableOpacity onPress={resetActivityFilters} activeOpacity={0.75}>
-                    <Text style={styles.clearFiltersText}>Limpar</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+      height={activitySheetHeight}
+      translateY={activitySheetTranslateY}
+      panHandlers={activitySheetPanResponder.panHandlers}
+      subtitle={household?.name ? `Casa inteira · ${household.name}` : 'Casa inteira'}
+      sections={alertSections}
+      onClose={closeActivityModal}
+    />
 
-              <Text style={styles.filterLabel}>Data</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-                {[
-                  ['all', 'Tudo'],
-                  ['today', 'Hoje'],
-                  ['7d', '7 dias'],
-                  ['30d', '30 dias'],
-                ].map(([value, label]) => (
-                  <TouchableOpacity
-                    key={value}
-                    style={[styles.filterChip, activityPeriod === value && styles.filterChipActive]}
-                    onPress={() => setActivityPeriod(value as ActivityPeriodFilter)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.filterChipText, activityPeriod === value && styles.filterChipTextActive]}>{label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.filterLabel}>Estoque</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-                <TouchableOpacity
-                  style={[styles.filterChip, activityStorageId === 'all' && styles.filterChipActive]}
-                  onPress={() => setActivityStorageId('all')}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.filterChipText, activityStorageId === 'all' && styles.filterChipTextActive]}>Todos</Text>
-                </TouchableOpacity>
-                {(storages ?? []).map((storage) => (
-                  <TouchableOpacity
-                    key={storage.id}
-                    style={[styles.filterChip, activityStorageId === storage.id && styles.filterChipActive]}
-                    onPress={() => setActivityStorageId(storage.id)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.filterChipText, activityStorageId === storage.id && styles.filterChipTextActive]}>{storage.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.filterLabel}>Ação</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-                {[
-                  ['all', 'Tudo'],
-                  ['added', 'Entrada'],
-                  ['removed', 'Saída'],
-                  ['updated', 'Edição'],
-                  ['from_list', 'Veio da lista'],
-                  ['to_list', 'Foi para lista'],
-                ].map(([value, label]) => (
-                  <TouchableOpacity
-                    key={value}
-                    style={[styles.filterChip, activityKind === value && styles.filterChipActive]}
-                    onPress={() => setActivityKind(value as ActivityKindFilter)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.filterChipText, activityKind === value && styles.filterChipTextActive]}>{label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-          <ActivityTimeline
-            fridgeEvents={filteredFridgeActivity}
-            taskEvents={taskActivity}
-            scope="stock"
-            showFilters={false}
-            showScopeFilter={false}
-            emptyText="Nenhuma atividade nos estoques."
-            onEventPress={openActivityStock}
-            newSince={activityNewSince}
-            localUserId={user?.id}
-          />
-          </Animated.View>
-        </Animated.View>
-      </View>
-    </Modal>
-
-    <Modal
-      visible={filterModalVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={() => setFilterModalVisible(false)}
-    >
-      <View style={styles.filterModalOverlay}>
-        <TouchableOpacity style={styles.filterModalBackdrop} activeOpacity={1} onPress={() => setFilterModalVisible(false)} />
-        <View style={styles.filterModalCard}>
-          <View style={styles.filterSectionHeader}>
-            <Text style={styles.filterModalTitle}>Filtros</Text>
-            {activeActivityFilterCount > 0 && (
-              <TouchableOpacity onPress={resetActivityFilters} activeOpacity={0.75}>
-                <Text style={styles.clearFiltersText}>Limpar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <Text style={styles.filterLabel}>Data</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            {[
-              ['all', 'Tudo'],
-              ['today', 'Hoje'],
-              ['7d', '7 dias'],
-              ['30d', '30 dias'],
-            ].map(([value, label]) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.filterChip, activityPeriod === value && styles.filterChipActive]}
-                onPress={() => setActivityPeriod(value as ActivityPeriodFilter)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, activityPeriod === value && styles.filterChipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Estoque</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, activityStorageId === 'all' && styles.filterChipActive]}
-              onPress={() => setActivityStorageId('all')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.filterChipText, activityStorageId === 'all' && styles.filterChipTextActive]}>Todos</Text>
-            </TouchableOpacity>
-            {(storages ?? []).map((storage) => (
-              <TouchableOpacity
-                key={storage.id}
-                style={[styles.filterChip, activityStorageId === storage.id && styles.filterChipActive]}
-                onPress={() => setActivityStorageId(storage.id)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, activityStorageId === storage.id && styles.filterChipTextActive]}>{storage.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Ação</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            {[
-              ['all', 'Tudo'],
-              ['added', 'Entrada'],
-              ['removed', 'Saída'],
-              ['updated', 'Edição'],
-              ['from_list', 'Veio da lista'],
-              ['to_list', 'Foi para lista'],
-            ].map(([value, label]) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.filterChip, activityKind === value && styles.filterChipActive]}
-                onPress={() => setActivityKind(value as ActivityKindFilter)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, activityKind === value && styles.filterChipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity style={styles.filterApplyButton} onPress={() => setFilterModalVisible(false)} activeOpacity={0.8}>
-            <Text style={styles.filterApplyButtonText}>Aplicar filtros</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+    <AttentionSummaryModal
+      visible={attentionModalVisible}
+      expiringItems={expiringItems}
+      tasks={priorityTasks}
+      urgentLists={urgentLists}
+      formatDate={formatShortDate}
+      onClose={() => setAttentionModalVisible(false)}
+      onOpenItem={openExpiringItem}
+      onOpenTask={openTask}
+      onOpenList={(list) => navigation.navigate('HomeShoppingListDetail', {
+        householdId: list.householdId,
+        listId: list.id,
+        listName: list.name,
+        listUrgent: list.urgent,
+        highlightList: true,
+      })}
+    />
 
     <GlobalSearchModal navigation={navigation.getParent?.() ?? navigation} />
 
@@ -819,344 +522,4 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 20, paddingTop: 0, paddingBottom: 40, minHeight: '100%' },
-
-  header: {
-    marginHorizontal: -20,
-    marginBottom: 14,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-  },
-  homeHeaderBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  homeHeaderIdentity: { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1 },
-  avatarCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  homeHeaderTextBlock: { flex: 1 },
-  homeHeaderDate: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    marginBottom: 1,
-  },
-  headerGreeting: { fontSize: 17, color: Colors.textSecondary },
-  headerGreetingName: { color: Colors.textPrimary, fontWeight: '800' },
-  homeHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  headerBadge: {
-    position: 'absolute',
-    top: 2,
-    right: -5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
-  helpScreen: { flex: 1, backgroundColor: Colors.background },
-  helpHeader: {
-    minHeight: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-    backgroundColor: Colors.background,
-  },
-  helpTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
-  helpSubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  helpScroll: { flex: 1 },
-  helpContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 34 },
-  helpIntroCard: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 14,
-  },
-  helpIntroTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
-  helpIntroText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
-  helpSection: {
-    flexDirection: 'row',
-    gap: 12,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-  },
-  helpSectionNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.accent + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  helpSectionNumberText: { fontSize: 13, fontWeight: '800', color: Colors.accent },
-  helpSectionBody: { flex: 1 },
-  helpSectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
-  helpSectionText: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
-  hero: { marginTop: -4, marginBottom: 22, zIndex: 20 },
-  greeting: { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: 10 },
-  dashboardCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    zIndex: 20,
-  },
-  dashboardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
-  },
-  dashboardLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  dashboardStats: { flexDirection: 'row', gap: 10 },
-  dashboardStat: {
-    flex: 1,
-    minHeight: 58,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  dashboardStatValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    lineHeight: 22,
-  },
-  dashboardStatLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
-  householdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.accent + '15',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  householdName: { fontSize: 14, fontWeight: '600', color: Colors.accent },
-  householdMeta: { fontSize: 13, color: Colors.textSecondary, marginTop: 8 },
-  householdWrapper: { alignSelf: 'flex-start' },
-
-  card: {
-    backgroundColor: Colors.card,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-    minHeight: 24,
-  },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 24 },
-  cardTitle: { fontSize: 16, lineHeight: 20, fontWeight: '700', color: Colors.textPrimary },
-  cardLink: { fontSize: 13, color: Colors.accent, fontWeight: '500' },
-  emptyCardText: { fontSize: 14, color: Colors.textSecondary, paddingTop: 10 },
-
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 7,
-    borderTopWidth: 1,
-    borderTopColor: Colors.separator,
-    gap: 10,
-  },
-  itemDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: Colors.accent,
-  },
-  itemName: { flex: 1, fontSize: 15, color: Colors.textPrimary },
-  itemStorage: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  itemQty: { fontSize: 13, color: Colors.textSecondary },
-  loadingLines: { gap: 10, paddingVertical: 8 },
-  activityOverlay: { flex: 1, justifyContent: 'flex-end' },
-  sheetBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  activitySheetMotion: {
-    zIndex: 2,
-    elevation: 24,
-  },
-  activitySheet: {
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    overflow: 'hidden',
-    zIndex: 2,
-    elevation: 24,
-  },
-  sheetDragArea: {
-    minHeight: 36,
-    paddingTop: 10,
-    paddingBottom: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.background,
-  },
-  sheetHandle: {
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#E7DCCB',
-    alignSelf: 'center',
-  },
-  sheetDragHint: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  activitySheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 2,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-    backgroundColor: Colors.background,
-  },
-  activitySheetTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  activityHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  filterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    minHeight: 30,
-    paddingHorizontal: 10,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: Colors.accent,
-    backgroundColor: Colors.card,
-  },
-  filterButtonActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  filterButtonText: { fontSize: 13, fontWeight: '700', color: Colors.accent },
-  filterButtonTextActive: { color: '#fff' },
-  filtersPanel: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-    backgroundColor: Colors.card,
-  },
-  filterSectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  filterSectionTitle: { fontSize: 14, fontWeight: '800', color: Colors.textPrimary },
-  clearFiltersText: { fontSize: 13, fontWeight: '700', color: Colors.accent },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: 8,
-    marginBottom: 6,
-  },
-  filterChipsRow: { gap: 8, paddingRight: 16 },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    backgroundColor: Colors.background,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  filterChipTextActive: { color: '#fff' },
-  filterModalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  filterModalBackdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-  },
-  filterModalCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    padding: 16,
-    gap: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 16,
-  },
-  filterModalTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  filterApplyButton: {
-    backgroundColor: Colors.accent,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  filterApplyButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
-
 });

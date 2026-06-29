@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
@@ -69,7 +69,7 @@ export default function ManageStoragesScreen({ route }: Props) {
 
   async function toggleHidden(storage: Storage) {
     if (!storage.hidden && visibleCount <= 1) {
-      Alert.alert('Nao da para ocultar', 'Mantenha pelo menos um estoque visivel.');
+      Alert.alert('Não dá para ocultar', 'Mantenha pelo menos um estoque visível.');
       return;
     }
 
@@ -93,13 +93,19 @@ export default function ManageStoragesScreen({ route }: Props) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>
-        Estoques ocultos somem da aba Estoque, mas seus itens e categorias continuam salvos.
-      </Text>
-
-      {orderedStorages.map((storage) => (
-        <View key={storage.id} style={[styles.row, storage.hidden && styles.rowHidden]}>
+    <View style={styles.container}>
+      <FlatList
+        contentContainerStyle={styles.content}
+        data={orderedStorages}
+        keyExtractor={(storage) => storage.id}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <Text style={styles.hint}>
+            Estoques ocultos somem da aba Estoque, mas seus itens e categorias continuam salvos.
+          </Text>
+        }
+        renderItem={({ item: storage }) => (
+          <View style={[styles.row, storage.hidden && styles.rowHidden]}>
           <View style={styles.info}>
             <Text style={styles.storageName}>{storage.name}</Text>
             <Text style={styles.storageStatus}>{storage.hidden ? 'Oculto' : 'Visivel'}</Text>
@@ -120,7 +126,8 @@ export default function ManageStoragesScreen({ route }: Props) {
             </TouchableOpacity>
           </View>
         </View>
-      ))}
+        )}
+      />
 
       <Modal visible={!!editing} transparent animationType="fade" onRequestClose={() => setEditing(null)}>
         <KeyboardAvoidingView style={styles.modalKeyboard} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -156,7 +163,7 @@ export default function ManageStoragesScreen({ route }: Props) {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 

@@ -5,8 +5,6 @@ import { API_URL } from '../config';
 
 const BASE_URL = API_URL;
 
-console.log('[API] baseURL:', BASE_URL);
-
 export const REFRESH_TOKEN_KEY = 'colmeia.refresh_token';
 export const ACCESS_TOKEN_KEY = '@colmeia:token';
 

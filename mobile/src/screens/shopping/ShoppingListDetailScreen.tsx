@@ -23,6 +23,7 @@ import { ShoppingItem } from '../../types';
 import { ShoppingItemSkeleton } from '../../components/Skeleton';
 import NativeSelect from '../../components/NativeSelect';
 import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
+import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -37,8 +38,6 @@ function KeepAwakeWhileFocused() {
 }
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
 function compareNames(a: ShoppingItem, b: ShoppingItem) {
   return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
 }
@@ -75,13 +74,21 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [editCategory, setEditCategory] = useState(listCategory ?? '');
   const [editUrgent, setEditUrgent] = useState(listUrgent);
   const { data: categoryGroups } = useHouseholdCategoryGroups(householdId);
-  const categoryOrder = categoryGroups.flatMap((group) => group.categories.map((category) => category.label));
-  const availableCategories = categoryGroups.flatMap((group) => group.categories);
+  const categoryOrder = React.useMemo(
+    () => categoryGroups.flatMap((group) => group.categories.map((category) => category.label)),
+    [categoryGroups],
+  );
+  const availableCategories = React.useMemo(
+    () => categoryGroups.flatMap((group) => group.categories),
+    [categoryGroups],
+  );
 
   const openMenu = useCallback(() => {
     navigation.getParent()?.navigate('Menu' as never);
   }, [navigation]);
-  const quickSuggestions = quickName.trim() ? filterItems(quickName).slice(0, 4) : [];
+  const quickSuggestions = React.useMemo(() => (
+    quickName.trim() ? filterItems(quickName).slice(0, 4) : []
+  ), [quickName]);
   const isFocused = useIsFocused();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
@@ -110,6 +117,30 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   const activeList = shoppingLists.find((list) => list.id === listId);
 
+  function openSendToFridge(item: ShoppingItem) {
+    const params = {
+      householdId,
+      listId,
+      itemId: item.id,
+      prefillName: item.name,
+      prefillQuantity: Number(item.quantity),
+      prefillUnit: item.unit ?? null,
+      prefillCategory: null,
+      listName: currentName,
+    };
+
+    const routeNames = navigation.getState()?.routeNames ?? [];
+    if (routeNames.includes('SendToFridge')) {
+      navigation.navigate('SendToFridge', params);
+      return;
+    }
+
+    (navigation.getParent() as any)?.navigate('ShoppingFlow', {
+      screen: 'SendToFridge',
+      params,
+    });
+  }
+
   useEffect(() => {
     if (!activeList) return;
 
@@ -124,16 +155,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     if (!isFocused || sendQueue.length === 0) return;
     const next = sendQueue[0];
     setSendQueue((q) => q.slice(1));
-    navigation.navigate('SendToFridge', {
-      householdId,
-      listId,
-      itemId: next.id,
-      prefillName: next.name,
-      prefillQuantity: Number(next.quantity),
-      prefillUnit: next.unit ?? null,
-      prefillCategory: null,
-      listName: currentName,
-    });
+    openSendToFridge(next);
   }, [isFocused, sendQueue, currentName]);
 
   function handleSendAllToFridge() {
@@ -251,7 +273,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       });
       setEditModal(false);
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel atualizar a lista.');
+      Alert.alert('Erro', 'Não foi possível atualizar a lista.');
     }
   }
 
@@ -268,7 +290,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       setUrgent(nextUrgent);
       navigation.setParams({ listUrgent: nextUrgent });
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel atualizar a lista.');
+      Alert.alert('Erro', 'Não foi possível atualizar a lista.');
     }
   }
 
@@ -287,20 +309,23 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }
 
   const handleDelete = useCallback((itemId: string, itemName?: string) => {
-    Alert.alert(itemName ? `Remover "${itemName}" da lista?` : 'Remover item da lista?', 'Voce esta excluindo este item da lista.', [
+    Alert.alert(itemName ? `Remover "${itemName}" da lista?` : 'Remover item da lista?', 'Você está excluindo este item da lista.', [
       { text: 'Remover', style: 'destructive', onPress: () => removeItem.mutate(itemId) },
       { text: 'Cancelar', style: 'cancel' },
     ]);
   }, [removeItem]);
 
-  const pending = items?.filter((i) => !i.checked) ?? [];
-  const bought = items?.filter((i) => i.checked) ?? [];
+  const pending = React.useMemo(() => items?.filter((i) => !i.checked) ?? [], [items]);
+  const bought = React.useMemo(() => items?.filter((i) => i.checked) ?? [], [items]);
   const total = items?.length ?? 0;
   const storeBoughtButtonLabel =
     bought.length === 1
       ? `Guardar ${bought[0].name}`
       : `Guardar ${bought.length} comprados`;
-  const selectedAddStorage = categoryGroups.find((group) => group.storageId === addStorageId);
+  const selectedAddStorage = React.useMemo(
+    () => categoryGroups.find((group) => group.storageId === addStorageId),
+    [addStorageId, categoryGroups],
+  );
 
   // Detect transition to empty list
   useEffect(() => {
@@ -374,104 +399,66 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       : null;
 
     return (
-      <AnimatedTouchableOpacity style={[styles.itemRow, highlightStyle]} onPress={() => handleToggle(item)} activeOpacity={0.7}>
-        <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
-          {item.checked && <Text style={styles.checkmark}>✓</Text>}
-        </View>
-        <View style={styles.itemInfo}>
-          <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>{item.name}</Text>
-        </View>
-        <Text style={[styles.itemQty, item.checked && styles.itemQtyChecked]}>
-          {item.quantity} {item.unit ?? ''}
-        </Text>
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={(event) => {
-            event.stopPropagation();
-            handleDelete(item.id, item.name);
-          }}
-          activeOpacity={0.7}
-          accessibilityLabel={`Remover ${item.name}`}
-        >
-          <Text style={styles.removeButtonText}>X</Text>
-        </TouchableOpacity>
-      </AnimatedTouchableOpacity>
+      <ShoppingItemRow
+        item={item}
+        highlightStyle={highlightStyle}
+        onToggle={handleToggle}
+        onDelete={handleDelete}
+      />
     );
   }
 
   // A comprar: uma seção por categoria (ordem dos corredores), itens em
   // ordem alfabética. Se ninguém categorizou nada, mantém a seção única.
-  const pendingByCategory = new Map<string, ShoppingItem[]>();
-  for (const item of pending) {
-    const cat = item.category || 'Outros';
-    const group = pendingByCategory.get(cat);
-    if (group) group.push(item);
-    else pendingByCategory.set(cat, [item]);
-  }
-  const onlyUncategorized = pendingByCategory.size === 1 && pendingByCategory.has('Outros');
-  const pendingSections = onlyUncategorized
-    ? [{ title: `A COMPRAR (${pending.length})`, data: [...pending].sort(compareNames), isPending: true }]
-    : [...pendingByCategory.entries()]
-        .sort((a, b) => {
-          const rankA = categoryOrder.indexOf(a[0]);
-          const rankB = categoryOrder.indexOf(b[0]);
-          return (rankA === -1 ? categoryOrder.length : rankA) - (rankB === -1 ? categoryOrder.length : rankB)
-            || a[0].localeCompare(b[0], 'pt-BR');
-        })
-        .map(([cat, data]) => ({ title: `${cat} (${data.length})`, data: data.sort(compareNames), isPending: true }));
+  const sections = React.useMemo(() => {
+    const pendingByCategory = new Map<string, ShoppingItem[]>();
+    for (const item of pending) {
+      const cat = item.category || 'Outros';
+      const group = pendingByCategory.get(cat);
+      if (group) group.push(item);
+      else pendingByCategory.set(cat, [item]);
+    }
 
-  const sections = [
-    ...(pending.length > 0 ? pendingSections : []),
-    ...(bought.length > 0 ? [{ title: `COMPRADOS (${bought.length})`, data: [...bought].sort(compareNames), isPending: false }] : []),
-  ];
+    const onlyUncategorized = pendingByCategory.size === 1 && pendingByCategory.has('Outros');
+    const pendingSections = onlyUncategorized
+      ? [{ title: `A COMPRAR (${pending.length})`, data: [...pending].sort(compareNames), isPending: true }]
+      : [...pendingByCategory.entries()]
+          .sort((a, b) => {
+            const rankA = categoryOrder.indexOf(a[0]);
+            const rankB = categoryOrder.indexOf(b[0]);
+            return (rankA === -1 ? categoryOrder.length : rankA) - (rankB === -1 ? categoryOrder.length : rankB)
+              || a[0].localeCompare(b[0], 'pt-BR');
+          })
+          .map(([cat, data]) => ({ title: `${cat} (${data.length})`, data: [...data].sort(compareNames), isPending: true }));
+
+    return [
+      ...(pending.length > 0 ? pendingSections : []),
+      ...(bought.length > 0 ? [{ title: `COMPRADOS (${bought.length})`, data: [...bought].sort(compareNames), isPending: false }] : []),
+    ];
+  }, [bought, categoryOrder, pending]);
 
   return (
     <View style={styles.container}>
       {isFocused && <KeepAwakeWhileFocused />}
       <View style={[styles.contentArea, { paddingBottom: footerHeight + footerKeyboardOffset }]}>
-      <Animated.View
-        style={[
-          styles.listFocusBand,
-          {
-            backgroundColor: listHighlightAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [Colors.background, Colors.accent + '18'],
-            }),
-            borderColor: listHighlightAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['transparent', Colors.accent],
-            }),
-          },
-        ]}
-      >
-      {total > 0 && (
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTopRow}>
-            <Text style={styles.progressFraction}>{bought.length}/{total}</Text>
-            <Text style={styles.progressLabel}>
-              {bought.length === total ? 'tudo comprado' : 'comprados'}
-            </Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(bought.length / total) * 100}%` as any }]} />
-          </View>
-        </View>
-      )}
-
-      <View style={styles.metaRow}>
-        <TouchableOpacity
-          style={[styles.urgentChip, urgent && styles.urgentChipActive]}
-          onPress={handleToggleUrgent}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.urgentChipText, urgent && styles.urgentChipTextActive]}>
-            {urgent ? 'Urgente' : 'Marcar urgente'}
-          </Text>
-        </TouchableOpacity>
-        {!!currentPlace && <Text style={styles.metaChip}>{currentPlace}</Text>}
-        {!!currentCategory && <Text style={styles.metaChip}>{currentCategory}</Text>}
-      </View>
-      </Animated.View>
+      <ListFocusSummary
+        total={total}
+        boughtCount={bought.length}
+        urgent={urgent}
+        currentPlace={currentPlace}
+        currentCategory={currentCategory}
+        highlightStyle={{
+          backgroundColor: listHighlightAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [Colors.background, Colors.accent + '18'],
+          }),
+          borderColor: listHighlightAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: ['transparent', Colors.accent],
+          }),
+        }}
+        onToggleUrgent={handleToggleUrgent}
+      />
 
       {isLoading ? (
         <View style={{ backgroundColor: Colors.background }}>
@@ -535,7 +522,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
                 style={styles.editInput}
                 value={editPlace}
                 onChangeText={setEditPlace}
-                placeholder="Ex: Mercado, farmacia"
+                placeholder="Ex: Mercado, farmácia"
                 placeholderTextColor={Colors.textSecondary}
                 returnKeyType="next"
               />
@@ -786,16 +773,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   contentArea: { flex: 1 },
-  listFocusBand: { borderWidth: 1, borderRadius: 14, margin: 10, marginBottom: 0, paddingBottom: 10 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 12, flexWrap: 'wrap' },
-  metaChip: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary },
-  progressContainer: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, gap: 8 },
-  progressTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  progressFraction: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
-  progressLabel: { fontSize: 13, color: Colors.textSecondary },
-  progressBar: { height: 4, backgroundColor: Colors.separator, borderRadius: 2, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: Colors.success, borderRadius: 2 },
   list: { paddingBottom: 16 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
@@ -806,30 +783,6 @@ const styles = StyleSheet.create({
   sectionLabelBought: { color: Colors.success },
   clearBtn: { paddingHorizontal: 8, paddingVertical: 2 },
   clearButton: { fontSize: 12, color: Colors.destructive, fontWeight: '600' },
-  itemRow: {
-    backgroundColor: Colors.card, marginHorizontal: 16, marginBottom: 2,
-    borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderWidth: 1, borderColor: Colors.separator,
-  },
-  checkbox: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: Colors.border,
-    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
-  },
-  checkboxChecked: { backgroundColor: Colors.success, borderColor: Colors.success },
-  checkmark: { color: '#fff', fontSize: 12, fontWeight: '700' },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
-  itemNameChecked: { color: Colors.textSecondary, textDecorationLine: 'line-through' },
-  itemQty: { fontSize: 13, color: Colors.textSecondary, flexShrink: 0 },
-  itemQtyChecked: { color: Colors.border },
-  removeButton: {
-    minWidth: 24,
-    minHeight: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  removeButtonText: { color: Colors.textSecondary, fontSize: 13, fontWeight: '600', lineHeight: 18 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
   emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary },

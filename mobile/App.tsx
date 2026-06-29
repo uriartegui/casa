@@ -33,10 +33,8 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { api } from './src/services/api';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const navigationRef = createNavigationContainerRef<any>();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const linking: LinkingOptions<any> = {
   prefixes: ['colmeia://'],
   config: {
@@ -103,7 +101,9 @@ function NotificationResponseHandler() {
         queryClient.invalidateQueries({ queryKey: ['shopping-lists', data.householdId] });
         queryClient.invalidateQueries({ queryKey: ['shopping-activity', data.householdId] });
       }).catch((err) => {
-        console.warn('[Push action] Nao foi possivel adicionar item a lista:', err?.message ?? err);
+        if (__DEV__) {
+          console.warn('[Push action] Não foi possível adicionar item à lista:', err?.message ?? err);
+        }
       });
       return;
     }

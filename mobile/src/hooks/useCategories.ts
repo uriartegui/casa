@@ -4,6 +4,8 @@ import { api } from '../services/api';
 import { HouseholdCategory } from '../types';
 import { useStorages } from './useStorages';
 
+const CATEGORY_STALE_TIME = 5 * 60 * 1000;
+
 export interface CategoryGroup {
   storageId: string;
   storageName: string;
@@ -21,6 +23,8 @@ export function useCategories(householdId: string | null, storageId: string | nu
       return response.data;
     },
     enabled: !!householdId && !!storageId,
+    staleTime: CATEGORY_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 
@@ -37,6 +41,8 @@ export function useHouseholdCategoryGroups(householdId: string | null) {
         return response.data;
       },
       enabled: !!householdId,
+      staleTime: CATEGORY_STALE_TIME,
+      refetchOnMount: false,
     })),
   });
 

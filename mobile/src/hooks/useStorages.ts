@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { Storage } from '../types';
 
+const STORAGE_STALE_TIME = 5 * 60 * 1000;
+
 export function useStorages(householdId: string | null, options?: { includeHidden?: boolean }) {
   const includeHidden = options?.includeHidden ?? false;
   return useQuery({
@@ -12,6 +14,8 @@ export function useStorages(householdId: string | null, options?: { includeHidde
       return response.data;
     },
     enabled: !!householdId,
+    staleTime: STORAGE_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 

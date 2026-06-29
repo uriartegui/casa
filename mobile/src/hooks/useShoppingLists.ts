@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { ShoppingList, ShoppingItem, ShoppingActivityEvent, ReplenishmentSuggestion } from '../types';
 
+const LIVE_STALE_TIME = 30 * 1000;
+const BACKGROUND_REFETCH_INTERVAL = 60 * 1000;
+
 export function useShoppingLists(householdId: string | null) {
   return useQuery({
     queryKey: ['shopping-lists', householdId],
@@ -10,11 +13,10 @@ export function useShoppingLists(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    // O WebSocket atualiza imediatamente quando disponivel. Este intervalo
-    // curto cobre reconexoes e garante que uma lista aberta nao fique velha.
-    refetchInterval: 2500,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -72,9 +74,10 @@ export function useListItems(householdId: string | null, listId: string | null) 
       Array.isArray(data) ? data : data.items ?? []
     ),
     enabled: !!householdId && !!listId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchInterval: 2500,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -273,9 +276,10 @@ export function useShoppingActivity(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -287,8 +291,9 @@ export function useReplenishmentSuggestions(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+    refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
   });
 }

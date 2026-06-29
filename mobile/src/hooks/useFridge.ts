@@ -2,6 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { FridgeItem } from '../types';
 
+const LIVE_STALE_TIME = 30 * 1000;
+const BACKGROUND_REFETCH_INTERVAL = 60 * 1000;
+
 export function useFridge(householdId: string | null, storageId?: string | null) {
   return useQuery({
     queryKey: ['fridge', householdId, storageId],
@@ -13,7 +16,10 @@ export function useFridge(householdId: string | null, storageId?: string | null)
       return response.data;
     },
     enabled: !!householdId,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
     refetchInterval: 5 * 60 * 1000,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -27,6 +33,8 @@ export function useFridgeItem(householdId: string | null, itemId: string | null)
       return response.data;
     },
     enabled: !!householdId && !!itemId,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 
@@ -127,9 +135,10 @@ export function useFridgeActivity(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchInterval: 5000,
+    staleTime: LIVE_STALE_TIME,
+    refetchOnMount: false,
+    refetchInterval: BACKGROUND_REFETCH_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 }
 

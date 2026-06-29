@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import {
   Animated, View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Modal, ActivityIndicator, Alert,
+  Dimensions, PanResponder,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { useFridge, useRemoveFridgeItem, useUpdateFridgeItem } from '../../hooks/useFridge';
+import { useFridge, useFridgeActivity, useRemoveFridgeItem, useUpdateFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { useCategories } from '../../hooks/useCategories';
 import { useQueryClient } from '@tanstack/react-query';
+import { Feather } from '@expo/vector-icons';
 import { useToast } from '../../context/ToastContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
@@ -19,8 +21,45 @@ import { formatBrDate } from '../../utils/dateUtils';
 import { FridgeItemSkeleton } from '../../components/Skeleton';
 import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 import NativeSelect from '../../components/NativeSelect';
+import { HelpSheet } from '../home/components/HomeSheets';
+import AlertsSheet from '../../components/AlertsSheet';
+import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { buildStockActivityAlerts, buildStockAttention, countAlerts } from '../../utils/alertCenter';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+
+const STOCK_HELP_HIGHLIGHTS = [
+  { icon: 'box' as const, title: 'Itens', body: 'Quantidades, unidades e quem cadastrou.' },
+  { icon: 'alert-triangle' as const, title: 'Validade', body: 'Destaques para vencidos e próximos.' },
+  { icon: 'tag' as const, title: 'Categorias', body: 'Filtros para achar tudo mais rápido.' },
+];
+
+const STOCK_HELP_SECTIONS = [
+  {
+    title: 'Adicionar item',
+    body: 'Use o botão de adicionar para registrar produto, quantidade, unidade, validade e categoria.',
+  },
+  {
+    title: 'Filtrar categorias',
+    body: 'Toque em uma categoria no topo para ver só aquele grupo de itens. Use "Todos" para voltar.',
+  },
+  {
+    title: 'Itens vencidos',
+    body: 'Quando houver validade vencida ou próxima, o app mostra alertas no card do item para você agir antes de perder.',
+  },
+  {
+    title: 'Categorizar itens',
+    body: 'Quando itens entram sem categoria, o aviso "Categorizar itens" ajuda a organizar tudo em lote.',
+  },
+  {
+    title: 'Item acabou',
+    body: 'Toque no X do item para remover do estoque ou mandar direto para uma lista de compras.',
+  },
+  {
+    title: 'Atualizar dados',
+    body: 'Puxe a lista para baixo quando quiser buscar as informações mais recentes da casa.',
+  },
+];
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'Fridge'>;
@@ -31,16 +70,17 @@ export default function FridgeScreen({ navigation, route }: Props) {
   const {
     householdId: effectiveId,
     storageId: effectiveStorageId,
-    storageName,
-    storageEmoji,
     highlightItemId,
   } = route.params;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const highlightAnim = React.useRef(new Animated.Value(0)).current;
   const [categorizeVisible, setCategorizeVisible] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
+  const [alertsVisible, setAlertsVisible] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState<Record<string, string>>({});
 
   const { data: items, isLoading: loadingItems, refetch } = useFridge(effectiveId, effectiveStorageId);
+  const { data: fridgeActivity = [] } = useFridgeActivity(effectiveId);
   const removeItem = useRemoveFridgeItem(effectiveId ?? '');
   const updateItem = useUpdateFridgeItem(effectiveId ?? '');
   const { data: categories } = useCategories(effectiveId, effectiveStorageId);
@@ -49,6 +89,236 @@ export default function FridgeScreen({ navigation, route }: Props) {
   const { showToast } = useToast();
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const screenHeight = Dimensions.get('window').height;
+  const helpCollapsedHeight = Math.round(screenHeight * 0.74);
+  const helpExpandedHeight = Math.round(screenHeight - 64);
+  const helpCloseThreshold = Math.round(screenHeight * 0.48);
+  const helpSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const helpSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const helpHeightRef = React.useRef(helpCollapsedHeight);
+  const helpDragStartHeight = React.useRef(helpCollapsedHeight);
+  const alertsSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const alertsSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const alertsHeightRef = React.useRef(helpCollapsedHeight);
+  const alertsDragStartHeight = React.useRef(helpCollapsedHeight);
+  const {
+    lastSeenAt: stockActivitySeenAt,
+    markSeen: markStockActivitySeen,
+  } = useActivitySeen(`stock:${effectiveStorageId}`, effectiveId, fridgeActivity.filter((event) => event.storageId === effectiveStorageId), undefined);
+
+  React.useEffect(() => {
+    const listener = helpSheetHeight.addListener(({ value }) => {
+      helpHeightRef.current = value;
+    });
+    return () => helpSheetHeight.removeListener(listener);
+  }, [helpSheetHeight]);
+
+  React.useEffect(() => {
+    const listener = alertsSheetHeight.addListener(({ value }) => {
+      alertsHeightRef.current = value;
+    });
+    return () => alertsSheetHeight.removeListener(listener);
+  }, [alertsSheetHeight]);
+
+  const animateHelpSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
+    Animated.spring(helpSheetHeight, {
+      toValue,
+      useNativeDriver: false,
+      speed: 18,
+      bounciness: 4,
+    }).start(() => onEnd?.());
+  }, [helpSheetHeight]);
+
+  const openHelpModal = React.useCallback(() => {
+    helpSheetHeight.setValue(helpCollapsedHeight);
+    helpSheetTranslateY.setValue(helpCollapsedHeight);
+    helpHeightRef.current = helpCollapsedHeight;
+    setHelpVisible(true);
+    requestAnimationFrame(() => {
+      Animated.spring(helpSheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: false,
+        speed: 20,
+        bounciness: 3,
+      }).start();
+    });
+  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
+
+  const closeHelpModal = React.useCallback(() => {
+    Animated.timing(helpSheetTranslateY, {
+      toValue: Math.max(helpHeightRef.current, helpCollapsedHeight),
+      duration: 190,
+      useNativeDriver: false,
+    }).start(() => {
+      setHelpVisible(false);
+      helpSheetHeight.setValue(helpCollapsedHeight);
+      helpSheetTranslateY.setValue(helpCollapsedHeight);
+      helpHeightRef.current = helpCollapsedHeight;
+    });
+  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
+
+  const animateAlertsSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
+    Animated.spring(alertsSheetHeight, {
+      toValue,
+      useNativeDriver: false,
+      speed: 18,
+      bounciness: 4,
+    }).start(() => onEnd?.());
+  }, [alertsSheetHeight]);
+
+  const openAlertsModal = React.useCallback(() => {
+    alertsSheetHeight.setValue(helpCollapsedHeight);
+    alertsSheetTranslateY.setValue(helpCollapsedHeight);
+    alertsHeightRef.current = helpCollapsedHeight;
+    setAlertsVisible(true);
+    markStockActivitySeen();
+    requestAnimationFrame(() => {
+      Animated.spring(alertsSheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: false,
+        speed: 20,
+        bounciness: 3,
+      }).start();
+    });
+  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight, markStockActivitySeen]);
+
+  const closeAlertsModal = React.useCallback(() => {
+    Animated.timing(alertsSheetTranslateY, {
+      toValue: Math.max(alertsHeightRef.current, helpCollapsedHeight),
+      duration: 190,
+      useNativeDriver: false,
+    }).start(() => {
+      setAlertsVisible(false);
+      alertsSheetHeight.setValue(helpCollapsedHeight);
+      alertsSheetTranslateY.setValue(helpCollapsedHeight);
+      alertsHeightRef.current = helpCollapsedHeight;
+    });
+  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight]);
+
+  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      helpDragStartHeight.current = helpHeightRef.current;
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
+      helpSheetHeight.setValue(nextHeight);
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const currentHeight = helpHeightRef.current;
+      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
+      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
+      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
+        closeHelpModal();
+        return;
+      }
+      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
+        animateHelpSheet(helpExpandedHeight);
+        return;
+      }
+      animateHelpSheet(helpCollapsedHeight);
+    },
+  }), [animateHelpSheet, closeHelpModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, helpSheetHeight, screenHeight]);
+
+  const alertsSheetPanResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      alertsDragStartHeight.current = alertsHeightRef.current;
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
+      alertsSheetHeight.setValue(nextHeight);
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const currentHeight = alertsHeightRef.current;
+      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
+      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
+      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
+        closeAlertsModal();
+        return;
+      }
+      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
+        animateAlertsSheet(helpExpandedHeight);
+        return;
+      }
+      animateAlertsSheet(helpCollapsedHeight);
+    },
+  }), [animateAlertsSheet, alertsSheetHeight, closeAlertsModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, screenHeight]);
+
+  const alertSections = React.useMemo(() => [
+    {
+      title: 'Precisa de atenção',
+      items: buildStockAttention(items ?? [], {
+        storageId: effectiveStorageId,
+        storageName: route.params.storageName,
+        onOpenItem: (item) => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! }),
+      }),
+      emptyText: 'Nenhum item vencido ou sem categoria neste estoque.',
+    },
+    {
+      title: 'Atividades novas',
+      items: buildStockActivityAlerts(fridgeActivity, {
+        storageId: effectiveStorageId,
+        since: stockActivitySeenAt,
+        onOpenEvent: (event) => event.storageId && navigation.navigate('Fridge', {
+          householdId: effectiveId!,
+          storageId: event.storageId,
+          storageName: event.storageName ?? route.params.storageName,
+          storageEmoji: event.storageEmoji ?? route.params.storageEmoji,
+        }),
+      }),
+      emptyText: 'Nenhuma atividade nova neste estoque.',
+    },
+  ], [effectiveId, effectiveStorageId, fridgeActivity, items, navigation, route.params.storageEmoji, route.params.storageName, stockActivitySeenAt]);
+  const alertCount = countAlerts(alertSections);
+
+  React.useLayoutEffect(() => {
+    (navigation as any).setOptions({
+      headerAlert: () => (
+        <TouchableOpacity
+          style={styles.headerIconButton}
+          onPress={openAlertsModal}
+          activeOpacity={0.72}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="bell" size={23} color={Colors.textPrimary} />
+          {alertCount > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{alertCount > 99 ? '99+' : alertCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ),
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={openHelpModal}
+            activeOpacity={0.72}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="help-circle" size={23} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => navigation.getParent()?.navigate('Menu' as never)}
+            activeOpacity={0.72}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="menu" size={30} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      ),
+    });
+  }, [alertCount, navigation, openAlertsModal, openHelpModal]);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -148,7 +418,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
       setCategorizeVisible(false);
       setCategoryDraft({});
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel categorizar os itens.');
+      Alert.alert('Erro', 'Não foi possível categorizar os itens.');
     }
   }
 
@@ -224,8 +494,6 @@ export default function FridgeScreen({ navigation, route }: Props) {
         </AnimatedTouchableOpacity>
     );
   }
-
-  const selectedStorage = { id: effectiveStorageId, name: storageName, emoji: storageEmoji };
 
   return (
     <View style={styles.container}>
@@ -321,9 +589,14 @@ export default function FridgeScreen({ navigation, route }: Props) {
                 <Text style={styles.emptySubtitle}>Crie categorias na area Casa para organizar este estoque.</Text>
               </View>
             ) : (
-              <ScrollView style={styles.categorizeList} contentContainerStyle={styles.categorizeContent} showsVerticalScrollIndicator={false}>
-                {uncategorizedItems.map((item) => (
-                  <View key={item.id} style={styles.categorizeItem}>
+              <FlatList
+                style={styles.categorizeList}
+                contentContainerStyle={styles.categorizeContent}
+                data={uncategorizedItems}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item }) => (
+                  <View style={styles.categorizeItem}>
                     <View style={styles.categorizeItemHeader}>
                       <Text style={styles.categorizeItemName}>{item.name}</Text>
                       <Text style={styles.categorizeItemQty}>{item.quantity} {item.unit ?? 'un'}</Text>
@@ -335,8 +608,8 @@ export default function FridgeScreen({ navigation, route }: Props) {
                       onChange={(category) => setCategoryDraft((current) => ({ ...current, [item.id]: category }))}
                     />
                   </View>
-                ))}
-              </ScrollView>
+                )}
+              />
             )}
 
             <TouchableOpacity
@@ -353,12 +626,117 @@ export default function FridgeScreen({ navigation, route }: Props) {
         </View>
       </Modal>
 
+      <Modal visible={false} transparent animationType="fade" onRequestClose={() => setHelpVisible(false)}>
+        <View style={styles.helpOverlay}>
+          <TouchableOpacity style={styles.helpBackdrop} activeOpacity={1} onPress={() => setHelpVisible(false)} />
+          <View style={styles.helpSheet}>
+            <View style={styles.helpDragArea}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.helpHeader}>
+              <View>
+                <Text style={styles.helpTitle}>Ajuda</Text>
+                <Text style={styles.helpSubtitle}>Estoque: {route.params.storageName}</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.helpFloatingClose} onPress={() => setHelpVisible(false)} activeOpacity={0.72}>
+              <Feather name="x" size={20} color={Colors.textSecondary} />
+            </TouchableOpacity>
+
+            <ScrollView style={styles.helpScroll} contentContainerStyle={styles.helpContent} showsVerticalScrollIndicator={false}>
+              <View style={styles.helpIntroCard}>
+                <Text style={styles.helpIntroTitle}>Como este estoque funciona</Text>
+                <Text style={styles.helpIntroText}>
+                  Aqui você acompanha o que existe em casa, vê validade, organiza por categoria e decide rapidamente quando um item acabou.
+                </Text>
+              </View>
+
+              <View style={styles.helpHighlightGrid}>
+                {[
+                  { icon: 'box' as const, title: 'Itens', body: 'Quantidades, unidades e quem cadastrou.' },
+                  { icon: 'alert-triangle' as const, title: 'Validade', body: 'Destaques para vencidos e próximos.' },
+                  { icon: 'tag' as const, title: 'Categorias', body: 'Filtros para achar tudo mais rápido.' },
+                ].map((item) => (
+                  <View key={item.title} style={styles.helpHighlightCard}>
+                    <View style={styles.helpHighlightIcon}>
+                      <Feather name={item.icon} size={17} color={Colors.accent} />
+                    </View>
+                    <Text style={styles.helpHighlightTitle}>{item.title}</Text>
+                    <Text style={styles.helpHighlightText}>{item.body}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={styles.helpGroupTitle}>Funções do estoque</Text>
+              {[
+                ['plus-circle', 'Adicionar item', 'Use o botão de adicionar para registrar produto, quantidade, unidade, validade e categoria.'],
+                ['tag', 'Filtrar categorias', 'Toque em uma categoria no topo para ver só aquele grupo de itens. Use "Todos" para voltar.'],
+                ['alert-triangle', 'Itens vencidos', 'Quando houver validade vencida ou próxima, o app mostra alertas no card do item para você agir antes de perder.'],
+                ['layers', 'Categorizar itens', 'Quando itens entram sem categoria, o aviso "Categorizar itens" ajuda a organizar tudo em lote.'],
+                ['x-circle', 'Item acabou', 'Toque no X do item para remover do estoque ou mandar direto para uma lista de compras.'],
+                ['refresh-cw', 'Atualizar dados', 'Puxe a lista para baixo quando quiser buscar as informações mais recentes da casa.'],
+              ].map(([, title, body], index) => (
+                <View key={title} style={styles.helpSection}>
+                  <View style={styles.helpSectionNumber}>
+                    <Text style={styles.helpSectionNumberText}>{index + 1}</Text>
+                  </View>
+                  <View style={styles.helpSectionBody}>
+                    <Text style={styles.helpSectionTitle}>{title}</Text>
+                    <Text style={styles.helpSectionText}>{body}</Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <HelpSheet
+        visible={helpVisible}
+        height={helpSheetHeight}
+        translateY={helpSheetTranslateY}
+        panHandlers={helpSheetPanResponder.panHandlers}
+        sections={STOCK_HELP_SECTIONS}
+        subtitle={`Estoque: ${route.params.storageName}`}
+        introTitle="Como este estoque funciona"
+        introText="Aqui você acompanha o que existe em casa, vê validade, organiza por categoria e decide rapidamente quando um item acabou."
+        highlights={STOCK_HELP_HIGHLIGHTS}
+        groupTitle="Funções do estoque"
+        onClose={closeHelpModal}
+      />
+
+      <AlertsSheet
+        visible={alertsVisible}
+        height={alertsSheetHeight}
+        translateY={alertsSheetTranslateY}
+        panHandlers={alertsSheetPanResponder.panHandlers}
+        subtitle={`Estoque: ${route.params.storageName}`}
+        sections={alertSections}
+        onClose={closeAlertsModal}
+      />
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  headerBadge: {
+    position: 'absolute',
+    top: 2,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 8 },
   storagePicker: {
     flexDirection: 'row', alignItems: 'center',
@@ -510,4 +888,161 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 18,
   },
+  helpOverlay: { flex: 1, justifyContent: 'flex-end' },
+  helpBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  helpSheet: {
+    maxHeight: '84%',
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    overflow: 'hidden',
+    zIndex: 2,
+    elevation: 24,
+  },
+  helpDragArea: {
+    minHeight: 36,
+    paddingTop: 10,
+    paddingBottom: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
+  helpHeader: {
+    minHeight: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.separator,
+    backgroundColor: Colors.background,
+  },
+  helpTitle: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
+  helpSubtitle: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  helpFloatingClose: {
+    position: 'absolute',
+    top: 42,
+    right: 16,
+    zIndex: 5,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+  },
+  helpScroll: { flex: 1 },
+  helpContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 34 },
+  helpIntroCard: {
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 14,
+  },
+  helpIntroTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
+  helpIntroText: { fontSize: 14, lineHeight: 21, color: Colors.textSecondary },
+  helpHighlightGrid: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  helpHighlightCard: {
+    flex: 1,
+    minHeight: 118,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.card,
+    padding: 12,
+  },
+  helpHighlightIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent + '14',
+    marginBottom: 8,
+  },
+  helpHighlightTitle: { fontSize: 13, lineHeight: 17, fontWeight: '900', color: Colors.textPrimary },
+  helpHighlightText: { fontSize: 11, lineHeight: 15, color: Colors.textSecondary, marginTop: 4 },
+  helpGroupTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  helpSection: {
+    flexDirection: 'row',
+    gap: 12,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 10,
+  },
+  helpSectionNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.accent + '18',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  helpSectionNumberText: { fontSize: 13, fontWeight: '800', color: Colors.accent },
+  helpSectionBody: { flex: 1 },
+  helpSectionTitle: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
+  helpSectionText: { fontSize: 13, lineHeight: 19, color: Colors.textSecondary },
+  helpHero: {
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.background,
+    padding: 14,
+  },
+  helpHeroIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+  },
+  helpHeroText: { flex: 1, minWidth: 0 },
+  helpHeroTitle: { fontSize: 16, lineHeight: 20, fontWeight: '900', color: Colors.textPrimary },
+  helpHeroBody: { fontSize: 13, lineHeight: 18, color: Colors.textSecondary, marginTop: 4 },
+  helpRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.separator,
+  },
+  helpRowIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent + '14',
+  },
+  helpRowText: { flex: 1, minWidth: 0 },
+  helpRowTitle: { fontSize: 14, lineHeight: 18, fontWeight: '900', color: Colors.textPrimary },
+  helpRowBody: { fontSize: 12, lineHeight: 17, color: Colors.textSecondary, marginTop: 2 },
 });

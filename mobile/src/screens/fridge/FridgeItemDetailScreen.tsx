@@ -52,7 +52,6 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
-  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
   const { data: categories } = useCategories(householdId, item?.storageId ?? item?.storage?.id ?? null);
   const updateItem = useUpdateFridgeItem(householdId);
@@ -93,7 +92,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!item) {
-      Alert.alert('Erro', 'Item ainda nao carregado.');
+      Alert.alert('Erro', 'Item ainda não carregado.');
       return;
     }
 
@@ -201,7 +200,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   if (isError || !item) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyTitle}>Item nao encontrado</Text>
+        <Text style={styles.emptyTitle}>Item não encontrado</Text>
         <Text style={styles.emptySubtitle}>Ele pode ter sido removido por outro membro da casa.</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
           <Text style={styles.retryButtonText}>Tentar novamente</Text>
@@ -319,6 +318,10 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
           }
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.secondaryButton} onPress={handlePickList}>
+          <Text style={styles.secondaryButtonText}>Mover para lista de compras</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
           <Text style={styles.removeButtonText}>Remover item</Text>
         </TouchableOpacity>
@@ -362,6 +365,8 @@ const styles = StyleSheet.create({
   clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  secondaryButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.accent },
+  secondaryButtonText: { color: Colors.accent, fontSize: 16, fontWeight: '600' },
   removeButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
   removeButtonText: { color: Colors.destructive, fontSize: 16, fontWeight: '600' },
   optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },

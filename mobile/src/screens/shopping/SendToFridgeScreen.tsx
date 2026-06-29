@@ -25,7 +25,6 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
 
   const { data: storages } = useStorages(householdId);
   const [selectedStorageId, setSelectedStorageId] = useState<string | null>(null);
-  const [showStorageOptions, setShowStorageOptions] = useState(false);
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
   const { showToast } = useToast();
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
@@ -79,26 +78,6 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
             {!selectedStorageId && (
               <Text style={styles.helperText}>Escolha onde guardar este item.</Text>
             )}
-            {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
-            <View style={[styles.selectField, showStorageOptions && styles.selectFieldOpen]}>
-              <TouchableOpacity style={styles.selectRow} onPress={() => { setShowStorageOptions((value) => !value); }}>
-                <Text style={[styles.selectRowText, !selectedStorageId && styles.selectRowPlaceholder]}>{storages.find((storage) => storage.id === selectedStorageId)?.name ?? 'Escolher compartimento'}</Text>
-                <Feather name={showStorageOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
-              </TouchableOpacity>
-              {showStorageOptions && <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
-              {storages.map((s) => (
-                <TouchableOpacity
-                  key={s.id}
-                  style={[styles.selectOption, selectedStorageId === s.id && styles.selectOptionActive]}
-                  onPress={() => { setSelectedStorageId(s.id); setShowStorageOptions(false); }}
-                >
-                  <Text style={[styles.selectOptionText, selectedStorageId === s.id && styles.selectOptionTextActive]}>{s.name}</Text>
-                  {selectedStorageId === s.id && <Feather name="check" size={16} color={Colors.accent} />}
-                </TouchableOpacity>
-              ))}
-              </ScrollView>}
-            </View>
-            */}
             <NativeSelect
               value={selectedStorageId ?? ''}
               placeholder="Escolher compartimento"

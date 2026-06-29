@@ -15,6 +15,7 @@ export function useGlobalSearch(householdId: string | null, query: string) {
       return response.data.results;
     },
     enabled: !!householdId && trimmedQuery.length >= 2,
-    staleTime: 10_000,
+    staleTime: 60_000,
+    refetchOnMount: false,
   });
 }

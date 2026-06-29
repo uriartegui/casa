@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -58,7 +59,7 @@ const TYPE_BADGES: Record<GlobalSearchResultType, string> = {
 };
 
 const TABS: { label: string; value: SearchTab }[] = [
-  { label: 'All', value: 'all' },
+  { label: 'Tudo', value: 'all' },
   { label: 'Estoque', value: 'stock' },
   { label: 'Listas', value: 'lists' },
   { label: 'Tarefas', value: 'tasks' },
@@ -66,10 +67,8 @@ const TABS: { label: string; value: SearchTab }[] = [
 ];
 
 function matchesQuery(...values: Array<string | null | undefined>) {
-  return (query: string) => {
-    const normalizedQuery = normalizeShoppingItemName(query);
-    return values.some((value) => normalizeShoppingItemName(value ?? '').includes(normalizedQuery));
-  };
+  const normalizedValues = values.map((value) => normalizeShoppingItemName(value ?? ''));
+  return (normalizedQuery: string) => normalizedValues.some((value) => value.includes(normalizedQuery));
 }
 
 export default function GlobalSearchModal({ navigation }: Props) {
@@ -81,6 +80,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const inputRef = useRef<TextInput>(null);
+  const shouldFetchListItems = visible && !!effectiveId && debouncedQuery.trim().length >= 3 && (activeTab === 'all' || activeTab === 'lists');
   const { data: serverResults = [], isFetching: isServerFetching } = useGlobalSearch(effectiveId, debouncedQuery);
   const { data: fridgeItems = [], isFetching: isFridgeFetching } = useFridge(visible ? effectiveId : null);
   const { data: shoppingLists = [], isFetching: isListsFetching } = useShoppingLists(visible ? effectiveId : null);
@@ -93,13 +93,13 @@ export default function GlobalSearchModal({ navigation }: Props) {
         const response = await api.get<ShoppingItem[]>(`/households/${effectiveId}/shopping-lists/${list.id}/items`);
         return { list, items: response.data };
       },
-      enabled: visible && !!effectiveId && debouncedQuery.trim().length >= 2,
-      staleTime: 10_000,
+      enabled: shouldFetchListItems,
+      staleTime: 60_000,
     })),
   });
 
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedQuery(query), 180);
+    const timeout = setTimeout(() => setDebouncedQuery(query), 260);
     return () => clearTimeout(timeout);
   }, [query]);
 
@@ -118,9 +118,10 @@ export default function GlobalSearchModal({ navigation }: Props) {
   const localResults = useMemo<GlobalSearchResult[]>(() => {
     const trimmed = debouncedQuery.trim();
     if (trimmed.length < 2 || !effectiveId) return [];
+    const normalizedQuery = normalizeShoppingItemName(trimmed);
 
     const stockResults: GlobalSearchResult[] = fridgeItems
-      .filter((item) => matchesQuery(item.name, item.category, item.storage?.name)(trimmed))
+      .filter((item) => matchesQuery(item.name, item.category, item.storage?.name)(normalizedQuery))
       .slice(0, 8)
       .map((item) => ({
         id: `stock:${item.id}`,
@@ -141,7 +142,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
       }));
 
     const shoppingListResults: GlobalSearchResult[] = shoppingLists
-      .filter((list) => matchesQuery(list.name, list.place, list.category)(trimmed))
+      .filter((list) => matchesQuery(list.name, list.place, list.category)(normalizedQuery))
       .slice(0, 6)
       .map((list) => ({
         id: `list:${list.id}`,
@@ -160,7 +161,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
 
     const shoppingItemResults: GlobalSearchResult[] = listItemQueries
       .flatMap((queryResult) => queryResult.data ? queryResult.data.items.map((item) => ({ item, list: queryResult.data!.list })) : [])
-      .filter(({ item, list }) => matchesQuery(item.name, item.category, list.name)(trimmed))
+      .filter(({ item, list }) => matchesQuery(item.name, item.category, list.name)(normalizedQuery))
       .slice(0, 8)
       .map(({ item, list }) => ({
         id: `shopping-item:${item.id}`,
@@ -184,16 +185,16 @@ export default function GlobalSearchModal({ navigation }: Props) {
       }));
 
     const taskResults: GlobalSearchResult[] = tasks
-      .filter((task) => matchesQuery(task.title, task.description, task.category, task.assignedTo?.name, task.shoppingList?.name)(trimmed))
+      .filter((task) => matchesQuery(task.title, task.description, task.category, task.assignedTo?.name, task.shoppingList?.name)(normalizedQuery))
       .slice(0, 8)
       .map((task) => ({
         id: `task:${task.id}`,
         type: 'task',
         title: task.title,
         subtitle: [
-          task.done ? 'Concluida' : task.status === 'in_progress' ? 'Em andamento' : 'Pendente',
+          task.done ? 'Concluída' : task.status === 'in_progress' ? 'Em andamento' : 'Pendente',
           task.category,
-          task.assignedTo?.name ? `Responsavel: ${task.assignedTo.name}` : null,
+          task.assignedTo?.name ? `Responsável: ${task.assignedTo.name}` : null,
           task.shoppingList?.name ? `Lista: ${task.shoppingList.name}` : null,
         ].filter(Boolean).join(' - '),
         target: {
@@ -310,14 +311,14 @@ export default function GlobalSearchModal({ navigation }: Props) {
     if (item.rowType === 'action') {
       return (
         <TouchableOpacity style={styles.resultRow} onPress={() => openShortcut(item.route)} activeOpacity={0.74}>
-          <View style={styles.resultIcon}>
+          <View style={styles.actionIcon}>
             <Feather name={item.icon} size={17} color={Colors.accent} />
           </View>
           <View style={styles.resultTextBlock}>
             <Text style={styles.resultTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.resultSubtitle} numberOfLines={1}>{item.subtitle}</Text>
+            <Text style={styles.resultSubtitle} numberOfLines={2}>{item.subtitle}</Text>
           </View>
-          <Text style={styles.routeBadge}>Ação</Text>
+          <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
         </TouchableOpacity>
       );
     }
@@ -330,7 +331,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
         </View>
         <View style={styles.resultTextBlock}>
           <Text style={styles.resultTitle} numberOfLines={1}>{item.result.title}</Text>
-          <Text style={styles.resultSubtitle} numberOfLines={1}>{item.result.subtitle}</Text>
+          <Text style={styles.resultSubtitle} numberOfLines={2}>{item.result.subtitle}</Text>
         </View>
         <Text style={styles.routeBadge}>{TYPE_BADGES[item.result.type]}</Text>
       </TouchableOpacity>
@@ -344,25 +345,23 @@ export default function GlobalSearchModal({ navigation }: Props) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
         <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={closeSearch} />
         <View style={styles.panel}>
-          <View style={styles.tabsRow}>
-            {TABS.map((tab) => (
-              <TouchableOpacity
-                key={tab.value}
-                style={[styles.tab, activeTab === tab.value && styles.tabActive]}
-                onPress={() => setActiveTab(tab.value)}
-                activeOpacity={0.76}
-              >
-                <Text style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}>{tab.label}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.panelHeader}>
+            <View>
+              <Text style={styles.panelTitle}>Buscar</Text>
+              <Text style={styles.panelSubtitle}>Itens, listas, tarefas e atalhos</Text>
+            </View>
+            <TouchableOpacity style={styles.closeButton} onPress={closeSearch} activeOpacity={0.72}>
+              <Feather name="x" size={20} color={Colors.textPrimary} />
+            </TouchableOpacity>
           </View>
+
           <View style={styles.searchRow}>
             <Feather name="search" size={18} color={Colors.textSecondary} />
             <TextInput
               ref={inputRef}
               value={query}
               onChangeText={setQuery}
-              placeholder="Buscar em tudo..."
+              placeholder="Buscar em tudo"
               placeholderTextColor={Colors.textSecondary}
               style={styles.input}
               autoCapitalize="none"
@@ -375,6 +374,25 @@ export default function GlobalSearchModal({ navigation }: Props) {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabsScroller}
+            contentContainerStyle={styles.tabsRow}
+            keyboardShouldPersistTaps="handled"
+          >
+            {TABS.map((tab) => (
+              <TouchableOpacity
+                key={tab.value}
+                style={[styles.tab, activeTab === tab.value && styles.tabActive]}
+                onPress={() => setActiveTab(tab.value)}
+                activeOpacity={0.76}
+              >
+                <Text style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}>{tab.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
           {query.trim().length < 2 ? (
             <FlatList
@@ -417,17 +435,17 @@ export default function GlobalSearchModal({ navigation }: Props) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    paddingHorizontal: 10,
-    paddingTop: 38,
+    paddingHorizontal: 14,
+    paddingTop: 56,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(61,32,0,0.36)',
   },
   panel: {
-    maxHeight: '88%',
+    maxHeight: '86%',
     backgroundColor: Colors.card,
-    borderRadius: 8,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.separator,
     overflow: 'hidden',
@@ -437,26 +455,62 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 20,
   },
-  tabsRow: {
-    minHeight: 43,
+  panelHeader: {
+    minHeight: 68,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 8,
+    justifyContent: 'space-between',
+    gap: 12,
+    backgroundColor: Colors.card,
+  },
+  panelTitle: {
+    fontSize: 20,
+    lineHeight: 24,
+    fontWeight: '900',
+    color: Colors.textPrimary,
+  },
+  panelSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 16,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.background,
+  },
+  tabsScroller: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.separator,
     backgroundColor: Colors.card,
   },
+  tabsRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
   tab: {
-    minHeight: 29,
+    minHeight: 32,
     justifyContent: 'center',
-    borderRadius: 5,
-    paddingHorizontal: 9,
+    borderRadius: 16,
+    paddingHorizontal: 13,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: Colors.separator,
+    backgroundColor: Colors.background,
   },
   tabActive: {
-    backgroundColor: Colors.accent + '18',
+    backgroundColor: Colors.accent,
     borderColor: Colors.accent,
   },
   tabText: {
@@ -465,17 +519,20 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: Colors.accent,
-    fontWeight: '700',
+    color: '#fff',
+    fontWeight: '800',
   },
   searchRow: {
-    minHeight: 48,
+    minHeight: 54,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
+    gap: 10,
+    marginHorizontal: 12,
+    marginBottom: 8,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
     backgroundColor: Colors.background,
   },
   input: {
@@ -494,25 +551,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 5,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 7,
     backgroundColor: Colors.card,
   },
   resultRow: {
-    minHeight: 35,
+    minHeight: 58,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    gap: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     borderTopWidth: 1,
     borderTopColor: Colors.separator,
   },
   resultIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent + '16',
+  },
+  actionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.accent + '16',
@@ -520,21 +585,31 @@ const styles = StyleSheet.create({
   resultTextBlock: {
     flex: 1,
     minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
+    gap: 3,
   },
   resultTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 15,
+    lineHeight: 19,
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   resultSubtitle: {
-    flex: 1,
     fontSize: 12,
+    lineHeight: 16,
     color: Colors.textSecondary,
   },
-  routeBadge: { fontSize: 12, color: Colors.accent, marginLeft: 6, fontWeight: '700' },
+  routeBadge: {
+    maxWidth: 70,
+    overflow: 'hidden',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: Colors.accent + '12',
+    fontSize: 11,
+    lineHeight: 14,
+    color: Colors.accent,
+    fontWeight: '800',
+  },
   centerState: {
     minHeight: 180,
     alignItems: 'center',

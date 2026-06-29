@@ -13,6 +13,26 @@ type PushTokenResult =
   | { ok: true; token: string }
   | { ok: false; reason: 'not-device' | 'permission-denied' | 'token-error' | 'api-error'; detail?: string };
 
+function logPush(message: string, detail?: unknown) {
+  if (!__DEV__) return;
+  // eslint-disable-next-line no-console
+  if (detail === undefined) console.log(message);
+  // eslint-disable-next-line no-console
+  else console.log(message, detail);
+}
+
+function warnPush(message: string, detail?: unknown) {
+  if (!__DEV__) return;
+  if (detail === undefined) console.warn(message);
+  else console.warn(message, detail);
+}
+
+function errorPush(message: string, detail?: unknown) {
+  if (!__DEV__) return;
+  if (detail === undefined) console.error(message);
+  else console.error(message, detail);
+}
+
 function createLocalDeviceId() {
   const random = Math.random().toString(36).slice(2);
   return `${Platform.OS}-${Date.now().toString(36)}-${random}`;
@@ -36,12 +56,11 @@ async function getPushDevicePayload() {
 
 export async function registerPushToken(): Promise<PushTokenResult> {
   if (!Device.isDevice && !__DEV__) {
-    console.log('[Push] Pulando: nao e device fisico e nao esta em __DEV__');
     return { ok: false, reason: 'not-device' };
   }
 
   if (!PROJECT_ID) {
-    console.error('[Push] Project ID do EAS nao encontrado.');
+    errorPush('[Push] Project ID do EAS não encontrado.');
     return { ok: false, reason: 'token-error', detail: 'missing-project-id' };
   }
 
@@ -55,26 +74,26 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  console.log('[Push] Permissao atual:', existingStatus);
+  logPush('[Push] Permissão atual:', existingStatus);
 
   let finalStatus = existingStatus;
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
-    console.log('[Push] Permissao apos request:', finalStatus);
+    logPush('[Push] Permissão após request:', finalStatus);
   }
 
   if (finalStatus !== 'granted') {
-    console.warn('[Push] Permissao negada');
+    warnPush('[Push] Permissão negada');
     return { ok: false, reason: 'permission-denied' };
   }
 
   let tokenData: Awaited<ReturnType<typeof Notifications.getExpoPushTokenAsync>>;
   try {
     tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
-    console.log('[Push] Token obtido:', tokenData.data);
+    logPush('[Push] Token obtido');
   } catch (err: any) {
-    console.error('[Push] Erro ao obter token:', err?.message ?? err);
+    errorPush('[Push] Erro ao obter token:', err?.message ?? err);
     return { ok: false, reason: 'token-error', detail: err?.message };
   }
 
@@ -83,10 +102,10 @@ export async function registerPushToken(): Promise<PushTokenResult> {
       pushToken: tokenData.data,
       ...(await getPushDevicePayload()),
     });
-    console.log('[Push] Token salvo no backend com sucesso');
+    logPush('[Push] Token salvo no backend com sucesso');
     return { ok: true, token: tokenData.data };
   } catch (err: any) {
-    console.error('[Push] Erro ao salvar token no backend:', err?.message ?? err);
+    errorPush('[Push] Erro ao salvar token no backend:', err?.message ?? err);
     return { ok: false, reason: 'api-error', detail: err?.message };
   }
 }
@@ -99,13 +118,13 @@ export async function unregisterPushToken(): Promise<void> {
     await api.delete('/users/me/push-token', {
       data: { pushToken: tokenData.data, ...devicePayload },
     });
-    console.log('[Push] Token removido do backend com sucesso');
+    logPush('[Push] Token removido do backend com sucesso');
   } catch (err: any) {
     try {
       await api.delete('/users/me/push-token', { data: devicePayload });
-      console.log('[Push] Device removido do backend com sucesso');
+      logPush('[Push] Device removido do backend com sucesso');
     } catch (fallbackErr: any) {
-      console.warn('[Push] Nao foi possivel remover token do backend:', fallbackErr?.message ?? err?.message ?? err);
+      warnPush('[Push] Não foi possível remover token do backend:', fallbackErr?.message ?? err?.message ?? err);
     }
   }
 }

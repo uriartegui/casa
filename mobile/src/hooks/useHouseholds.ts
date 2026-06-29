@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { Household, HouseholdAttention } from '../types';
 
+const HOUSEHOLDS_STALE_TIME = 5 * 60 * 1000;
+
 export function useHouseholds() {
   return useQuery({
     queryKey: ['households'],
@@ -9,6 +11,8 @@ export function useHouseholds() {
       const response = await api.get<Household[]>('/households');
       return response.data;
     },
+    staleTime: HOUSEHOLDS_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 
@@ -92,7 +96,7 @@ export function usePromoteToAdmin() {
     mutationFn: async ({ householdId, memberId }: { householdId: string; memberId: string }) => {
       await api.patch(`/households/${householdId}/members/${memberId}/promote`);
     },
-    onSuccess: (_data, { householdId }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['households'] });
     },
   });

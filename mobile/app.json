@@ -2,7 +2,7 @@
   "expo": {
     "name": "Colmeia - Casa Compartilhada",
     "slug": "colmeia-app",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "colmeia",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -17,13 +17,13 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.guiuriarte.colmeia",
       "appleTeamId": "89M8K9745R",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#F5A623"

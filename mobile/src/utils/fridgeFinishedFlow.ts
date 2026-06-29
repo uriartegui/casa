@@ -52,7 +52,7 @@ export function showFinishedFridgeItemAlert({
       showToast(`${item.name} removido do estoque`, 'success');
       onDone?.();
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel remover o item.');
+      Alert.alert('Erro', 'Não foi possível remover o item.');
     }
   }
 
@@ -61,7 +61,7 @@ export function showFinishedFridgeItemAlert({
       await addItemToShoppingList(householdId, list.id, item);
       invalidateShoppingList(queryClient, householdId, list.id);
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel adicionar o item na lista.');
+      Alert.alert('Erro', 'Não foi possível adicionar o item na lista.');
       return;
     }
 
@@ -72,14 +72,14 @@ export function showFinishedFridgeItemAlert({
     } catch {
       Alert.alert(
         'Item adicionado na lista',
-        'Ele foi para a lista, mas nao foi possivel remover do estoque. Tente remover do estoque novamente.',
+        'Ele foi para a lista, mas não foi possível remover do estoque. Tente remover do estoque novamente.',
       );
     }
   }
 
   function pickList() {
     if (shoppingListsLoading) {
-      Alert.alert('Aguarde', 'As listas ainda estao carregando.');
+      Alert.alert('Aguarde', 'As listas ainda estão carregando.');
       return;
     }
 
@@ -102,7 +102,7 @@ export function showFinishedFridgeItemAlert({
     );
   }
 
-  Alert.alert(`"${item.name}" acabou?`, 'Voce esta removendo este item do estoque.', [
+  Alert.alert(`"${item.name}" acabou?`, 'Você está removendo este item do estoque.', [
     { text: 'Somente excluir', style: 'destructive', onPress: removeOnly },
     { text: 'Excluir e mandar para lista', onPress: pickList },
     { text: 'Cancelar', style: 'cancel' },

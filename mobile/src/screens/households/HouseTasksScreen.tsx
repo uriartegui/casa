@@ -4,9 +4,11 @@ import {
   ActionSheetIOS,
   Alert,
   Animated,
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Modal,
+  PanResponder,
   Platform,
   RefreshControl,
   ScrollView,
@@ -21,12 +23,12 @@ import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import NativeSelect from '../../components/NativeSelect';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import {
   useCreateHouseTask,
   useDeleteHouseTask,
+  useHouseTaskActivity,
   useHouseTasks,
   useUpdateHouseTaskStatus,
 } from '../../hooks/useHouseTasks';
@@ -36,6 +38,11 @@ import { useAuth } from '../../context/AuthContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
+import { DateField, DropdownField } from './components/TaskFields';
+import { HelpSheet } from '../home/components/HomeSheets';
+import AlertsSheet from '../../components/AlertsSheet';
+import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { buildTaskActivityAlerts, buildTaskAttention, countAlerts } from '../../utils/alertCenter';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
@@ -43,18 +50,50 @@ type Props = {
 };
 
 type StatusFilter = 'open' | 'mine' | 'late' | 'done' | 'all';
-type DropdownOption = { label: string; value: string };
 
 const NONE_VALUE = '__none__';
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-const CATEGORIES = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutencao', 'Compras', 'Organizacao', 'Outros'];
+const CATEGORIES = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutenção', 'Compras', 'Organização', 'Outros'];
 const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: 'Pendentes', value: 'open' },
   { label: 'Minhas', value: 'mine' },
   { label: 'Atrasadas', value: 'late' },
-  { label: 'Concluidas', value: 'done' },
+  { label: 'Concluídas', value: 'done' },
   { label: 'Tudo', value: 'all' },
+];
+
+const TASK_HELP_HIGHLIGHTS = [
+  { icon: 'check-square' as const, title: 'Tarefas', body: 'Rotinas e pendências da casa em um só lugar.' },
+  { icon: 'calendar' as const, title: 'Prazos', body: 'Veja atrasadas, de hoje e próximas.' },
+  { icon: 'users' as const, title: 'Responsáveis', body: 'Acompanhe quem ficou com cada tarefa.' },
+];
+
+const TASK_HELP_SECTIONS = [
+  {
+    title: 'Criar tarefa',
+    body: 'Use o botão "+ Nova tarefa" para informar título, descrição, categoria, prazo, responsável e recorrência.',
+  },
+  {
+    title: 'Visão geral',
+    body: 'Os quadros mostram tarefas a fazer, em andamento e concluídas para você entender a situação rapidamente.',
+  },
+  {
+    title: 'Filtros',
+    body: 'Use os filtros para ver pendentes, minhas tarefas, atrasadas, concluídas ou uma categoria específica.',
+  },
+  {
+    title: 'Categoria',
+    body: 'Quando você entra por uma categoria, a tela mostra apenas as tarefas daquele assunto da casa.',
+  },
+  {
+    title: 'Concluir tarefa',
+    body: 'Toque no círculo do card para marcar como concluída. Tarefas concluídas podem ser vistas pelo botão "Concluídas".',
+  },
+  {
+    title: 'Editar ou remover',
+    body: 'Toque em uma tarefa para abrir detalhes, mudar informações ou remover quando não fizer mais sentido.',
+  },
 ];
 
 function dateKeyFromOffset(days: number): string {
@@ -86,35 +125,6 @@ function dateKeyFromPicker(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, '0');
   const day = String(value.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-function DropdownField({ label, value, options, onChange }: {
-  label: string;
-  value: string;
-  options: DropdownOption[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <View style={styles.dropdownField}>
-      <Text style={styles.sheetLabel}>{label}</Text>
-      <NativeSelect value={value} options={options} onChange={onChange} />
-    </View>
-  );
-}
-
-function DateField({ value, onPress, onClear }: { value: string | null; onPress: () => void; onClear: () => void }) {
-  return (
-    <View style={styles.dropdownField}>
-      <Text style={styles.sheetLabel}>Prazo</Text>
-      <View style={styles.dateRowWrap}>
-        <TouchableOpacity style={[styles.selectRow, styles.dateRow]} onPress={onPress} activeOpacity={0.75}>
-          <Text style={styles.selectValue}>{value ? formatBrShortDate(value) : 'Sem prazo'}</Text>
-          <Feather name="calendar" size={17} color={Colors.textSecondary} />
-        </TouchableOpacity>
-        {!!value && <TouchableOpacity onPress={onClear} style={styles.clearDateButton}><Text style={styles.clearDateText}>Limpar</Text></TouchableOpacity>}
-      </View>
-    </View>
-  );
 }
 
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
@@ -169,6 +179,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const { user } = useAuth();
   const { data: households } = useHouseholds();
   const { data: tasks, isLoading, refetch } = useHouseTasks(householdId);
+  const { data: taskActivity = [] } = useHouseTaskActivity(householdId);
   const { data: shoppingLists = [] } = useShoppingLists(householdId);
   const createTask = useCreateHouseTask(householdId);
   const updateStatus = useUpdateHouseTaskStatus(householdId);
@@ -192,8 +203,173 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [newTaskDatePickerVisible, setNewTaskDatePickerVisible] = useState(false);
   const [detailDatePickerVisible, setDetailDatePickerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
+  const [alertsVisible, setAlertsVisible] = useState(false);
   const highlightAnim = React.useRef(new Animated.Value(0)).current;
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
+  const screenHeight = Dimensions.get('window').height;
+  const helpCollapsedHeight = Math.round(screenHeight * 0.74);
+  const helpExpandedHeight = Math.round(screenHeight - 64);
+  const helpCloseThreshold = Math.round(screenHeight * 0.48);
+  const helpSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const helpSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const helpHeightRef = React.useRef(helpCollapsedHeight);
+  const helpDragStartHeight = React.useRef(helpCollapsedHeight);
+  const alertsSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const alertsSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
+  const alertsHeightRef = React.useRef(helpCollapsedHeight);
+  const alertsDragStartHeight = React.useRef(helpCollapsedHeight);
+  const {
+    lastSeenAt: taskActivitySeenAt,
+    markSeen: markTaskActivitySeen,
+  } = useActivitySeen(`tasks:${initialCategory ?? 'all'}`, householdId, taskActivity, user?.id);
+
+  React.useLayoutEffect(() => {
+    const listener = helpSheetHeight.addListener(({ value }) => {
+      helpHeightRef.current = value;
+    });
+    return () => helpSheetHeight.removeListener(listener);
+  }, [helpSheetHeight]);
+
+  React.useLayoutEffect(() => {
+    const listener = alertsSheetHeight.addListener(({ value }) => {
+      alertsHeightRef.current = value;
+    });
+    return () => alertsSheetHeight.removeListener(listener);
+  }, [alertsSheetHeight]);
+
+  const animateHelpSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
+    Animated.spring(helpSheetHeight, {
+      toValue,
+      useNativeDriver: false,
+      speed: 18,
+      bounciness: 4,
+    }).start(() => onEnd?.());
+  }, [helpSheetHeight]);
+
+  const openHelpModal = React.useCallback(() => {
+    helpSheetHeight.setValue(helpCollapsedHeight);
+    helpSheetTranslateY.setValue(helpCollapsedHeight);
+    helpHeightRef.current = helpCollapsedHeight;
+    setHelpVisible(true);
+    requestAnimationFrame(() => {
+      Animated.spring(helpSheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: false,
+        speed: 20,
+        bounciness: 3,
+      }).start();
+    });
+  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
+
+  const closeHelpModal = React.useCallback(() => {
+    Animated.timing(helpSheetTranslateY, {
+      toValue: Math.max(helpHeightRef.current, helpCollapsedHeight),
+      duration: 190,
+      useNativeDriver: false,
+    }).start(() => {
+      setHelpVisible(false);
+      helpSheetHeight.setValue(helpCollapsedHeight);
+      helpSheetTranslateY.setValue(helpCollapsedHeight);
+      helpHeightRef.current = helpCollapsedHeight;
+    });
+  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
+
+  const animateAlertsSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
+    Animated.spring(alertsSheetHeight, {
+      toValue,
+      useNativeDriver: false,
+      speed: 18,
+      bounciness: 4,
+    }).start(() => onEnd?.());
+  }, [alertsSheetHeight]);
+
+  const openAlertsModal = React.useCallback(() => {
+    alertsSheetHeight.setValue(helpCollapsedHeight);
+    alertsSheetTranslateY.setValue(helpCollapsedHeight);
+    alertsHeightRef.current = helpCollapsedHeight;
+    setAlertsVisible(true);
+    markTaskActivitySeen();
+    requestAnimationFrame(() => {
+      Animated.spring(alertsSheetTranslateY, {
+        toValue: 0,
+        useNativeDriver: false,
+        speed: 20,
+        bounciness: 3,
+      }).start();
+    });
+  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight, markTaskActivitySeen]);
+
+  const closeAlertsModal = React.useCallback(() => {
+    Animated.timing(alertsSheetTranslateY, {
+      toValue: Math.max(alertsHeightRef.current, helpCollapsedHeight),
+      duration: 190,
+      useNativeDriver: false,
+    }).start(() => {
+      setAlertsVisible(false);
+      alertsSheetHeight.setValue(helpCollapsedHeight);
+      alertsSheetTranslateY.setValue(helpCollapsedHeight);
+      alertsHeightRef.current = helpCollapsedHeight;
+    });
+  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight]);
+
+  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      helpDragStartHeight.current = helpHeightRef.current;
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
+      helpSheetHeight.setValue(nextHeight);
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const currentHeight = helpHeightRef.current;
+      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
+      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
+      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
+        closeHelpModal();
+        return;
+      }
+      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
+        animateHelpSheet(helpExpandedHeight);
+        return;
+      }
+      animateHelpSheet(helpCollapsedHeight);
+    },
+  }), [animateHelpSheet, closeHelpModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, helpSheetHeight, screenHeight]);
+
+  const alertsSheetPanResponder = React.useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onStartShouldSetPanResponderCapture: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponderCapture: () => true,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => {
+      alertsDragStartHeight.current = alertsHeightRef.current;
+    },
+    onPanResponderMove: (_, gesture) => {
+      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
+      alertsSheetHeight.setValue(nextHeight);
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const currentHeight = alertsHeightRef.current;
+      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
+      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
+      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
+        closeAlertsModal();
+        return;
+      }
+      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
+        animateAlertsSheet(helpExpandedHeight);
+        return;
+      }
+      animateAlertsSheet(helpCollapsedHeight);
+    },
+  }), [alertsSheetHeight, animateAlertsSheet, closeAlertsModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, screenHeight]);
 
   React.useEffect(() => {
     if (initialCategory) {
@@ -203,21 +379,66 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     }
   }, [initialCategory]);
 
+  const alertSections = React.useMemo(() => [
+    {
+      title: 'Precisa de atenção',
+      items: buildTaskAttention(tasks ?? [], {
+        category: initialCategory,
+        userId: user?.id,
+        onOpenTask: setSelectedTask,
+      }),
+      emptyText: initialCategory ? 'Nenhuma tarefa urgente nesta categoria.' : 'Nenhuma tarefa urgente agora.',
+    },
+    {
+      title: 'Atividades novas',
+      items: buildTaskActivityAlerts(taskActivity, {
+        category: initialCategory,
+        localUserId: user?.id,
+        since: taskActivitySeenAt,
+      }),
+      emptyText: 'Nenhuma atividade nova nas tarefas.',
+    },
+  ], [initialCategory, taskActivity, taskActivitySeenAt, tasks, user?.id]);
+  const alertCount = countAlerts(alertSections);
+
   React.useEffect(() => {
-    navigation.setOptions({
+    (navigation as any).setOptions({
       title: initialCategory ?? 'Tarefas da casa',
       headerTitle: initialCategory ? () => <TaskHouseholdHeader category={initialCategory} householdName={householdName} /> : undefined,
-      headerRight: () => (
+      headerAlert: () => (
         <TouchableOpacity
-          style={styles.headerMenuButton}
-          onPress={() => navigation.getParent()?.navigate('Menu' as never)}
+          style={styles.headerIconButton}
+          onPress={openAlertsModal}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Feather name="menu" size={30} color={Colors.textPrimary} />
+          <Feather name="bell" size={23} color={Colors.textPrimary} />
+          {alertCount > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{alertCount > 99 ? '99+' : alertCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       ),
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={openHelpModal}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="help-circle" size={23} color={Colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerIconButton}
+            onPress={() => navigation.getParent()?.navigate('Menu' as never)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="menu" size={30} color={Colors.textPrimary} />
+          </TouchableOpacity>
+        </View>
+      ),
     });
-  }, [navigation]);
+  }, [alertCount, householdName, initialCategory, navigation, openAlertsModal, openHelpModal]);
 
   const stats = useMemo(() => {
     const all = tasks ?? [];
@@ -252,6 +473,11 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     });
   }, [categoryFilter, initialCategory, isCategoryPage, tasks]);
 
+  const categoryPendingCount = useMemo(
+    () => kanbanTasks.filter((task) => !task.done && task.status !== 'completed' && task.status !== 'skipped').length,
+    [kanbanTasks],
+  );
+
   async function handleRefresh() {
     setRefreshing(true);
     await refetch();
@@ -274,7 +500,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       setSheetVisible(false);
     } catch (error: any) {
       const message = error?.response?.data?.message;
-      Alert.alert('Nao foi possivel criar a tarefa', Array.isArray(message) ? message[0] : message || 'Verifique sua conexao e tente novamente.');
+      Alert.alert('Não foi possível criar a tarefa', Array.isArray(message) ? message[0] : message || 'Verifique sua conexão e tente novamente.');
     }
   }
 
@@ -301,7 +527,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       const updated = await updateStatus.mutateAsync({ taskId: selectedTask.id, ...data });
       setSelectedTask(updated);
     } catch {
-      Alert.alert('Nao foi possivel atualizar a tarefa', 'Tente novamente em instantes.');
+      Alert.alert('Não foi possível atualizar a tarefa', 'Tente novamente em instantes.');
     }
   }
 
@@ -474,18 +700,18 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
               ))}
             </ScrollView>}
             {isCategoryPage && <View style={styles.categoryPageHeader}>
-              <Text style={styles.categoryContextText}>{stats.pending} {stats.pending === 1 ? 'tarefa pendente' : 'tarefas pendentes'} nesta categoria</Text>
+              <Text style={styles.categoryContextText}>{categoryPendingCount} {categoryPendingCount === 1 ? 'tarefa pendente' : 'tarefas pendentes'} nesta categoria</Text>
               <TouchableOpacity
                 style={[styles.completedToggle, statusFilter === 'done' && styles.completedToggleActive]}
                 onPress={() => setStatusFilter((current) => current === 'done' ? 'open' : 'done')}
               >
                 <Text style={[styles.completedToggleText, statusFilter === 'done' && styles.completedToggleTextActive]}>
-                  {statusFilter === 'done' ? 'Ver pendentes' : 'Concluidas'}
+                  {statusFilter === 'done' ? 'Ver pendentes' : 'Concluídas'}
                 </Text>
               </TouchableOpacity>
             </View>}
-            <Text style={styles.sectionTitle}>Visao geral</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kanbanBoard}>{renderKanbanColumn('A fazer', 'pending')}{renderKanbanColumn('Em andamento', 'in_progress')}{renderKanbanColumn('Concluidas', 'completed')}</ScrollView>
+            <Text style={styles.sectionTitle}>Visão geral</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.kanbanBoard}>{renderKanbanColumn('A fazer', 'pending')}{renderKanbanColumn('Em andamento', 'in_progress')}{renderKanbanColumn('Concluídas', 'completed')}</ScrollView>
             <Text style={styles.sectionTitle}>Tarefas</Text>
           </View>
         }
@@ -550,10 +776,10 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
               />}
 
               <DropdownField
-                label="Responsavel"
+                label="Responsável"
                 value={assignmentType === 'user' && assignedToId ? `user:${assignedToId}` : assignmentType}
                 options={[
-                  { label: 'Sem responsavel', value: 'unassigned' },
+                  { label: 'Sem responsável', value: 'unassigned' },
                   { label: 'Todos', value: 'all' },
                   ...members.map((member) => ({ label: member.user?.name ?? 'Membro', value: `user:${member.userId}` })),
                 ]}
@@ -564,9 +790,9 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
               />
 
               <DropdownField
-                label="Repeticao"
+                label="Repetição"
                 value={recurrence}
-                options={[{ label: 'Nao repetir', value: 'none' }, { label: 'Todo dia', value: 'daily' }, { label: 'Toda semana', value: 'weekly' }, { label: 'A cada 15 dias', value: 'biweekly' }, { label: 'Todo mes', value: 'monthly' }]}
+                options={[{ label: 'Não repetir', value: 'none' }, { label: 'Todo dia', value: 'daily' }, { label: 'Toda semana', value: 'weekly' }, { label: 'A cada 15 dias', value: 'biweekly' }, { label: 'Todo mês', value: 'monthly' }]}
                 onChange={(value) => setRecurrence(value as HouseTask['recurrence'])}
               />
 
@@ -618,10 +844,10 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
             {!!selectedTask?.description && <Text style={styles.taskDetailDescription}>{selectedTask.description}</Text>}
 
             <DropdownField
-              label="Responsavel"
+              label="Responsável"
               value={selectedTask?.assignmentType === 'user' && selectedTask.assignedToId ? `user:${selectedTask.assignedToId}` : selectedTask?.assignmentType ?? 'unassigned'}
               options={[
-                { label: 'Sem responsavel', value: 'unassigned' },
+                { label: 'Sem responsável', value: 'unassigned' },
                 { label: 'Todos', value: 'all' },
                 ...members.map((member) => ({ label: member.user?.name ?? 'Membro', value: `user:${member.userId}` })),
               ]}
@@ -645,7 +871,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
             <DropdownField
               label="Status"
               value={selectedTask?.status ?? 'pending'}
-              options={[{ label: 'A fazer', value: 'pending' }, { label: 'Em andamento', value: 'in_progress' }, { label: 'Concluida', value: 'completed' }, { label: 'Nao fazer', value: 'skipped' }]}
+              options={[{ label: 'A fazer', value: 'pending' }, { label: 'Em andamento', value: 'in_progress' }, { label: 'Concluída', value: 'completed' }, { label: 'Não fazer', value: 'skipped' }]}
               onChange={(value) => updateSelectedTask({ status: value as HouseTask['status'] })}
             />
 
@@ -658,12 +884,50 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
           </ScrollView>
         </View>
       </Modal>
+
+      <HelpSheet
+        visible={helpVisible}
+        height={helpSheetHeight}
+        translateY={helpSheetTranslateY}
+        panHandlers={helpSheetPanResponder.panHandlers}
+        sections={TASK_HELP_SECTIONS}
+        subtitle={initialCategory ? `Tarefas: ${initialCategory}` : 'Guia rápido das tarefas'}
+        introTitle="Como organizar tarefas da casa"
+        introText="Use tarefas para rotinas, pendências e combinados que não são estoque, como limpar, comprar gás, trocar filtro ou cuidar da manutenção."
+        highlights={TASK_HELP_HIGHLIGHTS}
+        groupTitle="Funções das tarefas"
+        onClose={closeHelpModal}
+      />
+      <AlertsSheet
+        visible={alertsVisible}
+        height={alertsSheetHeight}
+        translateY={alertsSheetTranslateY}
+        panHandlers={alertsSheetPanResponder.panHandlers}
+        subtitle={initialCategory ? `Tarefas: ${initialCategory}` : 'Tarefas da casa'}
+        sections={alertSections}
+        onClose={closeAlertsModal}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  headerBadge: {
+    position: 'absolute',
+    top: 2,
+    right: -5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
   headerMenuButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   list: { padding: 16, gap: 10, paddingBottom: 104 },
   listEmpty: { flexGrow: 1 },
@@ -813,19 +1077,6 @@ const styles = StyleSheet.create({
   },
   sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
   taskDetailDescription: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 6 },
-  dropdownField: { gap: 5, position: 'relative' },
-  dropdownFieldOpen: { zIndex: 30, elevation: 30 },
-  selectRow: { minHeight: 46, borderWidth: 1, borderColor: Colors.separator, borderRadius: 10, backgroundColor: Colors.card, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  selectValue: { flex: 1, fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
-  dropdownPanel: { position: 'absolute', top: 67, left: 0, right: 0, zIndex: 40, elevation: 40, borderWidth: 1, borderColor: Colors.separator, borderRadius: 10, backgroundColor: Colors.card, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-  dropdownOption: { minHeight: 42, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: Colors.separator },
-  dropdownOptionActive: { backgroundColor: Colors.accent + '12' },
-  dropdownOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
-  dropdownOptionTextActive: { color: Colors.accent, fontWeight: '800' },
-  dateRowWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateRow: { flex: 1 },
-  clearDateButton: { paddingHorizontal: 4, paddingVertical: 8 },
-  clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
   sheetLabel: {
     fontSize: 12,
     fontWeight: '700',
@@ -844,17 +1095,4 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   descriptionInput: { minHeight: 68, textAlignVertical: 'top' },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  horizontalChips: { gap: 8, paddingRight: 8 },
-  chip: {
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    borderRadius: 18,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    backgroundColor: Colors.card,
-  },
-  chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  chipText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
-  chipTextActive: { color: '#fff' },
 });

@@ -130,7 +130,7 @@ export default function ManageCategoriesScreen({ route }: Props) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.hint}>Toque em uma categoria para remove-la. Itens ja cadastrados com essa categoria nao sao afetados.</Text>
+      <Text style={styles.hint}>Toque em uma categoria para removê-la. Itens já cadastrados com essa categoria não são afetados.</Text>
       {(storages ?? []).map((s) => (
         <StorageSection key={s.id} householdId={householdId} storage={s} />
       ))}

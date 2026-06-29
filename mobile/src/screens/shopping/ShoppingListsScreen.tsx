@@ -16,8 +16,10 @@ import { ShoppingListCardSkeleton } from '../../components/Skeleton';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList } from '../../types';
-import ShoppingActivityScreen from './ShoppingActivityScreen';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { HelpSheet } from '../home/components/HomeSheets';
+import AlertsSheet from '../../components/AlertsSheet';
+import { buildShoppingActivityAlerts, buildShoppingAttention, countAlerts } from '../../utils/alertCenter';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
@@ -26,11 +28,11 @@ type Props = {
 const SHOPPING_HELP_SECTIONS = [
   {
     title: 'Listas',
-    body: 'Crie uma lista para cada compra, mercado ou necessidade da casa. Cada lista guarda local, categoria, itens e historico.',
+    body: 'Crie uma lista para cada compra, mercado ou necessidade da casa. Cada lista guarda local, categoria, itens e histórico.',
   },
   {
     title: 'Urgente',
-    body: 'Marque como urgente na criacao ou edicao. A lista fica destacada na Home para todo mundo ver mais rapido.',
+    body: 'Marque como urgente na criação ou edição. A lista fica destacada na Home para todo mundo ver mais rápido.',
   },
   {
     title: 'Itens',
@@ -38,7 +40,7 @@ const SHOPPING_HELP_SECTIONS = [
   },
   {
     title: 'Compra feita',
-    body: 'Ao marcar um item como comprado, voce pode mandar para o estoque escolhido com quantidade, unidade e categoria.',
+    body: 'Ao marcar um item como comprado, você pode mandar para o estoque escolhido com quantidade, unidade e categoria.',
   },
   {
     title: 'Atividades',
@@ -46,8 +48,14 @@ const SHOPPING_HELP_SECTIONS = [
   },
   {
     title: 'Editar e excluir',
-    body: 'Use Editar no card para alterar nome, local, categoria e urgencia. O X remove a lista inteira.',
+    body: 'Use Editar no card para alterar nome, local, categoria e urgência. O X remove a lista inteira.',
   },
+];
+
+const SHOPPING_HELP_HIGHLIGHTS = [
+  { icon: 'shopping-cart' as const, title: 'Listas', body: 'Compras separadas por lugar ou necessidade.' },
+  { icon: 'alert-circle' as const, title: 'Urgente', body: 'Destaque o que precisa de atenção rápida.' },
+  { icon: 'box' as const, title: 'Estoque', body: 'Envie comprados direto para o estoque certo.' },
 ];
 
 export default function ShoppingListsScreen({ navigation }: Props) {
@@ -61,8 +69,29 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const {
     lastSeenAt: shoppingActivitySeenAt,
     markSeen: markShoppingActivitySeen,
-    unseenCount: shoppingActivityUnreadCount,
   } = useActivitySeen('shopping', effectiveId, shoppingActivity ?? [], user?.id);
+  const alertSections = React.useMemo(() => [
+    {
+      title: 'Precisa de atenção',
+      items: buildShoppingAttention(lists ?? [], {
+        onOpenList: (list) => navigation.navigate('ShoppingListDetail', {
+          householdId: list.householdId,
+          listId: list.id,
+          listName: list.name,
+          listUrgent: list.urgent,
+          listPlace: list.place,
+          listCategory: list.category,
+        }),
+      }),
+      emptyText: 'Nenhuma lista urgente ou pendente agora.',
+    },
+    {
+      title: 'Atividades novas',
+      items: buildShoppingActivityAlerts(shoppingActivity ?? [], { localUserId: user?.id, since: shoppingActivitySeenAt }),
+      emptyText: 'Nenhuma atividade nova nas listas.',
+    },
+  ], [lists, navigation, shoppingActivity, shoppingActivitySeenAt, user?.id]);
+  const alertCount = countAlerts(alertSections);
 
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -78,7 +107,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const [editUrgent, setEditUrgent] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [activityModalVisible, setActivityModalVisible] = useState(false);
-  const [activityNewSince, setActivityNewSince] = useState<string | null>(null);
   const screenHeight = Dimensions.get('window').height;
   const activityCollapsedHeight = Math.round(screenHeight * 0.74);
   const activityExpandedHeight = Math.round(screenHeight - 64);
@@ -107,8 +135,22 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   }, [helpSheetHeight]);
 
   React.useEffect(() => {
-    navigation.setOptions({
+    (navigation as any).setOptions({
       title: household?.name ?? 'Listas de Compras',
+      headerAlert: () => (
+        <TouchableOpacity
+          onPress={() => effectiveId && openActivityModal()}
+          style={styles.headerIconButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="bell" size={23} color={Colors.textPrimary} />
+          {alertCount > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{alertCount > 99 ? '99+' : alertCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ),
       headerRight: () => (
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -117,18 +159,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => effectiveId && openActivityModal()}
-            style={styles.headerIconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="bell" size={23} color={Colors.textPrimary} />
-            {shoppingActivityUnreadCount > 0 && (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>{shoppingActivityUnreadCount > 99 ? '99+' : shoppingActivityUnreadCount}</Text>
-              </View>
-            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.getParent()?.navigate('Menu' as never)}
@@ -140,7 +170,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         </View>
       ),
     });
-  }, [navigation, household, effectiveId, shoppingActivityUnreadCount, shoppingActivitySeenAt, markShoppingActivitySeen]);
+  }, [alertCount, navigation, household, effectiveId, openHelpModal]);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -185,7 +215,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       });
       setEditingList(null);
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel atualizar a lista.');
+      Alert.alert('Erro', 'Não foi possível atualizar a lista.');
     }
   }
 
@@ -236,7 +266,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   }
 
   function openActivityModal() {
-    setActivityNewSince(shoppingActivitySeenAt);
     activitySheetHeight.setValue(activityCollapsedHeight);
     activitySheetTranslateY.setValue(activityCollapsedHeight);
     activityHeightRef.current = activityCollapsedHeight;
@@ -427,96 +456,29 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      <Modal
+      <HelpSheet
         visible={helpVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeHelpModal}
-      >
-        <View style={styles.activityOverlay}>
-          <TouchableOpacity
-            style={styles.sheetBackdrop}
-            activeOpacity={1}
-            onPress={closeHelpModal}
-          />
-          <Animated.View style={[styles.activitySheetMotion, { transform: [{ translateY: helpSheetTranslateY }] }]}>
-            <Animated.View style={[styles.activitySheet, { height: helpSheetHeight }]}>
-              <View style={styles.sheetDragArea} {...helpSheetPanResponder.panHandlers}>
-                <View style={styles.sheetHandle} />
-                <View style={styles.sheetDragHint} />
-              </View>
-              <View style={styles.helpHeader}>
-                <Text style={styles.helpTitle}>Ajuda</Text>
-                <Text style={styles.helpSubtitle}>Guia rapido das listas</Text>
-              </View>
+        height={helpSheetHeight}
+        translateY={helpSheetTranslateY}
+        panHandlers={helpSheetPanResponder.panHandlers}
+        sections={SHOPPING_HELP_SECTIONS}
+        subtitle="Guia rápido das listas"
+        introTitle="Como usar listas de compras"
+        introText="Organize compras por lugar ou necessidade, marque itens durante a compra e mande produtos comprados para o estoque certo."
+        highlights={SHOPPING_HELP_HIGHLIGHTS}
+        groupTitle="Funções das listas"
+        onClose={closeHelpModal}
+      />
 
-              <ScrollView
-                style={styles.helpScroll}
-                contentContainerStyle={styles.helpContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <View style={styles.helpIntroCard}>
-                  <Text style={styles.helpIntroTitle}>Como usar listas de compras</Text>
-                  <Text style={styles.helpIntroText}>
-                    Organize compras por lugar ou necessidade, marque itens durante a compra e mande produtos comprados para o estoque certo.
-                  </Text>
-                </View>
-
-                {SHOPPING_HELP_SECTIONS.map((section, index) => (
-                  <View key={section.title} style={styles.helpSection}>
-                    <View style={styles.helpSectionNumber}>
-                      <Text style={styles.helpSectionNumberText}>{index + 1}</Text>
-                    </View>
-                    <View style={styles.helpSectionBody}>
-                      <Text style={styles.helpSectionTitle}>{section.title}</Text>
-                      <Text style={styles.helpSectionText}>{section.body}</Text>
-                    </View>
-                  </View>
-                ))}
-              </ScrollView>
-            </Animated.View>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      <Modal
+      <AlertsSheet
         visible={activityModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={closeActivityModal}
-      >
-        <View style={styles.activityOverlay}>
-          <TouchableOpacity
-            style={styles.sheetBackdrop}
-            activeOpacity={1}
-            onPress={closeActivityModal}
-          />
-          <Animated.View style={[styles.activitySheetMotion, { transform: [{ translateY: activitySheetTranslateY }] }]}>
-            <Animated.View style={[styles.activitySheet, { height: activitySheetHeight }]}>
-            <View style={styles.sheetDragArea} {...activitySheetPanResponder.panHandlers}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetDragHint} />
-            </View>
-            <View style={styles.activitySheetHeader}>
-              <Text style={styles.activitySheetTitle}>Atividades da lista</Text>
-            </View>
-            {effectiveId ? (
-              <ShoppingActivityScreen
-                navigation={navigation as any}
-                route={{
-                  key: 'ShoppingActivitySheet',
-                  name: 'ShoppingActivity',
-                  params: { householdId: effectiveId },
-                } as any}
-                embedded
-                newSince={activityNewSince}
-                localUserId={user?.id}
-              />
-            ) : null}
-            </Animated.View>
-          </Animated.View>
-        </View>
-      </Modal>
+        height={activitySheetHeight}
+        translateY={activitySheetTranslateY}
+        panHandlers={activitySheetPanResponder.panHandlers}
+        subtitle="Listas de compras"
+        sections={alertSections}
+        onClose={closeActivityModal}
+      />
 
       <Modal visible={!!editingList} transparent animationType="slide" onRequestClose={() => setEditingList(null)}>
         <View style={styles.sheetOverlay}>
@@ -547,7 +509,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
                 style={styles.editInput}
                 value={editPlace}
                 onChangeText={setEditPlace}
-                placeholder="Ex: Mercado, farmacia"
+                placeholder="Ex: Mercado, farmácia"
                 placeholderTextColor={Colors.textSecondary}
                 returnKeyType="next"
               />

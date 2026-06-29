@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await api.post<AuthResponse>('/auth/login', { phone, password });
     await persistSession(response.data);
     registerPushToken().then((result) => {
-      if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
+      if (__DEV__ && !result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
     });
   }
 
@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await api.post<AuthResponse>('/auth/register', { name, password, phone });
     await persistSession(response.data);
     registerPushToken().then((result) => {
-      if (!result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
+      if (__DEV__ && !result.ok) console.warn('[Auth] Push token não registrado:', result.reason, result.detail ?? '');
     });
   }
 

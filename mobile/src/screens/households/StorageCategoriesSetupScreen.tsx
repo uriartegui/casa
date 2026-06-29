@@ -39,7 +39,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
 
   async function toggleStorage(storageId: string, hidden: boolean) {
     if (!hidden && visibleCount <= 1) {
-      Alert.alert('Mantenha um estoque', 'A casa precisa ter pelo menos um estoque visivel.');
+      Alert.alert('Mantenha um estoque', 'A casa precisa ter pelo menos um estoque visível.');
       return;
     }
     await updateStorage.mutateAsync({ storageId, hidden: !hidden });
@@ -65,7 +65,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
         <Text style={styles.eyebrow}>Primeiros passos</Text>
         <Text style={styles.title}>Deixe sua casa pronta</Text>
         <Text style={styles.subtitle}>
-          Configure o basico agora. O resto voce pode ajustar depois pela aba Casa.
+          Configure o básico agora. O resto você pode ajustar depois pela aba Casa.
         </Text>
 
         <View style={styles.progressWrap}>
@@ -79,7 +79,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
           <View style={styles.cardHeader}>
             <View>
               <Text style={styles.cardTitle}>1. Escolha os estoques</Text>
-              <Text style={styles.cardText}>Deixe visivel só o que sua casa usa.</Text>
+              <Text style={styles.cardText}>Deixe visível só o que sua casa usa.</Text>
             </View>
             {isLoading && <ActivityIndicator size="small" color={Colors.accent} />}
           </View>
@@ -105,7 +105,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
           <Text style={styles.cardTitle}>2. Convide quem mora junto</Text>
           <Text style={styles.cardText}>A casa funciona melhor quando todo mundo consegue atualizar estoque e lista.</Text>
           <View style={styles.inviteBox}>
-            <Text style={styles.inviteLabel}>Codigo</Text>
+            <Text style={styles.inviteLabel}>Código</Text>
             <Text style={styles.inviteCode}>{inviteCode ? `${inviteCode.slice(0, 3)} ${inviteCode.slice(3)}` : '...'}</Text>
           </View>
           <View style={styles.actionRow}>
@@ -120,7 +120,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>3. Adicione seus primeiros itens</Text>
-          <Text style={styles.cardText}>Comece com 3 itens que voce sempre quer lembrar: leite, sabao, papel, shampoo...</Text>
+          <Text style={styles.cardText}>Comece com 3 itens que você sempre quer lembrar: leite, sabão, papel, shampoo...</Text>
         </View>
 
         <View style={styles.card}>

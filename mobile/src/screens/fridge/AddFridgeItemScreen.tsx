@@ -35,8 +35,6 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [unit, setUnit] = useState<Unit>('un');
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
-  const [showStorageOptions, setShowStorageOptions] = useState(false);
-  const [showCategoryOptions, setShowCategoryOptions] = useState(false);
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
 
   // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
@@ -44,12 +42,11 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const { data: storages } = useStorages(householdId);
   const [pickedStorageId, setPickedStorageId] = useState<string | null>(routeStorageId ?? null);
   const storageId = pickedStorageId ?? undefined;
-  const selectedStorage = storages?.find((s) => s.id === storageId);
-
   const addItem = useAddFridgeItem(householdId);
   const { data: categories } = useCategories(householdId, storageId ?? null);
   const createCategory = useCreateCategory(householdId, storageId ?? '');
   const deleteCategory = useDeleteCategory(householdId, storageId ?? '');
+  const selectedCategory = categories?.find((item) => item.label === category);
 
   const [newCatModal, setNewCatModal] = useState(false);
   const [newCatLabel, setNewCatLabel] = useState('');
@@ -284,6 +281,20 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
             ]}
             onChange={(nextCategory) => setCategory(nextCategory === '__none__' ? null : nextCategory)}
           />
+          {storageId && (
+            <View style={styles.inlineActions}>
+              <TouchableOpacity style={styles.inlineAction} onPress={() => setNewCatModal(true)}>
+                <Feather name="plus" size={15} color={Colors.accent} />
+                <Text style={styles.inlineActionText}>Nova categoria</Text>
+              </TouchableOpacity>
+              {selectedCategory && (
+                <TouchableOpacity style={styles.inlineAction} onPress={() => handleCategoryLongPress(selectedCategory)}>
+                  <Feather name="trash-2" size={15} color={Colors.destructive} />
+                  <Text style={[styles.inlineActionText, styles.inlineDangerText]}>Excluir categoria</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <Text style={styles.label}>Data de validade <Text style={styles.optional}>(opcional)</Text></Text>
           <TouchableOpacity style={styles.selectRow} onPress={() => setExpirationPickerVisible(true)}>
@@ -409,6 +420,10 @@ const styles = StyleSheet.create({
   selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
   clearDateButton: { alignSelf: 'flex-end', paddingVertical: 4, paddingHorizontal: 2 },
   clearDateText: { fontSize: 12, fontWeight: '700', color: Colors.accent },
+  inlineActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: -2 },
+  inlineAction: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
+  inlineActionText: { fontSize: 13, fontWeight: '700', color: Colors.accent },
+  inlineDangerText: { color: Colors.destructive },
   selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
   compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
   compactChip: {

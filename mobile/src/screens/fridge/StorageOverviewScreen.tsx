@@ -123,7 +123,7 @@ export default function StorageOverviewScreen({ navigation }: Props) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         ListEmptyComponent={
           <View style={styles.center}>
-            <Text style={styles.emptyTitle}>Nenhum estoque visivel</Text>
+            <Text style={styles.emptyTitle}>Nenhum estoque visível</Text>
             <Text style={styles.emptySubtitle}>Gerencie os estoques pela aba Casa.</Text>
           </View>
         }

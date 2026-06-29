@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { HouseTask, HouseTaskActivityEvent, TaskCategory } from '../types';
 
+const TASKS_STALE_TIME = 30 * 1000;
+
 export type HouseTaskInput = {
   title: string;
   description?: string | null;
@@ -23,6 +25,8 @@ export function useHouseTasks(householdId: string | null) {
       return res.data;
     },
     enabled: !!householdId,
+    staleTime: TASKS_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 
@@ -31,11 +35,19 @@ export function useHouseTaskActivity(householdId: string | null) {
     queryKey: ['house-task-activity', householdId],
     queryFn: async () => (await api.get<HouseTaskActivityEvent[]>(`/households/${householdId}/task-activity`)).data,
     enabled: !!householdId,
+    staleTime: TASKS_STALE_TIME,
+    refetchOnMount: false,
   });
 }
 
 export function useTaskCategories(householdId: string | null) {
-  return useQuery({ queryKey: ['task-categories', householdId], queryFn: async () => (await api.get<TaskCategory[]>(`/households/${householdId}/task-categories`)).data, enabled: !!householdId });
+  return useQuery({
+    queryKey: ['task-categories', householdId],
+    queryFn: async () => (await api.get<TaskCategory[]>(`/households/${householdId}/task-categories`)).data,
+    enabled: !!householdId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
+  });
 }
 
 export function useCreateHouseTask(householdId: string) {

@@ -32,14 +32,18 @@ class NativeSocket {
       try {
         const msg = JSON.parse(e.data);
         this.listeners.get(msg.event)?.forEach((fn) => fn(msg.data));
-      } catch {}
+      } catch {
+        // Ignora mensagens malformadas recebidas pelo socket.
+      }
     };
 
     this.ws.onclose = () => {
       this.reconnectTimer = setTimeout(() => this.connect(), 3000);
     };
 
-    this.ws.onerror = () => {};
+    this.ws.onerror = () => {
+      // O onclose cuida da tentativa de reconexao.
+    };
   }
 
   send(event: string, data?: any) {
