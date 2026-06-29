@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Headers,
   UseGuards,
   Request,
   ParseUUIDPipe,
@@ -27,6 +28,7 @@ import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
 import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 import { CreateTaskCategoryDto } from './dto/create-task-category.dto';
+import { CreateTestAlertsDto } from './dto/create-test-alerts.dto';
 
 @ApiTags('households')
 @ApiBearerAuth()
@@ -253,6 +255,17 @@ export class HouseholdsController {
   @ApiOperation({ summary: 'Resumo de atencao da casa' })
   getHouseholdAttention(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
     return this.householdsService.getHouseholdAttention(id, req.user.id);
+  }
+
+  @Post(':id/test-alerts')
+  @ApiOperation({ summary: 'Gerar alertas reais para teste controlado' })
+  createTestAlerts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateTestAlertsDto,
+    @Headers('x-test-alert-token') token: string | undefined,
+    @Request() req,
+  ) {
+    return this.householdsService.createTestAlerts(id, req.user.id, dto, token);
   }
 
   @Get(':id/search')

@@ -29,6 +29,7 @@ import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
 import { AddListItemDto } from './dto/add-list-item.dto';
 import { CreateHouseTaskDto } from './dto/create-house-task.dto';
+import { CreateTestAlertsDto } from './dto/create-test-alerts.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 
 const DEFAULT_TASK_CATEGORIES = [
@@ -1277,6 +1278,104 @@ export class HouseholdsService {
       order: { createdAt: 'DESC' },
       take: 50,
     });
+  }
+
+  async createTestAlerts(
+    householdId: string,
+    userId: string,
+    dto: CreateTestAlertsDto,
+    token?: string,
+  ) {
+    await this.assertMember(householdId, userId);
+
+    const expectedToken = process.env.TEST_ALERT_TOKEN;
+    if (process.env.ENABLE_TEST_ALERTS !== 'true' || !expectedToken || token !== expectedToken) {
+      throw new ForbiddenException('Alertas de teste desativados');
+    }
+
+    const member = await this.membersRepo.findOne({
+      where: { householdId, userId },
+      relations: ['user'],
+    });
+    const userName = member?.user?.name ?? 'Teste';
+    const kinds = dto.kinds?.length ? dto.kinds : ['stock', 'shopping', 'task'];
+    const nowLabel = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    const created: string[] = [];
+
+    if (kinds.includes('stock')) {
+      const storage = await this.storageRepo.findOne({
+        where: { householdId, hidden: false },
+        order: { createdAt: 'ASC' },
+      });
+      await this.fridgeActivityRepo.save({
+        householdId,
+        action: 'updated',
+        itemName: 'Alerta de estoque',
+        quantity: 1,
+        unit: 'un',
+        userId,
+        userName,
+        storageId: storage?.id ?? null,
+        storageName: storage?.name ?? null,
+        storageEmoji: storage?.emoji ?? null,
+        details: `Teste gerado em ${nowLabel}`,
+      } as any);
+      created.push('stock');
+    }
+
+    if (kinds.includes('shopping')) {
+      const list = await this.shoppingListsRepo.findOne({
+        where: { householdId },
+        order: { createdAt: 'DESC' },
+      });
+      await this.shoppingActivityRepo.save({
+        householdId,
+        shoppingListId: list?.id ?? null,
+        action: 'added',
+        itemName: 'Alerta de compras',
+        listName: list?.name ?? 'Lista de teste',
+        quantity: 1,
+        unit: 'un',
+        userId,
+        userName,
+      } as any);
+      created.push('shopping');
+    }
+
+    if (kinds.includes('task')) {
+      const task = await this.houseTasksRepo.findOne({
+        where: { householdId },
+        order: { createdAt: 'DESC' },
+      });
+      await this.houseTaskActivityRepo.save(this.houseTaskActivityRepo.create({
+        householdId,
+        taskId: task?.id ?? null,
+        action: 'updated',
+        taskTitle: task?.title ?? 'Alerta de tarefa',
+        userId,
+        userName,
+        details: `Teste gerado em ${nowLabel}`,
+      }));
+      created.push('task');
+    }
+
+    if (dto.sendPush || kinds.includes('push')) {
+      await this.notificationsService.notifyAllMembers(
+        householdId,
+        'Colmeia teste',
+        `Alerta de teste gerado por ${userName}`,
+        { data: { type: 'test_alert', householdId, created } },
+      );
+      created.push('push');
+    }
+
+    this.eventsGateway.emitHouseholdUpdate(householdId);
+
+    return {
+      ok: true,
+      created,
+      message: 'Alertas de teste gerados',
+    };
   }
 
   async getFridgeCategories(householdId: string, userId: string, storageId?: string): Promise<string[]> {
