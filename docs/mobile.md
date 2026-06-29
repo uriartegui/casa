@@ -135,3 +135,18 @@ npx eas submit --platform ios --path "CAMINHO_DO_IPA"
 
 Depois aguarde processamento no App Store Connect, selecione o build e envie
 para revisao.
+
+## Firebase Android
+
+O build Android usa:
+
+```txt
+mobile/google-services.json
+```
+
+Esse arquivo e referenciado em `mobile/app.json` por `googleServicesFile`.
+Antes de remover ou trocar esse fluxo, valide um build Android.
+
+Detalhes e checklist de restricao da API key:
+
+- [Firebase Android](firebase-android.md)

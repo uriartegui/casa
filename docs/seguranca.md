@@ -33,6 +33,10 @@ aponta para esse arquivo no build Android. Antes de remover do Git, confirme o
 fluxo EAS/Firebase e restrinja a API key no Google Cloud/Firebase por pacote,
 SHA e APIs permitidas.
 
+Guia do projeto:
+
+- [Firebase Android](firebase-android.md)
+
 ## Swagger
 
 Em producao, Swagger deve ficar:

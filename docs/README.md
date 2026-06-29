@@ -15,6 +15,7 @@ Indice dos documentos principais do projeto.
 
 - [Backend](backend.md)
 - [Mobile](mobile.md)
+- [Firebase Android](firebase-android.md)
 - [API e Swagger](api.md)
 - [Deploy e VPS](deploy.md)
 - [Desenvolvimento geral](desenvolvimento.md)

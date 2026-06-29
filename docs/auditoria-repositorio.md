@@ -33,6 +33,7 @@ Recomendacao:
 - Confirmar se o arquivo precisa mesmo ficar no repositorio para builds EAS.
 - Hoje o `mobile/app.json` aponta para `./google-services.json`, entao a
   remocao precisa ser planejada junto com o fluxo de build Android.
+- Ver guia especifico: [Firebase Android](firebase-android.md).
 - Restringir a chave no Google Cloud/Firebase.
 - Se possivel, mover para secret/config de build e remover do Git em um PR
   separado.
