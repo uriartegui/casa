@@ -42,6 +42,7 @@ import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
+import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
 import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
 
 type Props = {
@@ -49,19 +50,7 @@ type Props = {
   route: RouteProp<HouseholdStackParamList, 'HouseTasks'>;
 };
 
-type StatusFilter = 'open' | 'mine' | 'late' | 'done' | 'all';
-
-const NONE_VALUE = '__none__';
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
-
-const CATEGORIES = ['Limpeza', 'Cozinha', 'Banheiro', 'Lavanderia', 'Manutenção', 'Compras', 'Organização', 'Outros'];
-const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
-  { label: 'Pendentes', value: 'open' },
-  { label: 'Minhas', value: 'mine' },
-  { label: 'Atrasadas', value: 'late' },
-  { label: 'Concluídas', value: 'done' },
-  { label: 'Tudo', value: 'all' },
-];
 
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
   const { data: households } = useHouseholds();
