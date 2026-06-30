@@ -17,7 +17,7 @@ import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList } from '../../types';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
-import { HelpSheet } from '../home/components/HomeSheets';
+import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { buildShoppingActivityAlerts, buildShoppingAttention, countAlerts } from '../../utils/alertCenter';

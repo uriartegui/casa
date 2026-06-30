@@ -37,7 +37,7 @@ import { useHouseholds } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { DateField, DropdownField } from './components/TaskFields';
-import { HelpSheet } from '../home/components/HomeSheets';
+import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';

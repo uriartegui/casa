@@ -20,7 +20,7 @@ import { formatBrDate } from '../../utils/dateUtils';
 import { FridgeItemSkeleton } from '../../components/Skeleton';
 import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 import NativeSelect from '../../components/NativeSelect';
-import { HelpSheet } from '../home/components/HomeSheets';
+import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
