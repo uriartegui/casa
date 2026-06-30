@@ -33,6 +33,7 @@ import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDeta
 import { buildShoppingListSections } from './shoppingListSections';
 import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
 import { useShoppingListHighlight } from './hooks/useShoppingListHighlight';
+import { buildShoppingShareMessage } from './shoppingShareMessage';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -215,13 +216,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }
 
   async function handleShareList() {
-    const pendingLines = pending.map((item) => `☐ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
-    const boughtLines = bought.map((item) => `✓ ${item.name}${item.quantity ? ` (${item.quantity} ${item.unit ?? 'un'})` : ''}`);
-    const message = [
-      `Lista: ${currentName}`,
-      pendingLines.length > 0 ? '\nA comprar:\n' + pendingLines.join('\n') : '',
-      boughtLines.length > 0 ? '\nComprados:\n' + boughtLines.join('\n') : '',
-    ].filter(Boolean).join('\n');
+    const message = buildShoppingShareMessage({ listName: currentName, pending, bought });
     await Share.share({ message });
   }
 
