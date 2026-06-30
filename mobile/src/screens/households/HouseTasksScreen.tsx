@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   ActionSheetIOS,
   Alert,
-  Animated,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -47,13 +46,12 @@ import { useTaskKanbanDrag } from './hooks/useTaskKanbanDrag';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
 import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
 import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
+import { TaskCard } from './components/TaskCard';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
   route: RouteProp<HouseholdStackParamList, 'HouseTasks'>;
 };
-
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
   const { data: households } = useHouseholds();
@@ -287,43 +285,15 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       : null;
 
     return (
-      <AnimatedTouchableOpacity
-        style={[styles.taskCard, item.done && styles.taskCardDone, late && styles.taskCardLate, highlightStyle]}
-        onPress={() => setSelectedTask(item)}
-        activeOpacity={0.78}
-      >
-        <TouchableOpacity
-          style={[styles.checkbox, item.done && styles.checkboxDone]}
-          onPress={() => updateStatus.mutate({ taskId: item.id, done: !item.done })}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          {item.done && <Feather name="check" size={15} color="#fff" />}
-        </TouchableOpacity>
-
-        <View style={styles.taskBody}>
-          <Text style={[styles.taskTitle, item.done && styles.taskTitleDone]} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <View style={styles.metaRow}>
-            {item.category && <Text style={styles.metaText}>{item.category}</Text>}
-            {label && <Text style={[styles.metaText, late && styles.metaTextLate]}>{label}</Text>}
-            <Text style={styles.metaText}>{item.assignmentType === 'all' ? 'Todos' : item.assignedTo?.name ? item.assignedTo.name.split(' ')[0] : 'Sem responsável'}</Text>
-            {item.recurrence !== 'none' && <Text style={styles.metaText}>{item.recurrence === 'weekly' ? 'Toda semana' : item.recurrence === 'daily' ? 'Todo dia' : item.recurrence === 'monthly' ? 'Todo mês' : 'Recorrente'}</Text>}
-            {item.shoppingList && <Text style={styles.metaText}>Lista: {item.shoppingList.name}</Text>}
-            {item.done && item.completedBy?.name && (
-              <Text style={styles.metaText}>por {item.completedBy.name.split(' ')[0]}</Text>
-            )}
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => handleDelete(item)}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Text style={styles.deleteButtonText}>X</Text>
-        </TouchableOpacity>
-      </AnimatedTouchableOpacity>
+      <TaskCard
+        task={item}
+        label={label}
+        late={late}
+        highlightStyle={highlightStyle}
+        onOpen={setSelectedTask}
+        onToggleDone={(task) => updateStatus.mutate({ taskId: task.id, done: !task.done })}
+        onDelete={handleDelete}
+      />
     );
   }
 
@@ -707,37 +677,6 @@ const styles = StyleSheet.create({
   categoryChipActive: { borderColor: Colors.accent, backgroundColor: Colors.accent + '12' },
   categoryChipText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   categoryChipTextActive: { color: Colors.accent },
-  taskCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    padding: 14,
-  },
-  taskCardDone: { opacity: 0.66 },
-  taskCardLate: { borderLeftWidth: 3, borderLeftColor: Colors.destructive },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  checkboxDone: { backgroundColor: Colors.success, borderColor: Colors.success },
-  taskBody: { flex: 1, minWidth: 0 },
-  taskTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  taskTitleDone: { textDecorationLine: 'line-through', color: Colors.textSecondary },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7, alignItems: 'center' },
-  metaText: { fontSize: 12, color: Colors.textSecondary },
-  metaTextLate: { color: Colors.destructive, fontWeight: '700' },
-  deleteButton: { paddingHorizontal: 2, paddingTop: 1 },
-  deleteButtonText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '700' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 40, paddingTop: 80 },
   emptyTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
   emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
