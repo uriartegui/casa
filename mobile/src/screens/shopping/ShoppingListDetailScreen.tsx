@@ -585,45 +585,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               </View>
 
               <Text style={styles.sheetLabel}>Estoque</Text>
-              {/* Dropdown anterior mantido apenas como referencia durante a troca para o seletor nativo.
-              <View style={[styles.selectField, showAddStorageOptions && styles.selectFieldOpen]}>
-              <TouchableOpacity
-                style={styles.selectRow}
-                onPress={() => {
-                  setShowAddStorageOptions((value) => !value);
-                  setShowAddCategoryOptions(false);
-                }}
-              >
-                <Text style={[styles.selectRowText, !addStorageId && styles.selectRowPlaceholder]}>
-                  {selectedAddStorage
-                    ? `${selectedAddStorage.storageEmoji} ${selectedAddStorage.storageName}`
-                    : 'Escolher estoque'}
-                </Text>
-                <Feather name={showAddStorageOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
-                <Text style={styles.selectRowChevron}>›</Text>
-              </TouchableOpacity>
-
-              {showAddStorageOptions && (
-                  <ScrollView style={styles.selectOptions} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
-                  {categoryGroups.map((group) => (
-                    <TouchableOpacity
-                      key={group.storageId}
-                      style={[styles.selectOption, addStorageId === group.storageId && styles.selectOptionActive]}
-                      onPress={() => {
-                        setAddStorageId(group.storageId);
-                        setAddCategory(null);
-                        setShowAddStorageOptions(false);
-                        setShowAddCategoryOptions(false);
-                      }}
-                    >
-                      <Text style={[styles.selectOptionText, addStorageId === group.storageId && styles.selectOptionTextActive]}>{group.storageName}</Text>
-                      {addStorageId === group.storageId && <Feather name="check" size={16} color={Colors.accent} />}
-                    </TouchableOpacity>
-                  ))}
-                  </ScrollView>
-              )}
-              </View>
-              */}
               <NativeSelect
                 value={addStorageId ?? ''}
                 placeholder="Escolher estoque"
@@ -635,52 +596,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               />
 
               <Text style={styles.sheetLabel}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
-              {/* Dropdown anterior mantido apenas como referencia durante a troca para o seletor nativo.
-              <View style={[styles.selectField, showAddCategoryOptions && styles.selectFieldOpen]}>
-              <TouchableOpacity
-                style={[styles.selectRow, !addStorageId && styles.selectRowDisabled]}
-                onPress={() => {
-                  if (!addStorageId) return;
-                  setShowAddCategoryOptions((value) => !value);
-                  setShowAddStorageOptions(false);
-                }}
-              >
-                <Text style={[styles.selectRowText, !addCategory && styles.selectRowPlaceholder]}>
-                  {addCategory ?? (addStorageId ? 'Escolher categoria' : 'Escolha um estoque primeiro')}
-                </Text>
-                <Feather name={showAddCategoryOptions ? 'chevron-up' : 'chevron-down'} size={18} color={Colors.textSecondary} />
-                <Text style={styles.selectRowChevron}>›</Text>
-              </TouchableOpacity>
-
-              {showAddCategoryOptions && addStorageId && (
-                  <ScrollView style={[styles.selectOptions, styles.selectOptionsAbove]} contentContainerStyle={styles.selectOptionsContent} nestedScrollEnabled showsVerticalScrollIndicator>
-                  <TouchableOpacity
-                    style={[styles.selectOption, !addCategory && styles.selectOptionActive]}
-                    onPress={() => {
-                      setAddCategory(null);
-                      setShowAddCategoryOptions(false);
-                    }}
-                  >
-                    <Text style={[styles.selectOptionText, !addCategory && styles.selectOptionTextActive]}>Sem categoria</Text>
-                    {!addCategory && <Feather name="check" size={16} color={Colors.accent} />}
-                  </TouchableOpacity>
-                  {(selectedAddStorage?.categories ?? []).map((category) => (
-                    <TouchableOpacity
-                      key={category.id}
-                      style={[styles.selectOption, addCategory === category.label && styles.selectOptionActive]}
-                      onPress={() => {
-                        setAddCategory(category.label);
-                        setShowAddCategoryOptions(false);
-                      }}
-                    >
-                      <Text style={[styles.selectOptionText, addCategory === category.label && styles.selectOptionTextActive]}>{category.label}</Text>
-                      {addCategory === category.label && <Feather name="check" size={16} color={Colors.accent} />}
-                    </TouchableOpacity>
-                  ))}
-                  </ScrollView>
-              )}
-              </View>
-              */}
               <NativeSelect
                 value={addStorageId ? addCategory ?? '__none__' : ''}
                 placeholder={addStorageId ? 'Escolher categoria' : 'Escolha um estoque primeiro'}
@@ -822,32 +737,6 @@ const styles = StyleSheet.create({
   editCheckTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
   editCheckSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
-  selectRow: {
-    minHeight: 46,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    backgroundColor: Colors.card,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  selectRowDisabled: { opacity: 0.65 },
-  selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
-  selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
-  selectField: { position: 'relative' },
-  selectFieldOpen: { zIndex: 30, elevation: 30 },
-  selectOptions: { position: 'absolute', top: 52, left: 0, right: 0, zIndex: 40, elevation: 40, maxHeight: 260, overflow: 'hidden', borderWidth: 1, borderColor: Colors.separator, borderRadius: 12, backgroundColor: Colors.card, shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
-  selectOptionsAbove: { top: undefined, bottom: 52 },
-  selectOptionsContent: { paddingBottom: 1 },
-  selectOption: { minHeight: 42, paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: Colors.separator, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  selectOptionActive: { backgroundColor: Colors.accent + '12' },
-  selectOptionText: { flex: 1, fontSize: 14, color: Colors.textPrimary },
-  selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
-  selectRowToggle: { fontSize: 18, color: Colors.accent, fontWeight: '800', lineHeight: 22 },
-  selectRowChevron: { width: 0, height: 0, opacity: 0 },
   compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
   compactChip: {
     paddingHorizontal: 12,
