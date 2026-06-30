@@ -20,7 +20,7 @@ import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
-import { buildShoppingActivityAlerts, buildShoppingAttention, countAlerts } from '../../utils/alertCenter';
+import { useShoppingAlerts } from './hooks/useShoppingAlerts';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
@@ -71,28 +71,23 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     lastSeenAt: shoppingActivitySeenAt,
     markSeen: markShoppingActivitySeen,
   } = useActivitySeen('shopping', effectiveId, shoppingActivity ?? [], user?.id);
-  const alertSections = React.useMemo(() => [
-    {
-      title: 'Precisa de atenção',
-      items: buildShoppingAttention(lists ?? [], {
-        onOpenList: (list) => navigation.navigate('ShoppingListDetail', {
-          householdId: list.householdId,
-          listId: list.id,
-          listName: list.name,
-          listUrgent: list.urgent,
-          listPlace: list.place,
-          listCategory: list.category,
-        }),
-      }),
-      emptyText: 'Nenhuma lista urgente ou pendente agora.',
-    },
-    {
-      title: 'Atividades novas',
-      items: buildShoppingActivityAlerts(shoppingActivity ?? [], { localUserId: user?.id, since: shoppingActivitySeenAt }),
-      emptyText: 'Nenhuma atividade nova nas listas.',
-    },
-  ], [lists, navigation, shoppingActivity, shoppingActivitySeenAt, user?.id]);
-  const alertCount = countAlerts(alertSections);
+  const openAlertList = React.useCallback((list: ShoppingList) => {
+    navigation.navigate('ShoppingListDetail', {
+      householdId: list.householdId,
+      listId: list.id,
+      listName: list.name,
+      listUrgent: list.urgent,
+      listPlace: list.place,
+      listCategory: list.category,
+    });
+  }, [navigation]);
+  const { alertSections, alertCount } = useShoppingAlerts({
+    lists,
+    activity: shoppingActivity,
+    userId: user?.id,
+    lastSeenAt: shoppingActivitySeenAt,
+    onOpenList: openAlertList,
+  });
 
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -107,17 +102,17 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const [editCategory, setEditCategory] = useState('');
   const [editUrgent, setEditUrgent] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-  const [activityModalVisible, setActivityModalVisible] = useState(false);
+  const [alertsVisible, setAlertsVisible] = useState(false);
   const helpSheet = useBottomSheetMotion({
     onOpen: () => setHelpVisible(true),
     onClose: () => setHelpVisible(false),
   });
-  const activitySheet = useBottomSheetMotion({
+  const alertsSheet = useBottomSheetMotion({
     onOpen: () => {
-      setActivityModalVisible(true);
+      setAlertsVisible(true);
       markShoppingActivitySeen();
     },
-    onClose: () => setActivityModalVisible(false),
+    onClose: () => setAlertsVisible(false),
   });
 
   React.useEffect(() => {
@@ -125,7 +120,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       title: household?.name ?? 'Listas de Compras',
       headerAlert: () => (
         <TouchableOpacity
-          onPress={() => effectiveId && activitySheet.open()}
+          onPress={() => effectiveId && alertsSheet.open()}
           style={styles.headerIconButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -156,7 +151,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         </View>
       ),
     });
-  }, [alertCount, navigation, household, effectiveId, activitySheet.open, helpSheet.open]);
+  }, [alertCount, navigation, household, effectiveId, alertsSheet.open, helpSheet.open]);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -324,13 +319,13 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       />
 
       <AlertsSheet
-        visible={activityModalVisible}
-        height={activitySheet.height}
-        translateY={activitySheet.translateY}
-        panHandlers={activitySheet.panHandlers}
+        visible={alertsVisible}
+        height={alertsSheet.height}
+        translateY={alertsSheet.translateY}
+        panHandlers={alertsSheet.panHandlers}
         subtitle="Listas de compras"
         sections={alertSections}
-        onClose={activitySheet.close}
+        onClose={alertsSheet.close}
       />
 
       <Modal visible={!!editingList} transparent animationType="slide" onRequestClose={() => setEditingList(null)}>
@@ -470,7 +465,6 @@ const styles = StyleSheet.create({
   },
   editButtonText: { fontSize: 13, color: Colors.accent, fontWeight: '700', lineHeight: 18 },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
-  activityOverlay: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: {
     position: 'absolute',
     top: 0,
@@ -479,46 +473,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  activitySheetMotion: {
-    zIndex: 2,
-    elevation: 24,
-  },
-  activitySheet: {
-    backgroundColor: Colors.background,
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    overflow: 'hidden',
-    zIndex: 2,
-    elevation: 24,
-  },
-  sheetDragArea: {
-    minHeight: 36,
-    paddingTop: 10,
-    paddingBottom: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.background,
-  },
-  sheetDragHint: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-  activitySheetHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 2,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.separator,
-    backgroundColor: Colors.background,
-  },
-  activitySheetTitle: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  activitySheetClose: { fontSize: 15, fontWeight: '600', color: Colors.accent },
   sheet: {
     backgroundColor: Colors.background,
     borderTopLeftRadius: 22,
