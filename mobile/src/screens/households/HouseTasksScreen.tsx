@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   ActionSheetIOS,
@@ -41,6 +41,7 @@ import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
+import { useTaskFilters } from './hooks/useTaskFilters';
 import { useTaskHighlight } from './hooks/useTaskHighlight';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
 import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
@@ -204,43 +205,14 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     });
   }, [alertCount, householdName, initialCategory, navigation, alertsSheet.open, helpSheet.open]);
 
-  const stats = useMemo(() => {
-    const all = tasks ?? [];
-    const pending = all.filter((task) => !task.done).length;
-    const late = all.filter(isLate).length;
-    const done = all.filter((task) => task.done).length;
-    return { pending, late, done, total: all.length };
-  }, [tasks]);
-
-  const categoryOptions = useMemo(() => {
-    const fromTasks = (tasks ?? []).map((task) => task.category).filter(Boolean) as string[];
-    return ['Todas', ...Array.from(new Set([...CATEGORIES, ...fromTasks]))];
-  }, [tasks]);
-
-  const visibleTasks = useMemo(() => {
-    return (tasks ?? []).filter((task) => {
-      if (isCategoryPage && task.category !== initialCategory) return false;
-      if (statusFilter === 'open' && task.done) return false;
-      if (statusFilter === 'done' && !task.done) return false;
-      if (statusFilter === 'late' && !isLate(task)) return false;
-      if (statusFilter === 'mine' && task.assignedToId !== user?.id) return false;
-      if (categoryFilter !== 'Todas' && task.category !== categoryFilter) return false;
-      return true;
-    });
-  }, [categoryFilter, initialCategory, isCategoryPage, statusFilter, tasks, user?.id]);
-
-  const kanbanTasks = useMemo(() => {
-    return (tasks ?? []).filter((task) => {
-      if (isCategoryPage && task.category !== initialCategory) return false;
-      if (categoryFilter !== 'Todas' && task.category !== categoryFilter) return false;
-      return true;
-    });
-  }, [categoryFilter, initialCategory, isCategoryPage, tasks]);
-
-  const categoryPendingCount = useMemo(
-    () => kanbanTasks.filter((task) => !task.done && task.status !== 'completed' && task.status !== 'skipped').length,
-    [kanbanTasks],
-  );
+  const { stats, categoryOptions, visibleTasks, kanbanTasks, categoryPendingCount } = useTaskFilters({
+    tasks,
+    initialCategory,
+    isCategoryPage,
+    statusFilter,
+    categoryFilter,
+    userId: user?.id,
+  });
 
   async function handleRefresh() {
     setRefreshing(true);
