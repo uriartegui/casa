@@ -365,8 +365,8 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
           <View style={styles.metaRow}>
             {item.category && <Text style={styles.metaText}>{item.category}</Text>}
             {label && <Text style={[styles.metaText, late && styles.metaTextLate]}>{label}</Text>}
-            <Text style={styles.metaText}>{item.assignmentType === 'all' ? 'Todos' : item.assignedTo?.name ? item.assignedTo.name.split(' ')[0] : 'Sem responsavel'}</Text>
-            {item.recurrence !== 'none' && <Text style={styles.metaText}>{item.recurrence === 'weekly' ? 'Toda semana' : item.recurrence === 'daily' ? 'Todo dia' : item.recurrence === 'monthly' ? 'Todo mes' : 'Recorrente'}</Text>}
+            <Text style={styles.metaText}>{item.assignmentType === 'all' ? 'Todos' : item.assignedTo?.name ? item.assignedTo.name.split(' ')[0] : 'Sem responsável'}</Text>
+            {item.recurrence !== 'none' && <Text style={styles.metaText}>{item.recurrence === 'weekly' ? 'Toda semana' : item.recurrence === 'daily' ? 'Todo dia' : item.recurrence === 'monthly' ? 'Todo mês' : 'Recorrente'}</Text>}
             {item.shoppingList && <Text style={styles.metaText}>Lista: {item.shoppingList.name}</Text>}
             {item.done && item.completedBy?.name && (
               <Text style={styles.metaText}>por {item.completedBy.name.split(' ')[0]}</Text>
@@ -403,7 +403,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
             activeOpacity={0.75}
           >
             <Text style={styles.kanbanCardTitle}>{task.title}</Text>
-            <Text style={styles.kanbanCardMeta}>{task.assignedTo?.name?.split(' ')[0] ?? (task.assignmentType === 'all' ? 'Todos' : 'Sem responsavel')}</Text>
+            <Text style={styles.kanbanCardMeta}>{task.assignedTo?.name?.split(' ')[0] ?? (task.assignmentType === 'all' ? 'Todos' : 'Sem responsável')}</Text>
           </TouchableOpacity>
         </GestureDetector>
       ))}
