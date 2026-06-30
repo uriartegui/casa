@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActionSheetIOS, Alert, Animated, Dimensions, PanResponder, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ActionSheetIOS, Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,6 +21,7 @@ import { ExpiringItemsCard, QuickActionsCard, TodayIntro, TodayTasksCard, Urgent
 import { AttentionSummaryModal, HelpSheet } from './components/HomeSheets';
 import { useHomeAlerts } from './hooks/useHomeAlerts';
 import { useHomeToday } from './hooks/useHomeToday';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -92,32 +93,6 @@ export default function HomeScreen() {
   const [helpVisible, setHelpVisible] = useState(false);
   const [activityModalVisible, setActivityModalVisible] = useState(false);
   const [attentionModalVisible, setAttentionModalVisible] = useState(false);
-  const screenHeight = Dimensions.get('window').height;
-  const activityCollapsedHeight = Math.round(screenHeight * 0.74);
-  const activityExpandedHeight = Math.round(screenHeight - 64);
-  const activityCloseThreshold = Math.round(screenHeight * 0.48);
-  const activitySheetHeight = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const activitySheetTranslateY = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const activityHeightRef = React.useRef(activityCollapsedHeight);
-  const activityDragStartHeight = React.useRef(activityCollapsedHeight);
-  const helpSheetHeight = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const helpSheetTranslateY = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const helpHeightRef = React.useRef(activityCollapsedHeight);
-  const helpDragStartHeight = React.useRef(activityCollapsedHeight);
-
-  React.useEffect(() => {
-    const listener = activitySheetHeight.addListener(({ value }) => {
-      activityHeightRef.current = value;
-    });
-    return () => activitySheetHeight.removeListener(listener);
-  }, [activitySheetHeight]);
-
-  React.useEffect(() => {
-    const listener = helpSheetHeight.addListener(({ value }) => {
-      helpHeightRef.current = value;
-    });
-    return () => helpSheetHeight.removeListener(listener);
-  }, [helpSheetHeight]);
   const {
     firstName,
     todayLabel,
@@ -153,6 +128,17 @@ export default function HomeScreen() {
       highlightList: true,
     }),
     onOpenStockActivity: openActivityStock,
+  });
+  const helpSheet = useBottomSheetMotion({
+    onOpen: () => setHelpVisible(true),
+    onClose: () => setHelpVisible(false),
+  });
+  const activitySheet = useBottomSheetMotion({
+    onOpen: () => {
+      setActivityModalVisible(true);
+      markHomeAlertsSeen();
+    },
+    onClose: () => setActivityModalVisible(false),
   });
 
   function openMenu() {
@@ -245,139 +231,6 @@ export default function HomeScreen() {
     })), { cancelable: true });
   }
 
-  function animateActivitySheet(toValue: number, onEnd?: () => void) {
-    Animated.spring(activitySheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }
-
-  function animateHelpSheet(toValue: number, onEnd?: () => void) {
-    Animated.spring(helpSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }
-
-  function openHelpModal() {
-    helpSheetHeight.setValue(activityCollapsedHeight);
-    helpSheetTranslateY.setValue(activityCollapsedHeight);
-    helpHeightRef.current = activityCollapsedHeight;
-    setHelpVisible(true);
-    requestAnimationFrame(() => {
-      Animated.spring(helpSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }
-
-  function closeHelpModal() {
-    Animated.timing(helpSheetTranslateY, {
-      toValue: Math.max(helpHeightRef.current, activityCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setHelpVisible(false);
-      helpSheetHeight.setValue(activityCollapsedHeight);
-      helpSheetTranslateY.setValue(activityCollapsedHeight);
-      helpHeightRef.current = activityCollapsedHeight;
-    });
-  }
-
-  function openActivityModal() {
-    activitySheetHeight.setValue(activityCollapsedHeight);
-    activitySheetTranslateY.setValue(activityCollapsedHeight);
-    activityHeightRef.current = activityCollapsedHeight;
-    setActivityModalVisible(true);
-    markHomeAlertsSeen();
-    requestAnimationFrame(() => {
-      Animated.spring(activitySheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }
-
-  function closeActivityModal() {
-    Animated.timing(activitySheetTranslateY, {
-      toValue: Math.max(activityHeightRef.current, activityCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setActivityModalVisible(false);
-      activitySheetHeight.setValue(activityCollapsedHeight);
-      activitySheetTranslateY.setValue(activityCollapsedHeight);
-      activityHeightRef.current = activityCollapsedHeight;
-    });
-  }
-
-  const activitySheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      activityDragStartHeight.current = activityHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(activityExpandedHeight, activityDragStartHeight.current - gesture.dy));
-      activitySheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = activityHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(activityExpandedHeight, activityDragStartHeight.current - gesture.dy));
-      const midpoint = (activityCollapsedHeight + activityExpandedHeight) / 2;
-      if (projectedHeight < activityCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeActivityModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateActivitySheet(activityExpandedHeight);
-        return;
-      }
-      animateActivitySheet(activityCollapsedHeight);
-    },
-  }), [activityCloseThreshold, activityCollapsedHeight, activityExpandedHeight, activitySheetHeight, screenHeight]);
-
-  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      helpDragStartHeight.current = helpHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(activityExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      helpSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = helpHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(activityExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      const midpoint = (activityCollapsedHeight + activityExpandedHeight) / 2;
-      if (projectedHeight < activityCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeHelpModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateHelpSheet(activityExpandedHeight);
-        return;
-      }
-      animateHelpSheet(activityCollapsedHeight);
-    },
-  }), [activityCloseThreshold, activityCollapsedHeight, activityExpandedHeight, helpSheetHeight, screenHeight]);
-
   return (
     <View style={{ flex: 1 }}>
     <ScrollView
@@ -391,8 +244,8 @@ export default function HomeScreen() {
         firstName={firstName}
         activityUnreadCount={activityUnreadCount}
         onSearch={openSearch}
-        onHelp={openHelpModal}
-        onActivity={() => effectiveId && openActivityModal()}
+        onHelp={helpSheet.open}
+        onActivity={() => effectiveId && activitySheet.open()}
         onMenu={openMenu}
       />
 
@@ -439,21 +292,21 @@ export default function HomeScreen() {
 
     <HelpSheet
       visible={helpVisible}
-      height={helpSheetHeight}
-      translateY={helpSheetTranslateY}
-      panHandlers={helpSheetPanResponder.panHandlers}
+      height={helpSheet.height}
+      translateY={helpSheet.translateY}
+      panHandlers={helpSheet.panHandlers}
       sections={HELP_SECTIONS}
-      onClose={closeHelpModal}
+      onClose={helpSheet.close}
     />
 
     <AlertsSheet
       visible={activityModalVisible}
-      height={activitySheetHeight}
-      translateY={activitySheetTranslateY}
-      panHandlers={activitySheetPanResponder.panHandlers}
+      height={activitySheet.height}
+      translateY={activitySheet.translateY}
+      panHandlers={activitySheet.panHandlers}
       subtitle={household?.name ? `Casa inteira · ${household.name}` : 'Casa inteira'}
       sections={alertSections}
-      onClose={closeActivityModal}
+      onClose={activitySheet.close}
     />
 
     <AttentionSummaryModal
@@ -484,3 +337,4 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 20, paddingTop: 0, paddingBottom: 40, minHeight: '100%' },
 });
+
