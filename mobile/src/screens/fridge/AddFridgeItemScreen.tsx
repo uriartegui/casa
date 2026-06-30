@@ -16,7 +16,7 @@ import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 import { Feather } from '@expo/vector-icons';
-import { parseShoppingQuantity } from '../../utils/shoppingItemSimilarity';
+import { parseQuantityInput } from '../../utils/shoppingItemSimilarity';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'AddFridgeItem'>;
@@ -58,7 +58,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
     }
-    const qty = parseShoppingQuantity(quantity);
+    const qty = parseQuantityInput(quantity);
     if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;

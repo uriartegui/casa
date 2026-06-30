@@ -4,9 +4,9 @@ import {
   findSimilarShoppingItem,
   mergedShoppingQuantity,
   normalizeShoppingItemName,
-  parseShoppingQuantity,
+  parseQuantityInput,
   similarShoppingItemMessage,
-  stepShoppingQuantity,
+  stepQuantityInput,
 } from './shoppingItemSimilarity';
 
 const baseItem = {
@@ -39,16 +39,16 @@ describe('shoppingItemSimilarity', () => {
   });
 
   it('parses comma and dot quantities', () => {
-    expect(parseShoppingQuantity('1,5')).toBe(1.5);
-    expect(parseShoppingQuantity('2.25')).toBe(2.25);
-    expect(parseShoppingQuantity('0')).toBeNull();
-    expect(parseShoppingQuantity('abc')).toBeNull();
+    expect(parseQuantityInput('1,5')).toBe(1.5);
+    expect(parseQuantityInput('2.25')).toBe(2.25);
+    expect(parseQuantityInput('0')).toBeNull();
+    expect(parseQuantityInput('abc')).toBeNull();
   });
 
   it('steps quantities with a minimum of one', () => {
-    expect(stepShoppingQuantity('2', 1)).toBe('3');
-    expect(stepShoppingQuantity('1', -1)).toBe('1');
-    expect(stepShoppingQuantity('abc', 2)).toBe('3');
+    expect(stepQuantityInput('2', 1)).toBe('3');
+    expect(stepQuantityInput('1', -1)).toBe('1');
+    expect(stepQuantityInput('abc', 2)).toBe('3');
   });
 
   it('builds a similar item merge message', () => {

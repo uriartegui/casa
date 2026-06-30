@@ -14,7 +14,7 @@ import { ShoppingItem, Unit } from '../../types';
 import {
   findSimilarShoppingItem,
   mergedShoppingQuantity,
-  parseShoppingQuantity,
+  parseQuantityInput,
   similarShoppingItemMessage,
 } from '../../utils/shoppingItemSimilarity';
 
@@ -62,7 +62,7 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
     }
-    const qty = parseShoppingQuantity(quantity);
+    const qty = parseQuantityInput(quantity);
     if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;

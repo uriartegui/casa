@@ -25,9 +25,9 @@ import NativeSelect from '../../components/NativeSelect';
 import {
   findSimilarShoppingItem,
   mergedShoppingQuantity,
-  parseShoppingQuantity,
+  parseQuantityInput,
   similarShoppingItemMessage,
-  stepShoppingQuantity,
+  stepQuantityInput,
 } from '../../utils/shoppingItemSimilarity';
 import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
 import { buildShoppingListSections } from './shoppingListSections';
@@ -193,7 +193,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   function confirmAdd() {
     const name = quickName.trim();
-    const qty = parseShoppingQuantity(addQty);
+    const qty = parseQuantityInput(addQty);
     if (!name) return;
     if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
@@ -277,7 +277,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }
 
   function stepQty(delta: number) {
-    setAddQty((current) => stepShoppingQuantity(current, delta));
+    setAddQty((current) => stepQuantityInput(current, delta));
   }
 
   function handleClearChecked() {
