@@ -19,7 +19,7 @@ import {
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { GestureDetector } from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
@@ -43,6 +43,7 @@ import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
 import { useTaskFilters } from './hooks/useTaskFilters';
 import { useTaskHighlight } from './hooks/useTaskHighlight';
+import { useTaskKanbanDrag } from './hooks/useTaskKanbanDrag';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
 import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
 import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
@@ -125,14 +126,15 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [showCategoryFilters, setShowCategoryFilters] = useState(false);
   const [sheetVisible, setSheetVisible] = useState(false);
   const [selectedTask, setSelectedTask] = useState<HouseTask | null>(null);
-  const [draggedKanbanTaskId, setDraggedKanbanTaskId] = useState<string | null>(null);
-  const [kanbanDragX, setKanbanDragX] = useState(0);
   const [newTaskDatePickerVisible, setNewTaskDatePickerVisible] = useState(false);
   const [detailDatePickerVisible, setDetailDatePickerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
   const highlightAnim = useTaskHighlight({ tasks, highlightTaskId });
+  const { draggedTaskId, dragX, createMoveGesture } = useTaskKanbanDrag({
+    onMove: (taskId, status) => updateStatus.mutate({ taskId, status }),
+  });
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
   const {
     lastSeenAt: taskActivitySeenAt,
@@ -267,29 +269,6 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     }
   }
 
-  function createKanbanMoveGesture(task: HouseTask) {
-    return Gesture.Pan()
-      .activateAfterLongPress(380)
-      .runOnJS(true)
-      .onBegin(() => {
-        setDraggedKanbanTaskId(task.id);
-        setKanbanDragX(0);
-      })
-      .onUpdate((event) => setKanbanDragX(Math.max(-110, Math.min(110, event.translationX))))
-      .onFinalize((event, success) => {
-        setDraggedKanbanTaskId(null);
-        setKanbanDragX(0);
-        if (!success || Math.abs(event.translationX) < 64) return;
-
-        const flow: HouseTask['status'][] = ['pending', 'in_progress', 'completed'];
-        const currentIndex = flow.indexOf(task.done ? 'completed' : task.status);
-        const nextIndex = currentIndex + (event.translationX > 0 ? 1 : -1);
-        const nextStatus = flow[nextIndex];
-
-        if (nextStatus) updateStatus.mutate({ taskId: task.id, status: nextStatus });
-      });
-  }
-
   function renderTask({ item }: { item: HouseTask }) {
     const label = dueLabel(item.dueDate);
     const late = isLate(item);
@@ -353,14 +332,14 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     return <View key={status} style={styles.kanbanColumn}>
       <Text style={styles.kanbanTitle}>{title} ({items.length})</Text>
       {items.map((task) => (
-        <GestureDetector key={task.id} gesture={createKanbanMoveGesture(task)}>
+        <GestureDetector key={task.id} gesture={createMoveGesture(task)}>
           <TouchableOpacity
             style={[
               styles.kanbanCard,
-              draggedKanbanTaskId === task.id && styles.kanbanCardDragging,
-              draggedKanbanTaskId === task.id && kanbanDragX > 12 && styles.kanbanCardMovingForward,
-              draggedKanbanTaskId === task.id && kanbanDragX < -12 && styles.kanbanCardMovingBack,
-              draggedKanbanTaskId === task.id && { transform: [{ translateX: kanbanDragX }, { scale: 1.02 }] },
+              draggedTaskId === task.id && styles.kanbanCardDragging,
+              draggedTaskId === task.id && dragX > 12 && styles.kanbanCardMovingForward,
+              draggedTaskId === task.id && dragX < -12 && styles.kanbanCardMovingBack,
+              draggedTaskId === task.id && { transform: [{ translateX: dragX }, { scale: 1.02 }] },
             ]}
             onPress={() => setSelectedTask(task)}
             activeOpacity={0.75}
