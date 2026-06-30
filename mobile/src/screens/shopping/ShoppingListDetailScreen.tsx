@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import {
-  Animated, View, Text, SectionList, TouchableOpacity, Modal, TextInput,
+  View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
   KeyboardAvoidingView, Platform, ScrollView, Share,
 } from 'react-native';
@@ -26,6 +26,7 @@ import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/sho
 import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
 import { buildShoppingListSections } from './shoppingListSections';
 import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
+import { useShoppingListHighlight } from './hooks/useShoppingListHighlight';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -90,8 +91,11 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   ), [quickName]);
   const isFocused = useIsFocused();
   const { footerHeight, footerKeyboardOffset, handleFooterLayout } = useFloatingFooterOffset();
-  const highlightAnim = useRef(new Animated.Value(0)).current;
-  const listHighlightAnim = useRef(new Animated.Value(0)).current;
+  const { highlightAnim, listHighlightAnim } = useShoppingListHighlight({
+    items,
+    highlightItemId,
+    highlightList,
+  });
 
   const activeList = shoppingLists.find((list) => list.id === listId);
 
@@ -340,26 +344,6 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       ),
     });
   }, [currentName, handleShareList, pending, bought, openMenu]);
-
-  useEffect(() => {
-    if (!highlightItemId || !items?.some((item) => item.id === highlightItemId)) return;
-    highlightAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
-      Animated.delay(650),
-      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
-    ]).start();
-  }, [highlightAnim, highlightItemId, items]);
-
-  useEffect(() => {
-    if (!highlightList) return;
-    listHighlightAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(listHighlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
-      Animated.delay(650),
-      Animated.timing(listHighlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
-    ]).start();
-  }, [highlightList, listHighlightAnim]);
 
   function renderItem({ item }: { item: ShoppingItem }) {
     const isHighlighted = item.id === highlightItemId;
