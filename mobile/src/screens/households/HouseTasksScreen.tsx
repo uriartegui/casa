@@ -41,6 +41,7 @@ import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
+import { useTaskHighlight } from './hooks/useTaskHighlight';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
 import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
 import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
@@ -130,7 +131,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
-  const highlightAnim = React.useRef(new Animated.Value(0)).current;
+  const highlightAnim = useTaskHighlight({ tasks, highlightTaskId });
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
   const {
     lastSeenAt: taskActivitySeenAt,
@@ -293,16 +294,6 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       Alert.alert('Não foi possível atualizar a tarefa', 'Tente novamente em instantes.');
     }
   }
-
-  React.useEffect(() => {
-    if (!highlightTaskId || !tasks?.some((task) => task.id === highlightTaskId)) return;
-    highlightAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
-      Animated.delay(650),
-      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
-    ]).start();
-  }, [highlightAnim, highlightTaskId, tasks]);
 
   function createKanbanMoveGesture(task: HouseTask) {
     return Gesture.Pan()
