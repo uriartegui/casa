@@ -24,6 +24,7 @@ import { ShoppingItemSkeleton } from '../../components/Skeleton';
 import NativeSelect from '../../components/NativeSelect';
 import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
 import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
+import { buildShoppingListSections } from './shoppingListSections';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -38,9 +39,6 @@ function KeepAwakeWhileFocused() {
 }
 
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
-function compareNames(a: ShoppingItem, b: ShoppingItem) {
-  return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-}
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { householdId, listId, listName, listUrgent, listPlace, listCategory, highlightItemId, highlightList } = route.params;
@@ -219,7 +217,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     const nextQuantity = mergedShoppingQuantity(similarItem, qty);
     Alert.alert(
       'Item parecido encontrado',
-      `"${similarItem.name}" ja esta na lista com ${similarItem.quantity} ${similarItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${similarItem.unit ?? addUnit}?`,
+      `"${similarItem.name}" já está na lista com ${similarItem.quantity} ${similarItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${similarItem.unit ?? addUnit}?`,
       [
         { text: 'Adicionar separado', style: 'cancel', onPress: () => addSeparateItem(name, qty) },
         { text: 'Juntar', onPress: () => mergeWithExistingItem(similarItem, qty) },
@@ -408,33 +406,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  // A comprar: uma seção por categoria (ordem dos corredores), itens em
-  // ordem alfabética. Se ninguém categorizou nada, mantém a seção única.
   const sections = React.useMemo(() => {
-    const pendingByCategory = new Map<string, ShoppingItem[]>();
-    for (const item of pending) {
-      const cat = item.category || 'Outros';
-      const group = pendingByCategory.get(cat);
-      if (group) group.push(item);
-      else pendingByCategory.set(cat, [item]);
-    }
-
-    const onlyUncategorized = pendingByCategory.size === 1 && pendingByCategory.has('Outros');
-    const pendingSections = onlyUncategorized
-      ? [{ title: `A COMPRAR (${pending.length})`, data: [...pending].sort(compareNames), isPending: true }]
-      : [...pendingByCategory.entries()]
-          .sort((a, b) => {
-            const rankA = categoryOrder.indexOf(a[0]);
-            const rankB = categoryOrder.indexOf(b[0]);
-            return (rankA === -1 ? categoryOrder.length : rankA) - (rankB === -1 ? categoryOrder.length : rankB)
-              || a[0].localeCompare(b[0], 'pt-BR');
-          })
-          .map(([cat, data]) => ({ title: `${cat} (${data.length})`, data: [...data].sort(compareNames), isPending: true }));
-
-    return [
-      ...(pending.length > 0 ? pendingSections : []),
-      ...(bought.length > 0 ? [{ title: `COMPRADOS (${bought.length})`, data: [...bought].sort(compareNames), isPending: false }] : []),
-    ];
+    return buildShoppingListSections(pending, bought, categoryOrder);
   }, [bought, categoryOrder, pending]);
 
   return (
