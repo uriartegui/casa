@@ -31,7 +31,6 @@ import {
   useUpdateHouseTaskStatus,
 } from '../../hooks/useHouseTasks';
 import { HouseTask } from '../../types';
-import { formatBrShortDate } from '../../utils/dateUtils';
 import { useAuth } from '../../context/AuthContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
@@ -43,6 +42,7 @@ import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
 import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
+import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
@@ -62,37 +62,6 @@ const STATUS_FILTERS: { label: string; value: StatusFilter }[] = [
   { label: 'Concluídas', value: 'done' },
   { label: 'Tudo', value: 'all' },
 ];
-
-function dateKeyFromOffset(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
-function dueLabel(dueDate: string | null): string | null {
-  if (!dueDate) return null;
-  const today = dateKeyFromOffset(0);
-  const tomorrow = dateKeyFromOffset(1);
-  if (dueDate < today) return `Atrasada - ${formatBrShortDate(dueDate)}`;
-  if (dueDate === today) return 'Hoje';
-  if (dueDate === tomorrow) return 'Amanha';
-  return formatBrShortDate(dueDate);
-}
-
-function isLate(task: HouseTask) {
-  return !!task.dueDate && task.dueDate < dateKeyFromOffset(0) && !task.done;
-}
-
-function dateFromKey(value: string | null): Date {
-  return value ? new Date(`${value}T12:00:00`) : new Date();
-}
-
-function dateKeyFromPicker(value: Date): string {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, '0');
-  const day = String(value.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 function TaskHouseholdHeader({ category, householdName }: { category: string; householdName: string }) {
   const { data: households } = useHouseholds();
