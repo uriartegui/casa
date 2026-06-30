@@ -11,7 +11,6 @@ import { useStorages } from '../../hooks/useStorages';
 import { useShoppingActivity, useShoppingLists } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { HomeStackParamList } from '../../navigation/AppTabs';
-import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useHouseTasks, useHouseTaskActivity } from '../../hooks/useHouseTasks';
 import { FridgeItem } from '../../types';
 import GlobalSearchModal from '../../components/GlobalSearchModal';
@@ -20,15 +19,7 @@ import { useGlobalSearchModal } from '../../context/GlobalSearchContext';
 import HomeHeader from './components/HomeHeader';
 import { ExpiringItemsCard, QuickActionsCard, TodayIntro, TodayTasksCard, UrgentListsCard } from './components/HomeCards';
 import { AttentionSummaryModal, HelpSheet } from './components/HomeSheets';
-import {
-  buildShoppingActivityAlerts,
-  buildShoppingAttention,
-  buildStockActivityAlerts,
-  buildStockAttention,
-  buildTaskActivityAlerts,
-  buildTaskAttention,
-  countAlerts,
-} from '../../utils/alertCenter';
+import { useHomeAlerts } from './hooks/useHomeAlerts';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -159,38 +150,26 @@ export default function HomeScreen() {
       });
   }, [fridgeItems, today]);
   const todayAttentionCount = expiringItems.length + priorityTasks.length + urgentLists.length;
-  const {
-    lastSeenAt: stockActivitySeenAt,
-    markSeen: markStockActivitySeen,
-  } = useActivitySeen('stock', effectiveId, fridgeActivity ?? [], user?.id);
-  const { markSeen: markTaskActivitySeen, lastSeenAt: taskActivitySeenAt } = useActivitySeen('tasks', effectiveId, taskActivity, user?.id);
-  const { markSeen: markShoppingActivitySeen, lastSeenAt: shoppingActivitySeenAt } = useActivitySeen('shopping', effectiveId, shoppingActivity, user?.id);
-  const alertSections = React.useMemo(() => {
-    const attentionItems = [
-      ...buildStockAttention(fridgeItems ?? [], { onOpenItem: openExpiringItem }),
-      ...buildTaskAttention(houseTasks, { userId: user?.id, onOpenTask: openTask }),
-      ...buildShoppingAttention(shoppingLists ?? [], {
-        onOpenList: (list) => navigation.navigate('HomeShoppingListDetail', {
-          householdId: list.householdId,
-          listId: list.id,
-          listName: list.name,
-          listUrgent: list.urgent,
-          highlightList: true,
-        }),
-      }),
-    ].slice(0, 16);
-    const activityItems = [
-      ...buildStockActivityAlerts(fridgeActivity ?? [], { localUserId: user?.id, since: stockActivitySeenAt, onOpenEvent: openActivityStock }),
-      ...buildShoppingActivityAlerts(shoppingActivity, { localUserId: user?.id, since: shoppingActivitySeenAt }),
-      ...buildTaskActivityAlerts(taskActivity, { localUserId: user?.id, since: taskActivitySeenAt }),
-    ].sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime()).slice(0, 12);
-
-    return [
-      { title: 'Precisa de atenção', items: attentionItems, emptyText: 'Nenhuma urgência na casa agora.' },
-      { title: 'Atividades novas', items: activityItems, emptyText: 'Nenhuma atividade nova desde a última vez.' },
-    ];
-  }, [fridgeActivity, fridgeItems, houseTasks, navigation, shoppingActivity, shoppingActivitySeenAt, shoppingLists, stockActivitySeenAt, taskActivity, taskActivitySeenAt, user?.id]);
-  const activityUnreadCount = countAlerts(alertSections);
+  const { alertSections, activityUnreadCount, markAllSeen: markHomeAlertsSeen } = useHomeAlerts({
+    householdId: effectiveId,
+    localUserId: user?.id,
+    fridgeItems,
+    fridgeActivity,
+    houseTasks,
+    taskActivity,
+    shoppingLists,
+    shoppingActivity,
+    onOpenStockItem: openExpiringItem,
+    onOpenTask: openTask,
+    onOpenShoppingList: (list) => navigation.navigate('HomeShoppingListDetail', {
+      householdId: list.householdId,
+      listId: list.id,
+      listName: list.name,
+      listUrgent: list.urgent,
+      highlightList: true,
+    }),
+    onOpenStockActivity: openActivityStock,
+  });
 
   function openMenu() {
     navigation.getParent()?.navigate('Menu' as never);
@@ -333,9 +312,7 @@ export default function HomeScreen() {
     activitySheetTranslateY.setValue(activityCollapsedHeight);
     activityHeightRef.current = activityCollapsedHeight;
     setActivityModalVisible(true);
-    markStockActivitySeen();
-    markTaskActivitySeen();
-    markShoppingActivitySeen();
+    markHomeAlertsSeen();
     requestAnimationFrame(() => {
       Animated.spring(activitySheetTranslateY, {
         toValue: 0,
