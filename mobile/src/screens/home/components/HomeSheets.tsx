@@ -2,8 +2,7 @@ import React from 'react';
 import { Animated, GestureResponderHandlers, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
-import ActivityTimeline from '../../../components/ActivityTimeline';
-import { FridgeItem, HouseTask, ShoppingList, Storage } from '../../../types';
+import { FridgeItem, HouseTask, ShoppingList } from '../../../types';
 
 export type HelpSection = {
   title: string;
@@ -15,8 +14,6 @@ type HelpHighlight = {
   title: string;
   body: string;
 };
-
-type FilterValue = 'all' | string;
 
 type HelpSheetProps = {
   visible: boolean;
@@ -30,35 +27,6 @@ type HelpSheetProps = {
   highlights?: HelpHighlight[];
   groupTitle?: string;
   onClose: () => void;
-};
-
-type ActivitySheetProps = {
-  visible: boolean;
-  height: Animated.Value;
-  translateY: Animated.Value;
-  panHandlers: GestureResponderHandlers;
-  activeFilterCount: number;
-  fridgeEvents: any[];
-  taskEvents: any[];
-  newSince: string | null;
-  localUserId?: string;
-  onClose: () => void;
-  onOpenFilters: () => void;
-  onEventPress: (event: any) => void;
-};
-
-type FilterModalProps = {
-  visible: boolean;
-  activeFilterCount: number;
-  period: FilterValue;
-  storageId: FilterValue;
-  kind: FilterValue;
-  storages: Storage[];
-  onClose: () => void;
-  onClear: () => void;
-  onPeriodChange: (value: any) => void;
-  onStorageChange: (value: string) => void;
-  onKindChange: (value: any) => void;
 };
 
 type AttentionSummaryModalProps = {
@@ -150,159 +118,6 @@ export function HelpSheet({
   );
 }
 
-export function ActivitySheet({
-  visible,
-  height,
-  translateY,
-  panHandlers,
-  activeFilterCount,
-  fridgeEvents,
-  taskEvents,
-  newSince,
-  localUserId,
-  onClose,
-  onOpenFilters,
-  onEventPress,
-}: ActivitySheetProps) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.activityOverlay}>
-        <TouchableOpacity style={styles.sheetBackdrop} activeOpacity={1} onPress={onClose} />
-        <Animated.View style={[styles.activitySheetMotion, { transform: [{ translateY }] }]}>
-          <Animated.View style={[styles.activitySheet, { height }]}>
-            <View style={styles.sheetDragArea} {...panHandlers}>
-              <View style={styles.sheetHandle} />
-              <View style={styles.sheetDragHint} />
-            </View>
-            <View style={styles.activitySheetHeader}>
-              <Text style={styles.activitySheetTitle}>Atividades da casa</Text>
-              <View style={styles.activityHeaderActions}>
-                <TouchableOpacity
-                  style={[styles.filterButton, activeFilterCount > 0 && styles.filterButtonActive]}
-                  onPress={onOpenFilters}
-                  activeOpacity={0.75}
-                >
-                  <Feather name="filter" size={14} color={activeFilterCount > 0 ? '#fff' : Colors.accent} />
-                  <Text style={[styles.filterButtonText, activeFilterCount > 0 && styles.filterButtonTextActive]}>
-                    Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <ActivityTimeline
-              fridgeEvents={fridgeEvents}
-              taskEvents={taskEvents}
-              scope="stock"
-              showFilters={false}
-              showScopeFilter={false}
-              emptyText="Nenhuma atividade nos estoques."
-              onEventPress={onEventPress}
-              newSince={newSince}
-              localUserId={localUserId}
-            />
-          </Animated.View>
-        </Animated.View>
-      </View>
-    </Modal>
-  );
-}
-
-export function ActivityFilterModal({
-  visible,
-  activeFilterCount,
-  period,
-  storageId,
-  kind,
-  storages,
-  onClose,
-  onClear,
-  onPeriodChange,
-  onStorageChange,
-  onKindChange,
-}: FilterModalProps) {
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.filterModalOverlay}>
-        <TouchableOpacity style={styles.filterModalBackdrop} activeOpacity={1} onPress={onClose} />
-        <View style={styles.filterModalCard}>
-          <View style={styles.filterSectionHeader}>
-            <Text style={styles.filterModalTitle}>Filtros</Text>
-            {activeFilterCount > 0 && (
-              <TouchableOpacity onPress={onClear} activeOpacity={0.75}>
-                <Text style={styles.clearFiltersText}>Limpar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          <Text style={styles.filterLabel}>Data</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            {[
-              ['all', 'Tudo'],
-              ['today', 'Hoje'],
-              ['7d', '7 dias'],
-              ['30d', '30 dias'],
-            ].map(([value, label]) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.filterChip, period === value && styles.filterChipActive]}
-                onPress={() => onPeriodChange(value)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, period === value && styles.filterChipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Estoque</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, storageId === 'all' && styles.filterChipActive]}
-              onPress={() => onStorageChange('all')}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.filterChipText, storageId === 'all' && styles.filterChipTextActive]}>Todos</Text>
-            </TouchableOpacity>
-            {storages.map((storage) => (
-              <TouchableOpacity
-                key={storage.id}
-                style={[styles.filterChip, storageId === storage.id && styles.filterChipActive]}
-                onPress={() => onStorageChange(storage.id)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, storageId === storage.id && styles.filterChipTextActive]}>{storage.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <Text style={styles.filterLabel}>Ação</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-            {[
-              ['all', 'Tudo'],
-              ['added', 'Entrada'],
-              ['removed', 'Saída'],
-              ['updated', 'Edição'],
-              ['from_list', 'Veio da lista'],
-              ['to_list', 'Foi para lista'],
-            ].map(([value, label]) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.filterChip, kind === value && styles.filterChipActive]}
-                onPress={() => onKindChange(value)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterChipText, kind === value && styles.filterChipTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
-          <TouchableOpacity style={styles.filterApplyButton} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.filterApplyButtonText}>Aplicar filtros</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 export function AttentionSummaryModal({
   visible,
