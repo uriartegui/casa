@@ -11,7 +11,12 @@ import { useAddListItem, useListItems, useUpdateListItem } from '../../hooks/use
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem, Unit } from '../../types';
-import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
+import {
+  findSimilarShoppingItem,
+  mergedShoppingQuantity,
+  parseShoppingQuantity,
+  similarShoppingItemMessage,
+} from '../../utils/shoppingItemSimilarity';
 
 type Params = {
   householdId: string;
@@ -40,11 +45,10 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
   const { data: existingItems } = useListItems(householdId, listId ?? null);
 
   function askMerge(existingItem: ShoppingItem, qty: number) {
-    const nextQuantity = mergedShoppingQuantity(existingItem, qty);
     return new Promise<'merge' | 'separate'>((resolve) => {
       Alert.alert(
         'Item parecido encontrado',
-        `"${existingItem.name}" ja esta na lista com ${existingItem.quantity} ${existingItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${existingItem.unit ?? unit}?`,
+        similarShoppingItemMessage(existingItem, qty, unit),
         [
           { text: 'Adicionar separado', style: 'cancel', onPress: () => resolve('separate') },
           { text: 'Juntar', onPress: () => resolve('merge') },
@@ -58,8 +62,8 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
     }
-    const qty = parseFloat(quantity);
-    if (isNaN(qty) || qty <= 0) {
+    const qty = parseShoppingQuantity(quantity);
+    if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
