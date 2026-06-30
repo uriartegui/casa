@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ShoppingItem } from '../types';
-import { findSimilarShoppingItem, mergedShoppingQuantity, normalizeShoppingItemName } from './shoppingItemSimilarity';
+import {
+  findSimilarShoppingItem,
+  mergedShoppingQuantity,
+  normalizeShoppingItemName,
+  parseShoppingQuantity,
+  similarShoppingItemMessage,
+  stepShoppingQuantity,
+} from './shoppingItemSimilarity';
 
 const baseItem = {
   quantity: 1,
@@ -29,5 +36,23 @@ describe('shoppingItemSimilarity', () => {
 
   it('merges quantities numerically', () => {
     expect(mergedShoppingQuantity(item({ id: '1', name: 'Leite', checked: false }), 3)).toBe(4);
+  });
+
+  it('parses comma and dot quantities', () => {
+    expect(parseShoppingQuantity('1,5')).toBe(1.5);
+    expect(parseShoppingQuantity('2.25')).toBe(2.25);
+    expect(parseShoppingQuantity('0')).toBeNull();
+    expect(parseShoppingQuantity('abc')).toBeNull();
+  });
+
+  it('steps quantities with a minimum of one', () => {
+    expect(stepShoppingQuantity('2', 1)).toBe('3');
+    expect(stepShoppingQuantity('1', -1)).toBe('1');
+    expect(stepShoppingQuantity('abc', 2)).toBe('3');
+  });
+
+  it('builds a similar item merge message', () => {
+    expect(similarShoppingItemMessage(item({ id: '1', name: 'Leite', checked: false }), 2, 'kg'))
+      .toContain('"Leite" já está na lista');
   });
 });

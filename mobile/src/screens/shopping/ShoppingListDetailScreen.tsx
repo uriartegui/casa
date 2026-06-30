@@ -22,7 +22,13 @@ import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingItem } from '../../types';
 import { ShoppingItemSkeleton } from '../../components/Skeleton';
 import NativeSelect from '../../components/NativeSelect';
-import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
+import {
+  findSimilarShoppingItem,
+  mergedShoppingQuantity,
+  parseShoppingQuantity,
+  similarShoppingItemMessage,
+  stepShoppingQuantity,
+} from '../../utils/shoppingItemSimilarity';
 import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
 import { buildShoppingListSections } from './shoppingListSections';
 import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
@@ -186,9 +192,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   function confirmAdd() {
     const name = quickName.trim();
-    const qty = parseFloat(addQty.replace(',', '.'));
+    const qty = parseShoppingQuantity(addQty);
     if (!name) return;
-    if (isNaN(qty) || qty <= 0) {
+    if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
@@ -198,10 +204,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    const nextQuantity = mergedShoppingQuantity(similarItem, qty);
     Alert.alert(
       'Item parecido encontrado',
-      `"${similarItem.name}" já está na lista com ${similarItem.quantity} ${similarItem.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${similarItem.unit ?? addUnit}?`,
+      similarShoppingItemMessage(similarItem, qty, addUnit),
       [
         { text: 'Adicionar separado', style: 'cancel', onPress: () => addSeparateItem(name, qty) },
         { text: 'Juntar', onPress: () => mergeWithExistingItem(similarItem, qty) },
@@ -277,9 +282,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   }
 
   function stepQty(delta: number) {
-    const current = parseFloat(addQty.replace(',', '.'));
-    const next = Math.max(1, (isNaN(current) ? 1 : current) + delta);
-    setAddQty(String(next));
+    setAddQty((current) => stepShoppingQuantity(current, delta));
   }
 
   function handleClearChecked() {

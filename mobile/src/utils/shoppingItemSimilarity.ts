@@ -29,3 +29,19 @@ export function findSimilarShoppingItem(items: ShoppingItem[] | undefined, name:
 export function mergedShoppingQuantity(item: ShoppingItem, quantityToAdd: number) {
   return Number(item.quantity) + quantityToAdd;
 }
+
+export function parseShoppingQuantity(value: string) {
+  const quantity = parseFloat(value.replace(',', '.'));
+  return Number.isNaN(quantity) || quantity <= 0 ? null : quantity;
+}
+
+export function stepShoppingQuantity(value: string, delta: number) {
+  const current = parseFloat(value.replace(',', '.'));
+  const next = Math.max(1, (Number.isNaN(current) ? 1 : current) + delta);
+  return String(next);
+}
+
+export function similarShoppingItemMessage(item: ShoppingItem, quantityToAdd: number, fallbackUnit: string) {
+  const nextQuantity = mergedShoppingQuantity(item, quantityToAdd);
+  return `"${item.name}" já está na lista com ${item.quantity} ${item.unit ?? 'un'}.\n\nQuer juntar e deixar ${nextQuantity} ${item.unit ?? fallbackUnit}?`;
+}
