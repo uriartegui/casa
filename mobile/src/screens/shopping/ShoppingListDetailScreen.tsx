@@ -3,7 +3,7 @@ import { useIsFocused } from '@react-navigation/native';
 import {
   Animated, View, Text, SectionList, TouchableOpacity, Modal, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Alert,
-  KeyboardAvoidingView, Keyboard, Platform, ScrollView, Share,
+  KeyboardAvoidingView, Platform, ScrollView, Share,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -25,6 +25,7 @@ import NativeSelect from '../../components/NativeSelect';
 import { findSimilarShoppingItem, mergedShoppingQuantity } from '../../utils/shoppingItemSimilarity';
 import { ListFocusSummary, ShoppingItemRow } from './components/ShoppingListDetailParts';
 import { buildShoppingListSections } from './shoppingListSections';
+import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -88,30 +89,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     quickName.trim() ? filterItems(quickName).slice(0, 4) : []
   ), [quickName]);
   const isFocused = useIsFocused();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [footerHeight, setFooterHeight] = useState(0);
-  const footerKeyboardOffset = Platform.OS === 'ios' ? keyboardHeight : 0;
+  const { footerHeight, footerKeyboardOffset, handleFooterLayout } = useFloatingFooterOffset();
   const highlightAnim = useRef(new Animated.Value(0)).current;
   const listHighlightAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const updateKeyboardHeight = (event: { endCoordinates: { height: number } }) => {
-      if (event.endCoordinates.height > 0) setKeyboardHeight(event.endCoordinates.height);
-    };
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSubscription = Keyboard.addListener(showEvent, updateKeyboardHeight);
-    const frameSubscription = Platform.OS === 'ios'
-      ? Keyboard.addListener('keyboardWillChangeFrame', updateKeyboardHeight)
-      : null;
-    const hideSubscription = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-
-    return () => {
-      showSubscription.remove();
-      frameSubscription?.remove();
-      hideSubscription.remove();
-    };
-  }, []);
 
   const activeList = shoppingLists.find((list) => list.id === listId);
 
@@ -534,7 +514,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
       <View
         style={[styles.footer, styles.footerFloating, { bottom: footerKeyboardOffset }]}
-        onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+        onLayout={handleFooterLayout}
       >
           {quickSuggestions.length > 0 && (
             <View style={styles.suggestionsRow}>
