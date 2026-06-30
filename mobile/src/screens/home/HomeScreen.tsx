@@ -92,7 +92,7 @@ export default function HomeScreen() {
   const { data: taskActivity = [] } = useHouseTaskActivity(effectiveId);
 
   const [helpVisible, setHelpVisible] = useState(false);
-  const [activityModalVisible, setActivityModalVisible] = useState(false);
+  const [alertsVisible, setAlertsVisible] = useState(false);
   const [attentionModalVisible, setAttentionModalVisible] = useState(false);
   const {
     firstName,
@@ -134,12 +134,12 @@ export default function HomeScreen() {
     onOpen: () => setHelpVisible(true),
     onClose: () => setHelpVisible(false),
   });
-  const activitySheet = useBottomSheetMotion({
+  const alertsSheet = useBottomSheetMotion({
     onOpen: () => {
-      setActivityModalVisible(true);
+      setAlertsVisible(true);
       markHomeAlertsSeen();
     },
-    onClose: () => setActivityModalVisible(false),
+    onClose: () => setAlertsVisible(false),
   });
 
   function openMenu() {
@@ -190,7 +190,7 @@ export default function HomeScreen() {
     const targetStorageEmoji = storage?.emoji ?? event.storageEmoji ?? '';
     if (!effectiveId || !targetStorageId || !targetStorageName) return;
 
-    setActivityModalVisible(false);
+    setAlertsVisible(false);
     requestAnimationFrame(() => {
       (navigation.getParent() as any)?.navigate('StorageFlow', {
         screen: 'Fridge',
@@ -246,7 +246,7 @@ export default function HomeScreen() {
         activityUnreadCount={activityUnreadCount}
         onSearch={openSearch}
         onHelp={helpSheet.open}
-        onActivity={() => effectiveId && activitySheet.open()}
+        onAlerts={() => effectiveId && alertsSheet.open()}
         onMenu={openMenu}
       />
 
@@ -301,13 +301,13 @@ export default function HomeScreen() {
     />
 
     <AlertsSheet
-      visible={activityModalVisible}
-      height={activitySheet.height}
-      translateY={activitySheet.translateY}
-      panHandlers={activitySheet.panHandlers}
+      visible={alertsVisible}
+      height={alertsSheet.height}
+      translateY={alertsSheet.translateY}
+      panHandlers={alertsSheet.panHandlers}
       subtitle={household?.name ? `Casa inteira · ${household.name}` : 'Casa inteira'}
       sections={alertSections}
-      onClose={activitySheet.close}
+      onClose={alertsSheet.close}
     />
 
     <AttentionSummaryModal

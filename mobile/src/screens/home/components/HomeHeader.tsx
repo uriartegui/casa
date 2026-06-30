@@ -10,7 +10,7 @@ type Props = {
   activityUnreadCount: number;
   onSearch: () => void;
   onHelp: () => void;
-  onActivity: () => void;
+  onAlerts: () => void;
   onMenu: () => void;
 };
 
@@ -21,7 +21,7 @@ export default function HomeHeader({
   activityUnreadCount,
   onSearch,
   onHelp,
-  onActivity,
+  onAlerts,
   onMenu,
 }: Props) {
   return (
@@ -40,7 +40,7 @@ export default function HomeHeader({
         </View>
 
         <View style={styles.homeHeaderActions}>
-          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={onActivity}>
+          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={onAlerts}>
             <Feather name="bell" size={23} color={Colors.textPrimary} />
             {activityUnreadCount > 0 && (
               <View style={styles.headerBadge}>
