@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Animated, Dimensions, View, Text, FlatList, ScrollView, TouchableOpacity,
+  View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Alert, Modal, TextInput,
-  KeyboardAvoidingView, Platform, ActivityIndicator, PanResponder,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +19,7 @@ import { ShoppingList } from '../../types';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { HelpSheet } from '../home/components/HomeSheets';
 import AlertsSheet from '../../components/AlertsSheet';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { buildShoppingActivityAlerts, buildShoppingAttention, countAlerts } from '../../utils/alertCenter';
 
 type Props = {
@@ -107,39 +108,24 @@ export default function ShoppingListsScreen({ navigation }: Props) {
   const [editUrgent, setEditUrgent] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [activityModalVisible, setActivityModalVisible] = useState(false);
-  const screenHeight = Dimensions.get('window').height;
-  const activityCollapsedHeight = Math.round(screenHeight * 0.74);
-  const activityExpandedHeight = Math.round(screenHeight - 64);
-  const activityCloseThreshold = Math.round(screenHeight * 0.48);
-  const activitySheetHeight = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const activitySheetTranslateY = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const activityHeightRef = React.useRef(activityCollapsedHeight);
-  const activityDragStartHeight = React.useRef(activityCollapsedHeight);
-  const helpSheetHeight = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const helpSheetTranslateY = React.useRef(new Animated.Value(activityCollapsedHeight)).current;
-  const helpHeightRef = React.useRef(activityCollapsedHeight);
-  const helpDragStartHeight = React.useRef(activityCollapsedHeight);
-
-  React.useEffect(() => {
-    const listener = activitySheetHeight.addListener(({ value }) => {
-      activityHeightRef.current = value;
-    });
-    return () => activitySheetHeight.removeListener(listener);
-  }, [activitySheetHeight]);
-
-  React.useEffect(() => {
-    const listener = helpSheetHeight.addListener(({ value }) => {
-      helpHeightRef.current = value;
-    });
-    return () => helpSheetHeight.removeListener(listener);
-  }, [helpSheetHeight]);
+  const helpSheet = useBottomSheetMotion({
+    onOpen: () => setHelpVisible(true),
+    onClose: () => setHelpVisible(false),
+  });
+  const activitySheet = useBottomSheetMotion({
+    onOpen: () => {
+      setActivityModalVisible(true);
+      markShoppingActivitySeen();
+    },
+    onClose: () => setActivityModalVisible(false),
+  });
 
   React.useEffect(() => {
     (navigation as any).setOptions({
       title: household?.name ?? 'Listas de Compras',
       headerAlert: () => (
         <TouchableOpacity
-          onPress={() => effectiveId && openActivityModal()}
+          onPress={() => effectiveId && activitySheet.open()}
           style={styles.headerIconButton}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -154,7 +140,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       headerRight: () => (
         <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={openHelpModal}
+            onPress={helpSheet.open}
             style={styles.headerIconButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -170,7 +156,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         </View>
       ),
     });
-  }, [alertCount, navigation, household, effectiveId, openHelpModal]);
+  }, [alertCount, navigation, household, effectiveId, activitySheet.open, helpSheet.open]);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -218,139 +204,6 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       Alert.alert('Erro', 'Não foi possível atualizar a lista.');
     }
   }
-
-  function animateActivitySheet(toValue: number, onEnd?: () => void) {
-    Animated.spring(activitySheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }
-
-  function animateHelpSheet(toValue: number, onEnd?: () => void) {
-    Animated.spring(helpSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }
-
-  function openHelpModal() {
-    helpSheetHeight.setValue(activityCollapsedHeight);
-    helpSheetTranslateY.setValue(activityCollapsedHeight);
-    helpHeightRef.current = activityCollapsedHeight;
-    setHelpVisible(true);
-    requestAnimationFrame(() => {
-      Animated.spring(helpSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }
-
-  function closeHelpModal() {
-    Animated.timing(helpSheetTranslateY, {
-      toValue: Math.max(helpHeightRef.current, activityCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setHelpVisible(false);
-      helpSheetHeight.setValue(activityCollapsedHeight);
-      helpSheetTranslateY.setValue(activityCollapsedHeight);
-      helpHeightRef.current = activityCollapsedHeight;
-    });
-  }
-
-  function openActivityModal() {
-    activitySheetHeight.setValue(activityCollapsedHeight);
-    activitySheetTranslateY.setValue(activityCollapsedHeight);
-    activityHeightRef.current = activityCollapsedHeight;
-    setActivityModalVisible(true);
-    markShoppingActivitySeen();
-    requestAnimationFrame(() => {
-      Animated.spring(activitySheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }
-
-  function closeActivityModal() {
-    Animated.timing(activitySheetTranslateY, {
-      toValue: Math.max(activityHeightRef.current, activityCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setActivityModalVisible(false);
-      activitySheetHeight.setValue(activityCollapsedHeight);
-      activitySheetTranslateY.setValue(activityCollapsedHeight);
-      activityHeightRef.current = activityCollapsedHeight;
-    });
-  }
-
-  const activitySheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      activityDragStartHeight.current = activityHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(activityExpandedHeight, activityDragStartHeight.current - gesture.dy));
-      activitySheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = activityHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(activityExpandedHeight, activityDragStartHeight.current - gesture.dy));
-      const midpoint = (activityCollapsedHeight + activityExpandedHeight) / 2;
-      if (projectedHeight < activityCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeActivityModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateActivitySheet(activityExpandedHeight);
-        return;
-      }
-      animateActivitySheet(activityCollapsedHeight);
-    },
-  }), [activityCloseThreshold, activityCollapsedHeight, activityExpandedHeight, activitySheetHeight, screenHeight]);
-
-  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      helpDragStartHeight.current = helpHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(activityExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      helpSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = helpHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(activityExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      const midpoint = (activityCollapsedHeight + activityExpandedHeight) / 2;
-      if (projectedHeight < activityCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeHelpModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateHelpSheet(activityExpandedHeight);
-        return;
-      }
-      animateHelpSheet(activityCollapsedHeight);
-    },
-  }), [activityCloseThreshold, activityCollapsedHeight, activityExpandedHeight, helpSheetHeight, screenHeight]);
 
   if (loadingHouseholds) {
     return (
@@ -458,26 +311,26 @@ export default function ShoppingListsScreen({ navigation }: Props) {
 
       <HelpSheet
         visible={helpVisible}
-        height={helpSheetHeight}
-        translateY={helpSheetTranslateY}
-        panHandlers={helpSheetPanResponder.panHandlers}
+        height={helpSheet.height}
+        translateY={helpSheet.translateY}
+        panHandlers={helpSheet.panHandlers}
         sections={SHOPPING_HELP_SECTIONS}
         subtitle="Guia rápido das listas"
         introTitle="Como usar listas de compras"
         introText="Organize compras por lugar ou necessidade, marque itens durante a compra e mande produtos comprados para o estoque certo."
         highlights={SHOPPING_HELP_HIGHLIGHTS}
         groupTitle="Funções das listas"
-        onClose={closeHelpModal}
+        onClose={helpSheet.close}
       />
 
       <AlertsSheet
         visible={activityModalVisible}
-        height={activitySheetHeight}
-        translateY={activitySheetTranslateY}
-        panHandlers={activitySheetPanResponder.panHandlers}
+        height={activitySheet.height}
+        translateY={activitySheet.translateY}
+        panHandlers={activitySheet.panHandlers}
         subtitle="Listas de compras"
         sections={alertSections}
-        onClose={closeActivityModal}
+        onClose={activitySheet.close}
       />
 
       <Modal visible={!!editingList} transparent animationType="slide" onRequestClose={() => setEditingList(null)}>
@@ -777,3 +630,4 @@ const styles = StyleSheet.create({
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
+
