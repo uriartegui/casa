@@ -41,7 +41,7 @@ import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
-import { buildTaskActivityAlerts, buildTaskAttention, countAlerts } from '../../utils/alertCenter';
+import { useTaskAlerts } from './hooks/useTaskAlerts';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
@@ -229,27 +229,14 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     }
   }, [initialCategory]);
 
-  const alertSections = React.useMemo(() => [
-    {
-      title: 'Precisa de atenção',
-      items: buildTaskAttention(tasks ?? [], {
-        category: initialCategory,
-        userId: user?.id,
-        onOpenTask: setSelectedTask,
-      }),
-      emptyText: initialCategory ? 'Nenhuma tarefa urgente nesta categoria.' : 'Nenhuma tarefa urgente agora.',
-    },
-    {
-      title: 'Atividades novas',
-      items: buildTaskActivityAlerts(taskActivity, {
-        category: initialCategory,
-        localUserId: user?.id,
-        since: taskActivitySeenAt,
-      }),
-      emptyText: 'Nenhuma atividade nova nas tarefas.',
-    },
-  ], [initialCategory, taskActivity, taskActivitySeenAt, tasks, user?.id]);
-  const alertCount = countAlerts(alertSections);
+  const { alertSections, alertCount } = useTaskAlerts({
+    tasks,
+    activity: taskActivity,
+    category: initialCategory,
+    userId: user?.id,
+    lastSeenAt: taskActivitySeenAt,
+    onOpenTask: setSelectedTask,
+  });
 
   React.useEffect(() => {
     (navigation as any).setOptions({
