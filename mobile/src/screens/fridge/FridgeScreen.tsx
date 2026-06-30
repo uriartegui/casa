@@ -24,7 +24,7 @@ import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
-import { buildStockActivityAlerts, buildStockAttention, countAlerts } from '../../utils/alertCenter';
+import { useStockAlerts } from './hooks/useStockAlerts';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -106,32 +106,28 @@ export default function FridgeScreen({ navigation, route }: Props) {
   });
 
 
-  const alertSections = React.useMemo(() => [
-    {
-      title: 'Precisa de atenção',
-      items: buildStockAttention(items ?? [], {
-        storageId: effectiveStorageId,
-        storageName: route.params.storageName,
-        onOpenItem: (item) => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! }),
-      }),
-      emptyText: 'Nenhum item vencido ou sem categoria neste estoque.',
-    },
-    {
-      title: 'Atividades novas',
-      items: buildStockActivityAlerts(fridgeActivity, {
-        storageId: effectiveStorageId,
-        since: stockActivitySeenAt,
-        onOpenEvent: (event) => event.storageId && navigation.navigate('Fridge', {
-          householdId: effectiveId!,
-          storageId: event.storageId,
-          storageName: event.storageName ?? route.params.storageName,
-          storageEmoji: event.storageEmoji ?? route.params.storageEmoji,
-        }),
-      }),
-      emptyText: 'Nenhuma atividade nova neste estoque.',
-    },
-  ], [effectiveId, effectiveStorageId, fridgeActivity, items, navigation, route.params.storageEmoji, route.params.storageName, stockActivitySeenAt]);
-  const alertCount = countAlerts(alertSections);
+  const openAlertItem = React.useCallback((item: FridgeItem) => {
+    if (!effectiveId) return;
+    navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId });
+  }, [effectiveId, navigation]);
+  const openAlertActivity = React.useCallback((event: { storageId?: string | null; storageName?: string | null; storageEmoji?: string | null }) => {
+    if (!effectiveId || !event.storageId) return;
+    navigation.navigate('Fridge', {
+      householdId: effectiveId,
+      storageId: event.storageId,
+      storageName: event.storageName ?? route.params.storageName,
+      storageEmoji: event.storageEmoji ?? route.params.storageEmoji,
+    });
+  }, [effectiveId, navigation, route.params.storageEmoji, route.params.storageName]);
+  const { alertSections, alertCount } = useStockAlerts({
+    items,
+    activity: fridgeActivity,
+    storageId: effectiveStorageId,
+    storageName: route.params.storageName,
+    lastSeenAt: stockActivitySeenAt,
+    onOpenItem: openAlertItem,
+    onOpenActivity: openAlertActivity,
+  });
 
   React.useLayoutEffect(() => {
     (navigation as any).setOptions({
