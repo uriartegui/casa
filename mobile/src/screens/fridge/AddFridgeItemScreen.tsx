@@ -16,6 +16,7 @@ import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 import { Feather } from '@expo/vector-icons';
+import { parseShoppingQuantity } from '../../utils/shoppingItemSimilarity';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'AddFridgeItem'>;
@@ -38,7 +39,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
 
   // Quando a tela abre sem compartimento (ex.: atalho da Home), o usuário
-  // escolhe um; item sem compartimento nao aparece no estoque.
+  // escolhe um; item sem compartimento não aparece no estoque.
   const { data: storages } = useStorages(householdId);
   const [pickedStorageId, setPickedStorageId] = useState<string | null>(routeStorageId ?? null);
   const storageId = pickedStorageId ?? undefined;
@@ -57,8 +58,8 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
       Alert.alert('Erro', 'Digite o nome do item.');
       return;
     }
-    const qty = parseFloat(quantity);
-    if (isNaN(qty) || qty <= 0) {
+    const qty = parseShoppingQuantity(quantity);
+    if (qty === null) {
       Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
