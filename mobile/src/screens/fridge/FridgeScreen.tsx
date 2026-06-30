@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Animated, View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Modal, ActivityIndicator, Alert,
-  Dimensions, PanResponder,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -24,6 +23,7 @@ import NativeSelect from '../../components/NativeSelect';
 import { HelpSheet } from '../home/components/HomeSheets';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { buildStockActivityAlerts, buildStockAttention, countAlerts } from '../../utils/alertCenter';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
@@ -89,169 +89,22 @@ export default function FridgeScreen({ navigation, route }: Props) {
   const { showToast } = useToast();
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
-  const screenHeight = Dimensions.get('window').height;
-  const helpCollapsedHeight = Math.round(screenHeight * 0.74);
-  const helpExpandedHeight = Math.round(screenHeight - 64);
-  const helpCloseThreshold = Math.round(screenHeight * 0.48);
-  const helpSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const helpSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const helpHeightRef = React.useRef(helpCollapsedHeight);
-  const helpDragStartHeight = React.useRef(helpCollapsedHeight);
-  const alertsSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const alertsSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const alertsHeightRef = React.useRef(helpCollapsedHeight);
-  const alertsDragStartHeight = React.useRef(helpCollapsedHeight);
   const {
     lastSeenAt: stockActivitySeenAt,
     markSeen: markStockActivitySeen,
   } = useActivitySeen(`stock:${effectiveStorageId}`, effectiveId, fridgeActivity.filter((event) => event.storageId === effectiveStorageId), undefined);
-
-  React.useEffect(() => {
-    const listener = helpSheetHeight.addListener(({ value }) => {
-      helpHeightRef.current = value;
-    });
-    return () => helpSheetHeight.removeListener(listener);
-  }, [helpSheetHeight]);
-
-  React.useEffect(() => {
-    const listener = alertsSheetHeight.addListener(({ value }) => {
-      alertsHeightRef.current = value;
-    });
-    return () => alertsSheetHeight.removeListener(listener);
-  }, [alertsSheetHeight]);
-
-  const animateHelpSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
-    Animated.spring(helpSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }, [helpSheetHeight]);
-
-  const openHelpModal = React.useCallback(() => {
-    helpSheetHeight.setValue(helpCollapsedHeight);
-    helpSheetTranslateY.setValue(helpCollapsedHeight);
-    helpHeightRef.current = helpCollapsedHeight;
-    setHelpVisible(true);
-    requestAnimationFrame(() => {
-      Animated.spring(helpSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
-
-  const closeHelpModal = React.useCallback(() => {
-    Animated.timing(helpSheetTranslateY, {
-      toValue: Math.max(helpHeightRef.current, helpCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setHelpVisible(false);
-      helpSheetHeight.setValue(helpCollapsedHeight);
-      helpSheetTranslateY.setValue(helpCollapsedHeight);
-      helpHeightRef.current = helpCollapsedHeight;
-    });
-  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
-
-  const animateAlertsSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
-    Animated.spring(alertsSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }, [alertsSheetHeight]);
-
-  const openAlertsModal = React.useCallback(() => {
-    alertsSheetHeight.setValue(helpCollapsedHeight);
-    alertsSheetTranslateY.setValue(helpCollapsedHeight);
-    alertsHeightRef.current = helpCollapsedHeight;
-    setAlertsVisible(true);
-    markStockActivitySeen();
-    requestAnimationFrame(() => {
-      Animated.spring(alertsSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight, markStockActivitySeen]);
-
-  const closeAlertsModal = React.useCallback(() => {
-    Animated.timing(alertsSheetTranslateY, {
-      toValue: Math.max(alertsHeightRef.current, helpCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setAlertsVisible(false);
-      alertsSheetHeight.setValue(helpCollapsedHeight);
-      alertsSheetTranslateY.setValue(helpCollapsedHeight);
-      alertsHeightRef.current = helpCollapsedHeight;
-    });
-  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight]);
-
-  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      helpDragStartHeight.current = helpHeightRef.current;
+  const helpSheet = useBottomSheetMotion({
+    onOpen: () => setHelpVisible(true),
+    onClose: () => setHelpVisible(false),
+  });
+  const alertsSheet = useBottomSheetMotion({
+    onOpen: () => {
+      setAlertsVisible(true);
+      markStockActivitySeen();
     },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      helpSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = helpHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
-      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeHelpModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateHelpSheet(helpExpandedHeight);
-        return;
-      }
-      animateHelpSheet(helpCollapsedHeight);
-    },
-  }), [animateHelpSheet, closeHelpModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, helpSheetHeight, screenHeight]);
+    onClose: () => setAlertsVisible(false),
+  });
 
-  const alertsSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      alertsDragStartHeight.current = alertsHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
-      alertsSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = alertsHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
-      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
-      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeAlertsModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateAlertsSheet(helpExpandedHeight);
-        return;
-      }
-      animateAlertsSheet(helpCollapsedHeight);
-    },
-  }), [animateAlertsSheet, alertsSheetHeight, closeAlertsModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, screenHeight]);
 
   const alertSections = React.useMemo(() => [
     {
@@ -285,7 +138,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
       headerAlert: () => (
         <TouchableOpacity
           style={styles.headerIconButton}
-          onPress={openAlertsModal}
+          onPress={alertsSheet.open}
           activeOpacity={0.72}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
@@ -301,7 +154,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerIconButton}
-            onPress={openHelpModal}
+            onPress={helpSheet.open}
             activeOpacity={0.72}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -318,7 +171,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
         </View>
       ),
     });
-  }, [alertCount, navigation, openAlertsModal, openHelpModal]);
+  }, [alertCount, navigation, alertsSheet.open, helpSheet.open]);
 
   async function handleRefresh() {
     setManualRefreshing(true);
@@ -694,26 +547,26 @@ export default function FridgeScreen({ navigation, route }: Props) {
 
       <HelpSheet
         visible={helpVisible}
-        height={helpSheetHeight}
-        translateY={helpSheetTranslateY}
-        panHandlers={helpSheetPanResponder.panHandlers}
+        height={helpSheet.height}
+        translateY={helpSheet.translateY}
+        panHandlers={helpSheet.panHandlers}
         sections={STOCK_HELP_SECTIONS}
         subtitle={`Estoque: ${route.params.storageName}`}
         introTitle="Como este estoque funciona"
         introText="Aqui você acompanha o que existe em casa, vê validade, organiza por categoria e decide rapidamente quando um item acabou."
         highlights={STOCK_HELP_HIGHLIGHTS}
         groupTitle="Funções do estoque"
-        onClose={closeHelpModal}
+        onClose={helpSheet.close}
       />
 
       <AlertsSheet
         visible={alertsVisible}
-        height={alertsSheetHeight}
-        translateY={alertsSheetTranslateY}
-        panHandlers={alertsSheetPanResponder.panHandlers}
+        height={alertsSheet.height}
+        translateY={alertsSheet.translateY}
+        panHandlers={alertsSheet.panHandlers}
         subtitle={`Estoque: ${route.params.storageName}`}
         sections={alertSections}
-        onClose={closeAlertsModal}
+        onClose={alertsSheet.close}
       />
 
     </View>
@@ -1046,3 +899,4 @@ const styles = StyleSheet.create({
   helpRowTitle: { fontSize: 14, lineHeight: 18, fontWeight: '900', color: Colors.textPrimary },
   helpRowBody: { fontSize: 12, lineHeight: 17, color: Colors.textSecondary, marginTop: 2 },
 });
+
