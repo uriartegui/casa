@@ -20,6 +20,7 @@ import HomeHeader from './components/HomeHeader';
 import { ExpiringItemsCard, QuickActionsCard, TodayIntro, TodayTasksCard, UrgentListsCard } from './components/HomeCards';
 import { AttentionSummaryModal, HelpSheet } from './components/HomeSheets';
 import { useHomeAlerts } from './hooks/useHomeAlerts';
+import { useHomeToday } from './hooks/useHomeToday';
 
 type HomeNav = NativeStackNavigationProp<HomeStackParamList, 'Home'>;
 
@@ -70,12 +71,6 @@ const HELP_SECTIONS = [
   },
 ];
 
-function formatShortDate(date: string) {
-  const [year, month, day] = date.split('-');
-  if (!year || !month || !day) return date;
-  return `${day}/${month}`;
-}
-
 export default function HomeScreen() {
   const navigation = useNavigation<HomeNav>();
   const insets = useSafeAreaInsets();
@@ -123,33 +118,22 @@ export default function HomeScreen() {
     });
     return () => helpSheetHeight.removeListener(listener);
   }, [helpSheetHeight]);
-
-  const firstName = user?.name?.split(' ')[0] ?? 'você';
-  const today = React.useMemo(() => new Date(), []);
-  const todayLabel = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-  const urgentLists = React.useMemo(() => (shoppingLists ?? []).filter((list) => list.urgent), [shoppingLists]);
-  const todayKey = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const priorityTasks = React.useMemo(() => (
-    houseTasks
-      .filter((task) => !task.done && (task.dueDate === todayKey || (task.dueDate && task.dueDate < todayKey) || task.assignedToId === user?.id))
-      .slice(0, 3)
-  ), [houseTasks, todayKey, user?.id]);
-  const expiringItems = React.useMemo(() => {
-    const todayAtStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    return (fridgeItems ?? [])
-      .filter((item) => {
-        if (!item.expirationDate) return false;
-        const expiration = new Date(`${item.expirationDate}T00:00:00`);
-        const diffDays = Math.ceil((expiration.getTime() - todayAtStart.getTime()) / 86400000);
-        return diffDays <= 7;
-      })
-      .sort((a, b) => {
-        const aTime = a.expirationDate ? new Date(`${a.expirationDate}T00:00:00`).getTime() : Infinity;
-        const bTime = b.expirationDate ? new Date(`${b.expirationDate}T00:00:00`).getTime() : Infinity;
-        return aTime - bTime;
-      });
-  }, [fridgeItems, today]);
-  const todayAttentionCount = expiringItems.length + priorityTasks.length + urgentLists.length;
+  const {
+    firstName,
+    todayLabel,
+    todayKey,
+    urgentLists,
+    priorityTasks,
+    expiringItems,
+    todayAttentionCount,
+    formatShortDate,
+  } = useHomeToday({
+    userName: user?.name,
+    userId: user?.id,
+    fridgeItems,
+    houseTasks,
+    shoppingLists,
+  });
   const { alertSections, activityUnreadCount, markAllSeen: markHomeAlertsSeen } = useHomeAlerts({
     householdId: effectiveId,
     localUserId: user?.id,
