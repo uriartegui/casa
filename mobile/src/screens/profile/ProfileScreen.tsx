@@ -4,6 +4,7 @@ import {
   StyleSheet, Alert, ScrollView, ActivityIndicator,
   Modal, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
@@ -163,7 +164,7 @@ export default function ProfileScreen() {
                 <Text style={styles.rowLabel}>Nome</Text>
                 <Text style={styles.rowValue}>{user?.name}</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+              <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
             </TouchableOpacity>
           )}
 
@@ -177,7 +178,7 @@ export default function ProfileScreen() {
               <Text style={styles.rowLabel}>Senha</Text>
               <Text style={styles.rowValue}>Alterar senha</Text>
             </View>
-            <Text style={styles.chevron}>›</Text>
+            <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -189,7 +190,7 @@ export default function ProfileScreen() {
             onPress={() => Linking.openURL('https://uriartegui.github.io/casa/privacy-policy.html')}
           >
             <Text style={styles.rowValue}>Política de Privacidade</Text>
-            <Text style={styles.chevron}>›</Text>
+            <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -256,7 +257,7 @@ export default function ProfileScreen() {
                       autoFocus
                     />
                     <TouchableOpacity onPress={() => setShowCurrent(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Text style={styles.eyeIcon}>{showCurrent ? '🙈' : '👁️'}</Text>
+                      <Feather name={showCurrent ? 'eye-off' : 'eye'} size={18} color={Colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -275,7 +276,7 @@ export default function ProfileScreen() {
                       onSubmitEditing={handleSavePassword}
                     />
                     <TouchableOpacity onPress={() => setShowNew(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Text style={styles.eyeIcon}>{showNew ? '🙈' : '👁️'}</Text>
+                      <Feather name={showNew ? 'eye-off' : 'eye'} size={18} color={Colors.textSecondary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -334,7 +335,6 @@ const styles = StyleSheet.create({
   rowLeft: { flex: 1 },
   rowLabel: { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
   rowValue: { fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
-  chevron: { fontSize: 22, color: Colors.textSecondary, marginLeft: 8, lineHeight: 26 },
   divider: { height: 1, backgroundColor: Colors.separator, marginLeft: 16 },
 
   // Inline edit
@@ -377,5 +377,4 @@ const styles = StyleSheet.create({
   passwordRowInput: {
     flex: 1, fontSize: 16, color: Colors.textPrimary, textAlign: 'right',
   },
-  eyeIcon: { fontSize: 16, marginLeft: 8 },
 });
