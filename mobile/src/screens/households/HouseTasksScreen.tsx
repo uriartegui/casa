@@ -4,11 +4,9 @@ import {
   ActionSheetIOS,
   Alert,
   Animated,
-  Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Modal,
-  PanResponder,
   Platform,
   RefreshControl,
   ScrollView,
@@ -42,6 +40,7 @@ import { DateField, DropdownField } from './components/TaskFields';
 import { HelpSheet } from '../home/components/HomeSheets';
 import AlertsSheet from '../../components/AlertsSheet';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
+import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { buildTaskActivityAlerts, buildTaskAttention, countAlerts } from '../../utils/alertCenter';
 
 type Props = {
@@ -207,170 +206,21 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [alertsVisible, setAlertsVisible] = useState(false);
   const highlightAnim = React.useRef(new Animated.Value(0)).current;
   const members = households?.find((item) => item.id === householdId)?.members ?? [];
-  const screenHeight = Dimensions.get('window').height;
-  const helpCollapsedHeight = Math.round(screenHeight * 0.74);
-  const helpExpandedHeight = Math.round(screenHeight - 64);
-  const helpCloseThreshold = Math.round(screenHeight * 0.48);
-  const helpSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const helpSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const helpHeightRef = React.useRef(helpCollapsedHeight);
-  const helpDragStartHeight = React.useRef(helpCollapsedHeight);
-  const alertsSheetHeight = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const alertsSheetTranslateY = React.useRef(new Animated.Value(helpCollapsedHeight)).current;
-  const alertsHeightRef = React.useRef(helpCollapsedHeight);
-  const alertsDragStartHeight = React.useRef(helpCollapsedHeight);
   const {
     lastSeenAt: taskActivitySeenAt,
     markSeen: markTaskActivitySeen,
   } = useActivitySeen(`tasks:${initialCategory ?? 'all'}`, householdId, taskActivity, user?.id);
-
-  React.useLayoutEffect(() => {
-    const listener = helpSheetHeight.addListener(({ value }) => {
-      helpHeightRef.current = value;
-    });
-    return () => helpSheetHeight.removeListener(listener);
-  }, [helpSheetHeight]);
-
-  React.useLayoutEffect(() => {
-    const listener = alertsSheetHeight.addListener(({ value }) => {
-      alertsHeightRef.current = value;
-    });
-    return () => alertsSheetHeight.removeListener(listener);
-  }, [alertsSheetHeight]);
-
-  const animateHelpSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
-    Animated.spring(helpSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }, [helpSheetHeight]);
-
-  const openHelpModal = React.useCallback(() => {
-    helpSheetHeight.setValue(helpCollapsedHeight);
-    helpSheetTranslateY.setValue(helpCollapsedHeight);
-    helpHeightRef.current = helpCollapsedHeight;
-    setHelpVisible(true);
-    requestAnimationFrame(() => {
-      Animated.spring(helpSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
-
-  const closeHelpModal = React.useCallback(() => {
-    Animated.timing(helpSheetTranslateY, {
-      toValue: Math.max(helpHeightRef.current, helpCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setHelpVisible(false);
-      helpSheetHeight.setValue(helpCollapsedHeight);
-      helpSheetTranslateY.setValue(helpCollapsedHeight);
-      helpHeightRef.current = helpCollapsedHeight;
-    });
-  }, [helpCollapsedHeight, helpSheetHeight, helpSheetTranslateY]);
-
-  const animateAlertsSheet = React.useCallback((toValue: number, onEnd?: () => void) => {
-    Animated.spring(alertsSheetHeight, {
-      toValue,
-      useNativeDriver: false,
-      speed: 18,
-      bounciness: 4,
-    }).start(() => onEnd?.());
-  }, [alertsSheetHeight]);
-
-  const openAlertsModal = React.useCallback(() => {
-    alertsSheetHeight.setValue(helpCollapsedHeight);
-    alertsSheetTranslateY.setValue(helpCollapsedHeight);
-    alertsHeightRef.current = helpCollapsedHeight;
-    setAlertsVisible(true);
-    markTaskActivitySeen();
-    requestAnimationFrame(() => {
-      Animated.spring(alertsSheetTranslateY, {
-        toValue: 0,
-        useNativeDriver: false,
-        speed: 20,
-        bounciness: 3,
-      }).start();
-    });
-  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight, markTaskActivitySeen]);
-
-  const closeAlertsModal = React.useCallback(() => {
-    Animated.timing(alertsSheetTranslateY, {
-      toValue: Math.max(alertsHeightRef.current, helpCollapsedHeight),
-      duration: 190,
-      useNativeDriver: false,
-    }).start(() => {
-      setAlertsVisible(false);
-      alertsSheetHeight.setValue(helpCollapsedHeight);
-      alertsSheetTranslateY.setValue(helpCollapsedHeight);
-      alertsHeightRef.current = helpCollapsedHeight;
-    });
-  }, [alertsSheetHeight, alertsSheetTranslateY, helpCollapsedHeight]);
-
-  const helpSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      helpDragStartHeight.current = helpHeightRef.current;
+  const helpSheet = useBottomSheetMotion({
+    onOpen: () => setHelpVisible(true),
+    onClose: () => setHelpVisible(false),
+  });
+  const alertsSheet = useBottomSheetMotion({
+    onOpen: () => {
+      setAlertsVisible(true);
+      markTaskActivitySeen();
     },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      helpSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = helpHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, helpDragStartHeight.current - gesture.dy));
-      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
-      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeHelpModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateHelpSheet(helpExpandedHeight);
-        return;
-      }
-      animateHelpSheet(helpCollapsedHeight);
-    },
-  }), [animateHelpSheet, closeHelpModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, helpSheetHeight, screenHeight]);
-
-  const alertsSheetPanResponder = React.useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onStartShouldSetPanResponderCapture: () => true,
-    onMoveShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponderCapture: () => true,
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderGrant: () => {
-      alertsDragStartHeight.current = alertsHeightRef.current;
-    },
-    onPanResponderMove: (_, gesture) => {
-      const nextHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
-      alertsSheetHeight.setValue(nextHeight);
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const currentHeight = alertsHeightRef.current;
-      const projectedHeight = Math.max(0, Math.min(helpExpandedHeight, alertsDragStartHeight.current - gesture.dy));
-      const midpoint = (helpCollapsedHeight + helpExpandedHeight) / 2;
-      if (projectedHeight < helpCloseThreshold || gesture.moveY > screenHeight * 0.72) {
-        closeAlertsModal();
-        return;
-      }
-      if (gesture.dy < -35 || gesture.vy < -0.75 || projectedHeight > midpoint || currentHeight > midpoint) {
-        animateAlertsSheet(helpExpandedHeight);
-        return;
-      }
-      animateAlertsSheet(helpCollapsedHeight);
-    },
-  }), [alertsSheetHeight, animateAlertsSheet, closeAlertsModal, helpCloseThreshold, helpCollapsedHeight, helpExpandedHeight, screenHeight]);
-
+    onClose: () => setAlertsVisible(false),
+  });
   React.useEffect(() => {
     if (initialCategory) {
       setCategoryFilter(initialCategory);
@@ -408,7 +258,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       headerAlert: () => (
         <TouchableOpacity
           style={styles.headerIconButton}
-          onPress={openAlertsModal}
+          onPress={alertsSheet.open}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Feather name="bell" size={23} color={Colors.textPrimary} />
@@ -423,7 +273,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerIconButton}
-            onPress={openHelpModal}
+            onPress={helpSheet.open}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Feather name="help-circle" size={23} color={Colors.textPrimary} />
@@ -438,7 +288,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         </View>
       ),
     });
-  }, [alertCount, householdName, initialCategory, navigation, openAlertsModal, openHelpModal]);
+  }, [alertCount, householdName, initialCategory, navigation, alertsSheet.open, helpSheet.open]);
 
   const stats = useMemo(() => {
     const all = tasks ?? [];
@@ -887,25 +737,25 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
 
       <HelpSheet
         visible={helpVisible}
-        height={helpSheetHeight}
-        translateY={helpSheetTranslateY}
-        panHandlers={helpSheetPanResponder.panHandlers}
+        height={helpSheet.height}
+        translateY={helpSheet.translateY}
+        panHandlers={helpSheet.panHandlers}
         sections={TASK_HELP_SECTIONS}
         subtitle={initialCategory ? `Tarefas: ${initialCategory}` : 'Guia rápido das tarefas'}
         introTitle="Como organizar tarefas da casa"
         introText="Use tarefas para rotinas, pendências e combinados que não são estoque, como limpar, comprar gás, trocar filtro ou cuidar da manutenção."
         highlights={TASK_HELP_HIGHLIGHTS}
         groupTitle="Funções das tarefas"
-        onClose={closeHelpModal}
+        onClose={helpSheet.close}
       />
       <AlertsSheet
         visible={alertsVisible}
-        height={alertsSheetHeight}
-        translateY={alertsSheetTranslateY}
-        panHandlers={alertsSheetPanResponder.panHandlers}
+        height={alertsSheet.height}
+        translateY={alertsSheet.translateY}
+        panHandlers={alertsSheet.panHandlers}
         subtitle={initialCategory ? `Tarefas: ${initialCategory}` : 'Tarefas da casa'}
         sections={alertSections}
-        onClose={closeAlertsModal}
+        onClose={alertsSheet.close}
       />
     </View>
   );
@@ -1096,3 +946,4 @@ const styles = StyleSheet.create({
   },
   descriptionInput: { minHeight: 68, textAlignVertical: 'top' },
 });
+
