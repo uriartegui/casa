@@ -9,6 +9,7 @@ import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Household } from '../../types';
 import { HouseholdCardSkeleton } from '../../components/Skeleton';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdList'>;
@@ -97,20 +98,20 @@ const styles = StyleSheet.create({
   loadingGrid: { flex: 1, padding: 16, gap: 10, backgroundColor: Colors.background },
   grid: { padding: 16, paddingBottom: 24, flexGrow: 1 },
   intro: { marginBottom: 22 },
-  kicker: { color: Colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 5 },
-  title: { color: Colors.textPrimary, fontSize: 24, fontWeight: '800' },
-  subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 6 },
+  kicker: { fontFamily: Typography.title, color: Colors.accent, fontSize: 12, fontWeight: '800', marginBottom: 5 },
+  title: { fontFamily: Typography.display, color: Colors.textPrimary, fontSize: 24, fontWeight: '800' },
+  subtitle: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 6 },
   row: { gap: 12, marginBottom: 12 },
-  houseTile: { flex: 1, minHeight: 166, borderRadius: 10, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, padding: 14, justifyContent: 'flex-end' },
+  houseTile: { flex: 1, minHeight: 166, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card, padding: 14, justifyContent: 'flex-end' },
   houseIcon: { width: 46, height: 46, borderRadius: 23, backgroundColor: Colors.accent + '18', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 14, left: 14 },
-  houseName: { color: Colors.textPrimary, fontSize: 16, fontWeight: '800' },
-  houseMeta: { color: Colors.textSecondary, fontSize: 13, marginTop: 4 },
+  houseName: { fontFamily: Typography.title, color: Colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  houseMeta: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 13, marginTop: 4 },
   empty: { flex: 1, minHeight: 300, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  emptyTitle: { color: Colors.textPrimary, fontSize: 17, fontWeight: '800', marginTop: 12 },
-  emptySubtitle: { color: Colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 6 },
+  emptyTitle: { fontFamily: Typography.title, color: Colors.textPrimary, fontSize: 17, fontWeight: '800', marginTop: 12 },
+  emptySubtitle: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20, marginTop: 6 },
   footer: { padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  primaryButton: { minHeight: 50, borderRadius: 10, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  primaryText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondaryButton: { minHeight: 48, borderRadius: 10, borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
-  secondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '700' },
+  primaryButton: { minHeight: 50, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
+  secondaryButton: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 15, fontWeight: '700' },
 });

@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Colors } from '../../constants/colors';
+import { Typography } from '../../theme/typography';
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuth();
@@ -308,14 +309,14 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  avatarText: { color: '#fff', fontSize: 36, fontWeight: '700' },
-  displayName: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  displayEmail: { fontSize: 14, color: Colors.textSecondary },
+  avatarText: { fontFamily: Typography.display, color: '#fff', fontSize: 36, fontWeight: '700' },
+  displayName: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 2 },
+  displayEmail: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary },
 
   // Section
   sectionLabel: {
-    fontSize: 12, fontWeight: '600', color: Colors.textSecondary,
-    letterSpacing: 0.6, paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6,
+    fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 6,
   },
   card: {
     backgroundColor: Colors.card,
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
   },
 
   // Row
@@ -333,8 +334,8 @@ const styles = StyleSheet.create({
   },
   rowDisabled: { opacity: 0.6 },
   rowLeft: { flex: 1 },
-  rowLabel: { fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
-  rowValue: { fontSize: 16, color: Colors.textPrimary, fontWeight: '500' },
+  rowLabel: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginBottom: 2 },
+  rowValue: { fontFamily: Typography.rounded, fontSize: 16, color: Colors.textPrimary, fontWeight: '600' },
   divider: { height: 1, backgroundColor: Colors.separator, marginLeft: 16 },
 
   // Inline edit
@@ -343,15 +344,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10, minHeight: 56,
   },
   inlineInput: {
-    flex: 1, fontSize: 16, color: Colors.textPrimary,
+    fontFamily: Typography.body, flex: 1, fontSize: 16, color: Colors.textPrimary,
     borderBottomWidth: 2, borderBottomColor: Colors.accent,
     paddingVertical: 4, marginRight: 12,
   },
   inlineSaveBtn: { paddingHorizontal: 12, paddingVertical: 6 },
-  inlineSaveText: { color: Colors.accent, fontWeight: '700', fontSize: 15 },
+  inlineSaveText: { fontFamily: Typography.title, color: Colors.accent, fontWeight: '700', fontSize: 15 },
 
   // Destructive
-  destructiveLabel: { fontSize: 16, color: Colors.destructive, fontWeight: '500' },
+  destructiveLabel: { fontFamily: Typography.rounded, fontSize: 16, color: Colors.destructive, fontWeight: '600' },
 
   // Modal
   modalContainer: { flex: 1, backgroundColor: Colors.background },
@@ -361,20 +362,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: Colors.separator,
     backgroundColor: Colors.card,
   },
-  modalTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  modalCancel: { fontSize: 16, color: Colors.textSecondary },
-  modalSave: { fontSize: 16, color: Colors.accent, fontWeight: '700' },
+  modalTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  modalCancel: { fontFamily: Typography.title, fontSize: 16, color: Colors.textSecondary },
+  modalSave: { fontFamily: Typography.title, fontSize: 16, color: Colors.accent, fontWeight: '700' },
   modalBody: { padding: 20 },
-  modalHint: { fontSize: 12, color: Colors.textSecondary, marginTop: 12, paddingHorizontal: 4 },
+  modalHint: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 12, paddingHorizontal: 4 },
 
   // Password rows inside modal
   passwordRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 14, minHeight: 56,
   },
-  passwordRowLabel: { fontSize: 15, color: Colors.textPrimary, width: 110 },
+  passwordRowLabel: { fontFamily: Typography.rounded, fontSize: 15, color: Colors.textPrimary, width: 110 },
   passwordRowRight: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   passwordRowInput: {
-    flex: 1, fontSize: 16, color: Colors.textPrimary, textAlign: 'right',
+    fontFamily: Typography.body, flex: 1, fontSize: 16, color: Colors.textPrimary, textAlign: 'right',
   },
 });

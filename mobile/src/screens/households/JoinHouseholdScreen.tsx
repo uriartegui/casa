@@ -10,6 +10,7 @@ import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useJoinHousehold } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'JoinHousehold'>;
@@ -67,13 +68,13 @@ export default function JoinHouseholdScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flexGrow: 1, padding: 24, gap: 12, paddingBottom: 120 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
+  content: { flexGrow: 1, padding: 22, gap: 12, paddingBottom: 120 },
+  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 8 },
   input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 32, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
+    fontFamily: Typography.display, fontSize: 32, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border,
     textAlign: 'center', letterSpacing: 8,
   },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 8 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  button: { backgroundColor: Colors.accent, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8 },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
 });

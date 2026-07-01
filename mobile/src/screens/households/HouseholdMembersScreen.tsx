@@ -9,6 +9,7 @@ import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { HouseholdMember } from '../../types';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdMembers'>;
@@ -29,8 +30,8 @@ export default function HouseholdMembersScreen({ navigation, route }: Props) {
   if (isError || !households) {
     return (
       <LoadErrorState
-        title="Não consegui carregar as pessoas"
-        message="Confira sua conexão e tente novamente."
+        title="NÃ£o consegui carregar as pessoas"
+        message="Confira sua conexÃ£o e tente novamente."
         isRetrying={isFetching}
         onRetry={() => refetch()}
       />
@@ -85,15 +86,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   list: { padding: 16, gap: 2, flexGrow: 1 },
-  sectionLabel: { fontSize: 12, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 0.5, marginBottom: 8 },
+  sectionLabel: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, marginBottom: 8 },
   memberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.separator },
   avatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accent },
-  avatarText: { color: '#fff', fontSize: 17, fontWeight: '800' },
+  avatarText: { fontFamily: Typography.title, color: '#fff', fontSize: 17, fontWeight: '800' },
   memberInfo: { flex: 1 },
-  memberName: { color: Colors.textPrimary, fontSize: 16, fontWeight: '700' },
-  memberRole: { color: Colors.accent, fontSize: 13, fontWeight: '600', marginTop: 2 },
-  emptyText: { color: Colors.textSecondary, fontSize: 15, textAlign: 'center', paddingTop: 20 },
+  memberName: { fontFamily: Typography.title, color: Colors.textPrimary, fontSize: 16, fontWeight: '700' },
+  memberRole: { fontFamily: Typography.body, color: Colors.accent, fontSize: 13, fontWeight: '600', marginTop: 2 },
+  emptyText: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 15, textAlign: 'center', paddingTop: 20 },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  inviteButton: { minHeight: 50, borderRadius: 10, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
-  inviteText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  inviteButton: { minHeight: 50, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
+  inviteText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
 });

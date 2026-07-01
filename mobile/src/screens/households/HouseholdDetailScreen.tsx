@@ -8,6 +8,7 @@ import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdDetail'>;
@@ -36,8 +37,8 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   if (isError || !households) {
     return (
       <LoadErrorState
-        title="Não consegui carregar esta casa"
-        message="Confira sua conexão e tente novamente."
+        title="NÃ£o consegui carregar esta casa"
+        message="Confira sua conexÃ£o e tente novamente."
         isRetrying={isFetching}
         onRetry={() => refetch()}
       />
@@ -112,13 +113,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   content: { padding: 16, paddingBottom: 32 },
   intro: { marginBottom: 22 },
-  kicker: { color: Colors.accent, fontSize: 12, fontWeight: '800', letterSpacing: 0.6, marginBottom: 5 },
-  title: { color: Colors.textPrimary, fontSize: 24, fontWeight: '800' },
-  subtitle: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 6 },
+  kicker: { fontFamily: Typography.title, color: Colors.accent, fontSize: 12, fontWeight: '800', marginBottom: 5 },
+  title: { fontFamily: Typography.display, color: Colors.textPrimary, fontSize: 24, fontWeight: '800' },
+  subtitle: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  tile: { width: '48.2%', minHeight: 150, borderRadius: 10, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, padding: 14, justifyContent: 'space-between' },
+  tile: { width: '48.2%', minHeight: 150, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card, padding: 14, justifyContent: 'space-between' },
   iconWrap: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.accent + '18', alignItems: 'center', justifyContent: 'center' },
-  tileTitle: { color: Colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: 16 },
-  tileSubtitle: { color: Colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 },
-  message: { color: Colors.textSecondary, fontSize: 15 },
+  tileTitle: { fontFamily: Typography.title, color: Colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: 16 },
+  tileSubtitle: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  message: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 15 },
 });

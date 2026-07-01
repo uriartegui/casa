@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdSettings'>;
@@ -30,8 +31,8 @@ export default function HouseholdSettingsScreen({ navigation, route }: Props) {
   if (isError || !households) {
     return (
       <LoadErrorState
-        title="Não consegui carregar esta casa"
-        message="Confira sua conexão e tente novamente."
+        title="NÃ£o consegui carregar esta casa"
+        message="Confira sua conexÃ£o e tente novamente."
         isRetrying={isFetching}
         onRetry={() => refetch()}
       />
@@ -100,9 +101,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background },
   content: { padding: 16 },
-  sectionLabel: { fontSize: 12, fontWeight: '800', color: Colors.destructive, letterSpacing: 0.5, marginBottom: 8 },
-  description: { color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 20 },
-  dangerButton: { minHeight: 50, borderRadius: 10, borderWidth: 1, borderColor: Colors.destructive, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
-  dangerText: { color: Colors.destructive, fontSize: 16, fontWeight: '700' },
-  message: { color: Colors.textSecondary, fontSize: 15 },
+  sectionLabel: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.destructive, marginBottom: 8 },
+  description: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 20 },
+  dangerButton: { minHeight: 50, borderRadius: 12, borderWidth: 1, borderColor: Colors.destructive, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
+  dangerText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 16, fontWeight: '700' },
+  message: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 15 },
 });
