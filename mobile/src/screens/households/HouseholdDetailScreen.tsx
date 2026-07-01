@@ -7,6 +7,7 @@ import { useHouseholds } from '../../hooks/useHouseholds';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdDetail'>;
@@ -22,7 +23,7 @@ type Shortcut = {
 
 export default function HouseholdDetailScreen({ navigation, route }: Props) {
   const { householdId, householdName } = route.params;
-  const { data: households, isLoading } = useHouseholds();
+  const { data: households, isLoading, isError, isFetching, refetch } = useHouseholds();
   const { setSelectedHouseholdId } = useSelectedHousehold();
   const household = households?.find((item) => item.id === householdId);
 
@@ -31,6 +32,18 @@ export default function HouseholdDetailScreen({ navigation, route }: Props) {
   }, [householdId, setSelectedHouseholdId]);
 
   if (isLoading) return <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>;
+
+  if (isError || !households) {
+    return (
+      <LoadErrorState
+        title="N„o consegui carregar esta casa"
+        message="Confira sua conex„o e tente novamente."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
   if (!household) return <View style={styles.center}><Text style={styles.message}>Casa n√£o encontrada.</Text></View>;
 
   const shortcuts: Shortcut[] = [

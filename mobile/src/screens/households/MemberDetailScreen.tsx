@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'MemberDetail'>;
@@ -18,7 +19,7 @@ type Props = {
 
 export default function MemberDetailScreen({ navigation, route }: Props) {
   const { householdId, memberId } = route.params;
-  const { data: households, isLoading } = useHouseholds();
+  const { data: households, isLoading, isError, isFetching, refetch } = useHouseholds();
   const { user } = useAuth();
   const { showToast } = useToast();
   const promoteToAdmin = usePromoteToAdmin();
@@ -35,6 +36,17 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.accent} />
       </View>
+    );
+  }
+
+  if (isError || !households) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar este membro"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
     );
   }
 

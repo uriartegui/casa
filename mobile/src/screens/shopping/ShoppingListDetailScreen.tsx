@@ -34,6 +34,7 @@ import { buildShoppingListSections } from './shoppingListSections';
 import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
 import { useShoppingListHighlight } from './hooks/useShoppingListHighlight';
 import { buildShoppingShareMessage } from './shoppingShareMessage';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -57,7 +58,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [urgent, setUrgent] = useState(listUrgent);
   const updateList = useUpdateShoppingList(householdId);
   const { data: shoppingLists = [] } = useShoppingLists(householdId);
-  const { data: items, isLoading, refetch } = useListItems(householdId, listId);
+  const { data: items, isLoading, isError: itemsError, isFetching: fetchingItems, refetch } = useListItems(householdId, listId);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
 
@@ -371,6 +372,17 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const sections = React.useMemo(() => {
     return buildShoppingListSections(pending, bought, categoryOrder);
   }, [bought, categoryOrder, pending]);
+
+  if (itemsError) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar esta lista"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingItems}
+        onRetry={() => refetch()}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>

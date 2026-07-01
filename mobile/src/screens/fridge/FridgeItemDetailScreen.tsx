@@ -19,6 +19,7 @@ import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Unit } from '../../types';
 import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 import { Feather } from '@expo/vector-icons';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'FridgeItemDetail'>;
@@ -45,7 +46,7 @@ const cleanDirtyFields: DirtyFields = {
 
 export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const { itemId, householdId, highlight } = route.params;
-  const { data: item, isLoading, isError, refetch } = useFridgeItem(householdId, itemId);
+  const { data: item, isLoading, isError, isFetching, refetch } = useFridgeItem(householdId, itemId);
   const [dirtyFields, setDirtyFields] = useState<DirtyFields>(cleanDirtyFields);
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -92,7 +93,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!item) {
-      Alert.alert('Erro', 'Item ainda não carregado.');
+      Alert.alert('Erro', 'Item ainda nÃ£o carregado.');
       return;
     }
 
@@ -102,7 +103,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
-      Alert.alert('Erro', 'Quantidade inválida.');
+      Alert.alert('Erro', 'Quantidade invÃ¡lida.');
       return;
     }
     try {
@@ -130,7 +131,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       await updateItem.mutateAsync(payload);
       navigation.goBack();
     } catch {
-      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+      Alert.alert('Erro', 'NÃ£o foi possÃ­vel salvar as alteraÃ§Ãµes.');
     }
   }
 
@@ -140,7 +141,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     try {
       await removeItem.mutateAsync({ itemId: item.id, toShoppingListName: listName });
     } catch {
-      Alert.alert('Erro', 'Não foi possível remover o item.');
+      Alert.alert('Erro', 'NÃ£o foi possÃ­vel remover o item.');
       return;
     }
     try {
@@ -153,7 +154,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
     } catch {
-      showToast('Item removido, mas erro ao adicionar à lista', 'error');
+      showToast('Item removido, mas erro ao adicionar Ã  lista', 'error');
     }
     navigation.goBack();
   }
@@ -166,7 +167,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     Alert.alert(
       'Escolher lista',
-      'Adicionar à qual lista?',
+      'Adicionar Ã  qual lista?',
       [
         ...lists.map((l) => ({ text: l.name, onPress: () => doRemoveAndAdd(l.id, l.name) })),
         { text: 'Cancelar', style: 'cancel' as const },
@@ -197,14 +198,22 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  if (isError || !item) {
+  if (isError) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar este item"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
+  if (!item) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Item não encontrado</Text>
         <Text style={styles.emptySubtitle}>Ele pode ter sido removido por outro membro da casa.</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Tentar novamente</Text>
-        </TouchableOpacity>
       </View>
     );
   }

@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { HouseholdMember } from '../../types';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdMembers'>;
@@ -16,12 +17,24 @@ type Props = {
 
 export default function HouseholdMembersScreen({ navigation, route }: Props) {
   const { householdId } = route.params;
-  const { data: households, isLoading } = useHouseholds();
+  const { data: households, isLoading, isError, isFetching, refetch } = useHouseholds();
   const { user } = useAuth();
   const household = households?.find((item) => item.id === householdId);
 
   if (isLoading) {
     return <View style={styles.center}><ActivityIndicator size="large" color={Colors.accent} /></View>;
+  }
+
+
+  if (isError || !households) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar as pessoas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
+    );
   }
 
   if (!household) {
