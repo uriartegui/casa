@@ -3,6 +3,7 @@ import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
 import { HouseTask } from '../../../types';
+import { Typography } from '../../../theme/typography';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     padding: 14,
   },
   taskCardDone: { opacity: 0.66 },
@@ -98,11 +99,11 @@ const styles = StyleSheet.create({
   },
   checkboxDone: { backgroundColor: Colors.success, borderColor: Colors.success },
   taskBody: { flex: 1, minWidth: 0 },
-  taskTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  taskTitle: { fontFamily: Typography.rounded, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
   taskTitleDone: { textDecorationLine: 'line-through', color: Colors.textSecondary },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7, alignItems: 'center' },
-  metaText: { fontSize: 12, color: Colors.textSecondary },
+  metaText: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary },
   metaTextLate: { color: Colors.destructive, fontWeight: '700' },
   deleteButton: { paddingHorizontal: 2, paddingTop: 1 },
-  deleteButtonText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '700' },
+  deleteButtonText: { fontFamily: Typography.title, fontSize: 13, color: Colors.textSecondary, fontWeight: '700' },
 });

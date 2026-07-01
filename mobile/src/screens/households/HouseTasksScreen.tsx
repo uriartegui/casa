@@ -49,6 +49,7 @@ import { TASK_HELP_HIGHLIGHTS, TASK_HELP_SECTIONS } from './helpContent';
 import { CATEGORIES, NONE_VALUE, STATUS_FILTERS, StatusFilter } from './taskConstants';
 import { dateFromKey, dateKeyFromPicker, dueLabel, isLate } from './taskDateUtils';
 import { TaskCard } from './components/TaskCard';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseTasks'>;
@@ -91,9 +92,9 @@ function TaskHouseholdHeader({ category, householdName }: { category: string; ho
   return (
     <View style={{ position: 'relative', minWidth: 150 }}>
       <TouchableOpacity onPress={openHouseholdSelector} activeOpacity={0.75} style={{ paddingVertical: 2 }}>
-        <Text style={{ fontSize: 17, fontWeight: '800', color: Colors.textPrimary, lineHeight: 20 }}>{category}</Text>
+        <Text style={{ fontFamily: Typography.title, fontSize: 17, fontWeight: '800', color: Colors.textPrimary, lineHeight: 20 }}>{category}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.textSecondary, lineHeight: 14 }}>{activeHouseholdName}</Text>
+          <Text style={{ fontFamily: Typography.body, fontSize: 11, fontWeight: '600', color: Colors.textSecondary, lineHeight: 14 }}>{activeHouseholdName}</Text>
           <Feather name="chevron-down" size={13} color={Colors.textSecondary} />
         </View>
       </TouchableOpacity>
@@ -589,71 +590,71 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   compactSummary: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 10, paddingHorizontal: 2 },
-  compactTitle: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  compactStats: { fontSize: 12, color: Colors.textSecondary, paddingBottom: 2 },
+  compactTitle: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  compactStats: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, paddingBottom: 2 },
   categoryPageHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 },
-  categoryContextText: { flex: 1, fontSize: 12, color: Colors.textSecondary },
-  completedToggle: { borderWidth: 1, borderColor: Colors.separator, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: Colors.card },
+  categoryContextText: { fontFamily: Typography.body, flex: 1, fontSize: 12, color: Colors.textSecondary },
+  completedToggle: { borderWidth: 1, borderColor: Colors.border, borderRadius: 16, paddingHorizontal: 11, paddingVertical: 7, backgroundColor: Colors.card },
   completedToggleActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  completedToggleText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  completedToggleText: { fontFamily: Typography.title, fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   completedToggleTextActive: { color: '#fff' },
-  sectionTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
+  sectionTitle: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
   kanbanBoard: { gap: 10, paddingBottom: 14 },
-  kanbanColumn: { width: 218, minHeight: 270, backgroundColor: Colors.accent + '0D', borderRadius: 10, padding: 10, gap: 8 },
-  kanbanTitle: { fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
-  kanbanCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator, borderRadius: 9, padding: 10, gap: 4 },
+  kanbanColumn: { width: 218, minHeight: 270, backgroundColor: Colors.accent + '0D', borderRadius: 12, padding: 10, gap: 8 },
+  kanbanTitle: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
+  kanbanCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 10, gap: 4 },
   kanbanCardDragging: { opacity: 0.82, borderColor: Colors.accent, zIndex: 4, elevation: 4 },
   kanbanCardMovingForward: { backgroundColor: Colors.success + '18', borderColor: Colors.success },
   kanbanCardMovingBack: { backgroundColor: Colors.accent + '18', borderColor: Colors.accent },
-  kanbanCardTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  kanbanCardMeta: { fontSize: 11, color: Colors.textSecondary },
-  kanbanEmpty: { fontSize: 12, color: Colors.textSecondary, paddingTop: 8 },
-  householdLabel: { fontSize: 12, fontWeight: '700', color: Colors.accent, marginBottom: 4 },
-  summaryTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  summaryText: { fontSize: 13, color: Colors.textSecondary, marginTop: 4, lineHeight: 19 },
+  kanbanCardTitle: { fontFamily: Typography.rounded, fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  kanbanCardMeta: { fontFamily: Typography.body, fontSize: 11, color: Colors.textSecondary },
+  kanbanEmpty: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, paddingTop: 8 },
+  householdLabel: { fontFamily: Typography.title, fontSize: 12, fontWeight: '700', color: Colors.accent, marginBottom: 4 },
+  summaryTitle: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  summaryText: { fontFamily: Typography.body, fontSize: 13, color: Colors.textSecondary, marginTop: 4, lineHeight: 19 },
   statsRow: { flexDirection: 'row', gap: 8, marginTop: 14 },
   statBox: {
     flex: 1,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     borderRadius: 12,
     backgroundColor: Colors.background,
     padding: 10,
   },
-  statValue: { fontSize: 19, fontWeight: '800', color: Colors.textPrimary },
+  statValue: { fontFamily: Typography.display, fontSize: 19, fontWeight: '800', color: Colors.textPrimary },
   statValueLate: { color: Colors.destructive },
-  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  statLabel: { fontFamily: Typography.body, fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
   filterBar: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   statusScroll: { flex: 1 },
   filtersRow: { gap: 8 },
   filtersRowSecondary: { gap: 8, paddingBottom: 12 },
-  categoryFilterButton: { width: 36, height: 34, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.separator, borderRadius: 17, backgroundColor: Colors.card },
+  categoryFilterButton: { width: 36, height: 34, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border, borderRadius: 17, backgroundColor: Colors.card },
   categoryFilterButtonActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   filterChip: {
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     borderRadius: 18,
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: Colors.card,
   },
   filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  filterChipText: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  filterChipText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   filterChipTextActive: { color: '#fff' },
   categoryChip: {
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     borderRadius: 18,
     paddingHorizontal: 11,
     paddingVertical: 7,
     backgroundColor: Colors.card,
   },
   categoryChipActive: { borderColor: Colors.accent, backgroundColor: Colors.accent + '12' },
-  categoryChipText: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  categoryChipText: { fontFamily: Typography.title, fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   categoryChipTextActive: { color: Colors.accent },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 40, paddingTop: 80 },
-  emptyTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
+  emptySubtitle: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
   footer: {
     position: 'absolute',
     left: 0,
@@ -667,7 +668,7 @@ const styles = StyleSheet.create({
   },
   button: { backgroundColor: Colors.accent, borderRadius: 12, padding: 14, alignItems: 'center' },
   buttonDisabled: { opacity: 0.45 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: {
     position: 'absolute',
@@ -693,9 +694,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 8,
   },
-  sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
-  taskDetailDescription: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 6 },
+  sheetTitle: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
+  taskDetailDescription: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 6 },
   sheetLabel: {
+    fontFamily: Typography.title,
     fontSize: 12,
     fontWeight: '700',
     color: Colors.textSecondary,
@@ -705,10 +707,11 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: Typography.body,
     fontSize: 15,
     color: Colors.textPrimary,
   },
