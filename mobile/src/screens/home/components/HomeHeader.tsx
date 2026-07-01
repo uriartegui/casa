@@ -1,7 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
+import { HeaderActionGroup, HeaderIconButton } from '../../../components/HeaderActions';
 
 type Props = {
   topInset: number;
@@ -39,25 +40,12 @@ export default function HomeHeader({
           </View>
         </View>
 
-        <View style={styles.homeHeaderActions}>
-          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={onAlerts}>
-            <Feather name="bell" size={23} color={Colors.textPrimary} />
-            {activityUnreadCount > 0 && (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>{activityUnreadCount > 99 ? '99+' : activityUnreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={onSearch}>
-            <Feather name="search" size={23} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton} activeOpacity={0.7} onPress={onHelp}>
-            <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.headerIconButton} onPress={onMenu} activeOpacity={0.7}>
-            <Feather name="menu" size={30} color={Colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <HeaderActionGroup>
+          <HeaderIconButton icon="bell" badgeCount={activityUnreadCount} onPress={onAlerts} />
+          <HeaderIconButton icon="search" onPress={onSearch} />
+          <HeaderIconButton icon="help-circle" onPress={onHelp} />
+          <HeaderIconButton icon="menu" size={30} onPress={onMenu} />
+        </HeaderActionGroup>
       </View>
     </View>
   );
@@ -97,19 +85,4 @@ const styles = StyleSheet.create({
   },
   headerGreeting: { fontSize: 17, color: Colors.textSecondary },
   headerGreetingName: { color: Colors.textPrimary, fontWeight: '800' },
-  homeHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  headerBadge: {
-    position: 'absolute',
-    top: 2,
-    right: -5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
 });
