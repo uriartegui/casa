@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
 import { HeaderActionGroup, HeaderIconButton } from '../../../components/HeaderActions';
+import { Typography } from '../../../theme/typography';
 
 type Props = {
   topInset: number;
@@ -54,10 +55,10 @@ export default function HomeHeader({
 const styles = StyleSheet.create({
   header: {
     marginHorizontal: -20,
-    marginBottom: 14,
+    marginBottom: 10,
     paddingHorizontal: 20,
-    paddingBottom: 14,
-    backgroundColor: Colors.card,
+    paddingBottom: 10,
+    backgroundColor: Colors.background,
     borderBottomWidth: 1,
     borderBottomColor: Colors.separator,
   },
@@ -78,11 +79,12 @@ const styles = StyleSheet.create({
   },
   homeHeaderTextBlock: { flex: 1 },
   homeHeaderDate: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: Typography.title,
+    fontSize: 13,
+    fontWeight: '800',
     color: Colors.textSecondary,
     marginBottom: 1,
   },
-  headerGreeting: { fontSize: 17, color: Colors.textSecondary },
-  headerGreetingName: { color: Colors.textPrimary, fontWeight: '800' },
+  headerGreeting: { fontFamily: Typography.body, fontSize: 16, color: Colors.textSecondary },
+  headerGreetingName: { fontFamily: Typography.title, color: Colors.textPrimary, fontWeight: '800' },
 });
