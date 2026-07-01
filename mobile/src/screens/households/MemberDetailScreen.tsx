@@ -11,6 +11,7 @@ import { useToast } from '../../context/ToastContext';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'MemberDetail'>;
@@ -157,9 +158,9 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 16, gap: 16 },
+  container: { flex: 1, backgroundColor: Colors.background, padding: 18, gap: 14 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  errorText: { color: Colors.textSecondary, fontSize: 16 },
+  errorText: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 16 },
   card: {
     backgroundColor: Colors.card, borderRadius: 16, padding: 24,
     alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Colors.separator,
@@ -168,24 +169,24 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 36,
     backgroundColor: Colors.accent, justifyContent: 'center', alignItems: 'center',
   },
-  avatarText: { color: '#fff', fontSize: 30, fontWeight: '700' },
-  name: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
+  avatarText: { fontFamily: Typography.title, color: '#fff', fontSize: 30, fontWeight: '800' },
+  name: { fontFamily: Typography.title, fontSize: 21, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center' },
   roleBadge: {
-    backgroundColor: Colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
+    backgroundColor: Colors.background, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: Colors.separator,
   },
-  roleText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  roleText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   roleAdmin: { color: Colors.accent },
   infoCard: {
     backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.separator,
     overflow: 'hidden',
   },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 },
-  infoLabel: { fontSize: 15, color: Colors.textSecondary },
-  infoValue: { fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, gap: 14 },
+  infoLabel: { fontFamily: Typography.body, fontSize: 15, color: Colors.textSecondary },
+  infoValue: { fontFamily: Typography.rounded, flexShrink: 1, textAlign: 'right', fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   separator: { height: 1, backgroundColor: Colors.separator, marginHorizontal: 14 },
-  promoteButton: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center' },
-  promoteButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  removeButton: { borderRadius: 10, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
-  removeButtonText: { color: Colors.destructive, fontSize: 16, fontWeight: '600' },
+  promoteButton: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  promoteButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
+  removeButton: { borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.destructive },
+  removeButtonText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 16, fontWeight: '700' },
 });

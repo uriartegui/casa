@@ -4,6 +4,7 @@ import { Colors } from '../constants/colors';
 import { FridgeActivityEntry } from '../hooks/useFridge';
 import { HouseTaskActivityEvent, ShoppingActivityEvent } from '../types';
 import { formatBrDate, formatBrTime } from '../utils/dateUtils';
+import { Typography } from '../theme/typography';
 
 export type ActivityScope = 'all' | 'stock' | 'shopping';
 
@@ -420,7 +421,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.separator,
   },
   filterChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  filterChipText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  filterChipText: { fontFamily: Typography.title, fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
   filterChipTextActive: { color: '#fff' },
   periodChip: {
     paddingHorizontal: 12,
@@ -431,16 +432,16 @@ const styles = StyleSheet.create({
     borderColor: Colors.separator,
   },
   periodChipActive: { backgroundColor: Colors.accent + '18', borderColor: Colors.accent },
-  periodChipText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  periodChipText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   periodChipTextActive: { color: Colors.accent },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
   listEmpty: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   sectionTitle: {
+    fontFamily: Typography.title,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
     paddingTop: 14,
     paddingBottom: 8,
     backgroundColor: Colors.background,
@@ -452,8 +453,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.separator,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 13,
   },
   rowNew: { borderColor: Colors.accent + '55', backgroundColor: Colors.card },
   newDot: {
@@ -474,14 +475,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexShrink: 0,
   },
-  iconText: { fontSize: 12, fontWeight: '800' },
+  iconText: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800' },
   body: { flex: 1, gap: 2 },
-  titleText: { fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
+  titleText: { fontFamily: Typography.body, fontSize: 14, color: Colors.textPrimary, lineHeight: 20 },
   strong: { fontWeight: '700' },
   item: { fontStyle: 'italic' },
   listName: { fontWeight: '700', color: Colors.accent },
   storage: { fontWeight: '700', color: '#3B82F6' },
-  subtitle: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
-  time: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
-  emptyText: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
+  subtitle: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  time: { fontFamily: Typography.body, fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  emptyText: { fontFamily: Typography.body, fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
 });

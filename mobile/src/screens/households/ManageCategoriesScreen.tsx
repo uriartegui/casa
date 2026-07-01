@@ -10,6 +10,7 @@ import { useCategories, useCreateCategory, useDeleteCategory } from '../../hooks
 import { Colors } from '../../constants/colors';
 import { HouseholdCategory, Storage } from '../../types';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'ManageCategories'>;
@@ -140,30 +141,32 @@ export default function ManageCategoriesScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { padding: 18, paddingBottom: 48 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  hint: { fontSize: 13, color: Colors.textSecondary, marginBottom: 20, lineHeight: 18 },
+  hint: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 20 },
 
   section: {
     backgroundColor: Colors.card, borderRadius: 14,
     borderWidth: 1, borderColor: Colors.separator,
-    padding: 16, marginBottom: 16,
+    padding: 16, marginBottom: 14,
   },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  sectionTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: Colors.background, borderRadius: 20,
     borderWidth: 1, borderColor: Colors.separator,
-    paddingHorizontal: 12, paddingVertical: 7,
+    minHeight: 36, paddingHorizontal: 12,
   },
-  chipText: { fontSize: 13, color: Colors.textPrimary, fontWeight: '500' },
-  chipX: { fontSize: 15, color: Colors.destructive, fontWeight: '700' },
+  chipText: { fontFamily: Typography.rounded, fontSize: 13, color: Colors.textPrimary, fontWeight: '600' },
+  chipX: { fontFamily: Typography.title, fontSize: 15, color: Colors.destructive, fontWeight: '700' },
   addChip: {
-    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+    minHeight: 36, paddingHorizontal: 12, borderRadius: 20,
     borderWidth: 1, borderColor: Colors.accent, borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  addChipText: { fontSize: 13, color: Colors.accent, fontWeight: '600' },
+  addChipText: { fontFamily: Typography.title, fontSize: 13, color: Colors.accent, fontWeight: '700' },
 
   modalKeyboard: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
@@ -172,18 +175,19 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 10,
   },
   modalContent: { padding: 20 },
-  modalTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  modalTitle: { fontFamily: Typography.title, fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
   modalInput: {
     borderWidth: 1, borderColor: Colors.separator, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 16,
+    paddingHorizontal: 14, paddingVertical: 10, fontFamily: Typography.body, fontSize: 16,
     color: Colors.textPrimary, backgroundColor: Colors.background, marginBottom: 12,
   },
   modalActions: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
-    flex: 1, paddingVertical: 11, borderRadius: 10,
+    flex: 1, minHeight: 44, borderRadius: 12,
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator, alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-  saveBtn: { flex: 1, paddingVertical: 11, borderRadius: 10, backgroundColor: Colors.accent, alignItems: 'center' },
-  saveText: { fontSize: 14, color: '#fff', fontWeight: '700' },
+  cancelText: { fontFamily: Typography.title, fontSize: 14, color: Colors.textSecondary, fontWeight: '700' },
+  saveBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  saveText: { fontFamily: Typography.title, fontSize: 14, color: '#fff', fontWeight: '700' },
 });

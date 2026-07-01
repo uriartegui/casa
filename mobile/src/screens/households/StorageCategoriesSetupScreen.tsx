@@ -9,6 +9,7 @@ import { useInviteCode } from '../../hooks/useHouseholds';
 import { useStorages, useUpdateStorage } from '../../hooks/useStorages';
 import { Colors } from '../../constants/colors';
 import { API_URL } from '../../config';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   householdId: string;
@@ -141,13 +142,13 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
-  eyebrow: { fontSize: 12, fontWeight: '700', color: Colors.accent, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary, marginBottom: 8 },
-  subtitle: { fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 18 },
+  eyebrow: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.accent, textTransform: 'uppercase', marginBottom: 6 },
+  title: { fontFamily: Typography.title, fontSize: 27, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
+  subtitle: { fontFamily: Typography.body, fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 18 },
   progressWrap: { gap: 8, marginBottom: 16 },
   progressTrack: { height: 8, borderRadius: 999, backgroundColor: Colors.separator, overflow: 'hidden' },
   progressFill: { height: 8, borderRadius: 999, backgroundColor: Colors.accent },
-  progressText: { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  progressText: { fontFamily: Typography.title, fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
   card: {
     backgroundColor: Colors.card,
     borderRadius: 14,
@@ -158,8 +159,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  cardText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  cardTitle: { fontFamily: Typography.title, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  cardText: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
   storageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   storageChip: {
     flexDirection: 'row',
@@ -170,10 +171,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.separator,
     backgroundColor: Colors.background,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    minHeight: 38,
   },
   storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  storageText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  storageText: { fontFamily: Typography.rounded, fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   storageTextActive: { color: '#fff' },
   inviteBox: {
     borderRadius: 12,
@@ -183,20 +184,21 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
   },
-  inviteLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  inviteCode: { fontSize: 30, color: Colors.textPrimary, fontWeight: '700', letterSpacing: 5, marginTop: 2 },
+  inviteLabel: { fontFamily: Typography.title, fontSize: 11, color: Colors.textSecondary, fontWeight: '800', textTransform: 'uppercase' },
+  inviteCode: { fontFamily: Typography.title, fontSize: 30, color: Colors.textPrimary, fontWeight: '800', marginTop: 2 },
   actionRow: { flexDirection: 'row', gap: 10 },
   secondaryButton: {
     flex: 1,
-    borderRadius: 10,
+    minHeight: 44,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors.accent,
     backgroundColor: Colors.card,
-    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  secondaryButtonText: { fontSize: 14, color: Colors.accent, fontWeight: '700' },
+  secondaryButtonText: { fontFamily: Typography.title, fontSize: 14, color: Colors.accent, fontWeight: '700' },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  doneButton: { backgroundColor: Colors.accent, borderRadius: 12, padding: 15, alignItems: 'center' },
-  doneButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  doneButton: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  doneButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
 });

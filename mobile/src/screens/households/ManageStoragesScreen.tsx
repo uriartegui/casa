@@ -9,6 +9,7 @@ import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Storage } from '../../types';
 import { useStorages, useUpdateStorage } from '../../hooks/useStorages';
 import { StorageAdminCardSkeleton } from '../../components/Skeleton';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   route: RouteProp<HouseholdStackParamList, 'ManageStorages'>;
@@ -108,7 +109,9 @@ export default function ManageStoragesScreen({ route }: Props) {
           <View style={[styles.row, storage.hidden && styles.rowHidden]}>
           <View style={styles.info}>
             <Text style={styles.storageName}>{storage.name}</Text>
-            <Text style={styles.storageStatus}>{storage.hidden ? 'Oculto' : 'Visivel'}</Text>
+            <Text style={[styles.storageStatus, storage.hidden ? styles.storageStatusHidden : styles.storageStatusVisible]}>
+              {storage.hidden ? 'Oculto' : 'Visível'}
+            </Text>
           </View>
 
           <View style={styles.actions}>
@@ -169,35 +172,47 @@ export default function ManageStoragesScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 16, paddingBottom: 48 },
+  content: { padding: 18, paddingBottom: 48 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  hint: { fontSize: 13, color: Colors.textSecondary, lineHeight: 18, marginBottom: 16 },
+  hint: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, lineHeight: 20, marginBottom: 16 },
   row: {
     backgroundColor: Colors.card,
     borderWidth: 1,
     borderColor: Colors.separator,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
     gap: 12,
   },
   rowHidden: { opacity: 0.65 },
-  info: { gap: 2 },
-  storageName: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  storageStatus: { fontSize: 12, color: Colors.textSecondary },
+  info: { gap: 6 },
+  storageName: { fontFamily: Typography.title, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  storageStatus: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    fontFamily: Typography.title,
+    fontSize: 12,
+    fontWeight: '700',
+    overflow: 'hidden',
+  },
+  storageStatusVisible: { color: Colors.success, backgroundColor: Colors.success + '14' },
+  storageStatusHidden: { color: Colors.textSecondary, backgroundColor: Colors.background },
   actions: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flex: 1,
+    minHeight: 42,
     borderWidth: 1,
     borderColor: Colors.separator,
     backgroundColor: Colors.background,
-    borderRadius: 10,
-    paddingVertical: 10,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   showBtn: { borderColor: Colors.accent },
   hideBtn: { borderColor: Colors.destructive },
-  actionText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  actionText: { fontFamily: Typography.title, fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
   showText: { color: Colors.accent },
   hideText: { color: Colors.destructive },
   modalKeyboard: { flex: 1 },
@@ -212,13 +227,14 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
   },
-  modalTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14 },
+  modalTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 14 },
   input: {
     borderWidth: 1,
     borderColor: Colors.separator,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    fontFamily: Typography.body,
     fontSize: 16,
     color: Colors.textPrimary,
     backgroundColor: Colors.background,
@@ -227,20 +243,21 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minHeight: 46,
+    borderRadius: 12,
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.separator,
     alignItems: 'center',
   },
-  cancelText: { fontSize: 15, color: Colors.textSecondary, fontWeight: '500' },
+  cancelText: { fontFamily: Typography.title, fontSize: 15, color: Colors.textSecondary, fontWeight: '700' },
   saveBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    minHeight: 46,
+    borderRadius: 12,
     backgroundColor: Colors.accent,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveText: { fontSize: 15, color: '#fff', fontWeight: '700' },
+  saveText: { fontFamily: Typography.title, fontSize: 15, color: '#fff', fontWeight: '700' },
 });

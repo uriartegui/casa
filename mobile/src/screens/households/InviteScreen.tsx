@@ -10,6 +10,7 @@ import { useInviteCode } from '../../hooks/useHouseholds';
 import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { API_URL } from '../../config';
+import { Typography } from '../../theme/typography';
 
 const API_BASE = API_URL;
 
@@ -85,24 +86,24 @@ export default function InviteScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 24, gap: 24 },
+  container: { flex: 1, backgroundColor: Colors.background, padding: 20, gap: 18 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
-  errorText: { color: Colors.textSecondary, fontSize: 16, marginBottom: 16 },
-  retryBtn: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12 },
-  retryText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  errorText: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 16, marginBottom: 16 },
+  retryBtn: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 46, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
+  retryText: { fontFamily: Typography.title, color: '#fff', fontSize: 15, fontWeight: '700' },
   card: {
     backgroundColor: Colors.card, borderRadius: 16, padding: 24,
     alignItems: 'center', borderWidth: 1, borderColor: Colors.separator,
   },
-  label: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 },
+  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginBottom: 8 },
   code: {
-    fontSize: 42, fontWeight: '700', color: Colors.textPrimary, letterSpacing: 8,
+    fontFamily: Typography.title, fontSize: 42, fontWeight: '800', color: Colors.textPrimary,
   },
-  expiry: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
+  expiry: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
   qrContainer: { alignItems: 'center', backgroundColor: Colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: Colors.separator },
   actions: { gap: 10 },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
+  button: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   buttonSecondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accent },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
   buttonTextSecondary: { color: Colors.accent },
 });
