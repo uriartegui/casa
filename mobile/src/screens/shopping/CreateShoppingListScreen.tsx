@@ -8,6 +8,7 @@ import { RouteProp } from '@react-navigation/native';
 import { useCreateShoppingList } from '../../hooks/useShoppingLists';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'CreateShoppingList'>;
@@ -101,21 +102,21 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10, paddingBottom: 140 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
+  content: { padding: 22, gap: 11, paddingBottom: 140 },
+  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 8 },
   input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
+    fontFamily: Typography.body, fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border,
   },
   checkRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     backgroundColor: Colors.card,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     marginTop: 8,
   },
   checkbox: {
@@ -128,9 +129,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  checkboxMark: { color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
-  checkTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
-  checkSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  checkboxMark: { fontFamily: Typography.title, color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
+  checkTitle: { fontFamily: Typography.title, fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
+  checkSubtitle: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  button: { backgroundColor: Colors.accent, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 16 },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
 });

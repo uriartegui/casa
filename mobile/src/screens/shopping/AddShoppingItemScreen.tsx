@@ -17,6 +17,7 @@ import {
   parseQuantityInput,
   similarShoppingItemMessage,
 } from '../../utils/shoppingItemSimilarity';
+import { Typography } from '../../theme/typography';
 
 type Params = {
   householdId: string;
@@ -167,34 +168,34 @@ export default function AddShoppingItemScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10, paddingBottom: 140 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
+  content: { padding: 22, gap: 11, paddingBottom: 140 },
+  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 8 },
   input: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
+    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
+    fontFamily: Typography.body, fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border,
   },
   unitRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  unitChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
+  unitChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  unitChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  unitChipText: { fontFamily: Typography.rounded, fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
   button: {
     backgroundColor: Colors.accent,
-    borderRadius: 10,
+    borderRadius: 12,
     minHeight: 52,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 20, textAlign: 'center' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700', lineHeight: 20, textAlign: 'center' },
   suggestions: {
-    backgroundColor: Colors.card, borderRadius: 10, borderWidth: 1,
-    borderColor: Colors.separator, overflow: 'hidden', marginTop: -6,
+    backgroundColor: Colors.card, borderRadius: 12, borderWidth: 1,
+    borderColor: Colors.border, overflow: 'hidden', marginTop: -6,
   },
   suggestionItem: {
     paddingHorizontal: 14, paddingVertical: 11,
     borderBottomWidth: 1, borderBottomColor: Colors.separator,
   },
-  suggestionText: { fontSize: 15, color: Colors.textPrimary },
+  suggestionText: { fontFamily: Typography.body, fontSize: 15, color: Colors.textPrimary },
 });
