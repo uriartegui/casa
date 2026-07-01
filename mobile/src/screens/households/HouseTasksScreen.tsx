@@ -385,7 +385,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
           !isLoading ? (
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>Nada por aqui</Text>
-              <Text style={styles.emptySubtitle}>Crie tarefas como lavar toalhas, trocar filtro ou comprar gas.</Text>
+              <Text style={styles.emptySubtitle}>Crie tarefas como lavar toalhas, trocar filtro ou comprar gás.</Text>
             </View>
           ) : (
             <ActivityIndicator color={Colors.accent} />
@@ -579,7 +579,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  list: { padding: 16, gap: 10, paddingBottom: 104 },
+  list: { padding: 18, gap: 10, paddingBottom: 104 },
   listEmpty: { flexGrow: 1 },
   summary: {
     backgroundColor: Colors.card,
@@ -600,9 +600,9 @@ const styles = StyleSheet.create({
   completedToggleTextActive: { color: '#fff' },
   sectionTitle: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
   kanbanBoard: { gap: 10, paddingBottom: 14 },
-  kanbanColumn: { width: 218, minHeight: 270, backgroundColor: Colors.accent + '0D', borderRadius: 12, padding: 10, gap: 8 },
+  kanbanColumn: { width: 218, minHeight: 270, backgroundColor: Colors.accent + '0D', borderRadius: 14, padding: 10, gap: 8 },
   kanbanTitle: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textPrimary },
-  kanbanCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, padding: 10, gap: 4 },
+  kanbanCard: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, padding: 10, gap: 4 },
   kanbanCardDragging: { opacity: 0.82, borderColor: Colors.accent, zIndex: 4, elevation: 4 },
   kanbanCardMovingForward: { backgroundColor: Colors.success + '18', borderColor: Colors.success },
   kanbanCardMovingBack: { backgroundColor: Colors.accent + '18', borderColor: Colors.accent },
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.separator,
     backgroundColor: Colors.background,
   },
-  button: { backgroundColor: Colors.accent, borderRadius: 12, padding: 14, alignItems: 'center' },
+  button: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   buttonDisabled: { opacity: 0.45 },
   buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },

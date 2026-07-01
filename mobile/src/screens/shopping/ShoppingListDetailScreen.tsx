@@ -35,6 +35,7 @@ import { useFloatingFooterOffset } from './hooks/useFloatingFooterOffset';
 import { useShoppingListHighlight } from './hooks/useShoppingListHighlight';
 import { buildShoppingShareMessage } from './shoppingShareMessage';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingListDetail'>;
@@ -637,16 +638,16 @@ const styles = StyleSheet.create({
   list: { paddingBottom: 16 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8, backgroundColor: Colors.background,
+    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8, backgroundColor: Colors.background,
   },
   sectionDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.accent },
-  sectionLabel: { flex: 1, fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 0.8, textTransform: 'uppercase' },
+  sectionLabel: { fontFamily: Typography.title, flex: 1, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase' },
   sectionLabelBought: { color: Colors.success },
   clearBtn: { paddingHorizontal: 8, paddingVertical: 2 },
-  clearButton: { fontSize: 12, color: Colors.destructive, fontWeight: '600' },
+  clearButton: { fontFamily: Typography.title, fontSize: 12, color: Colors.destructive, fontWeight: '700' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
+  emptyTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
+  emptySubtitle: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary },
   footer: { paddingHorizontal: 16, paddingVertical: 12, gap: 8, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   footerFloating: { position: 'absolute', left: 0, right: 0, zIndex: 10 },
   button: {
@@ -657,9 +658,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700', lineHeight: 20, textAlign: 'center' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800', lineHeight: 20, textAlign: 'center' },
   buttonSecondary: { borderRadius: 14, padding: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6, backgroundColor: Colors.accent + '12' },
-  buttonSecondaryText: { color: Colors.accent, fontSize: 15, fontWeight: '600' },
+  buttonSecondaryText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 15, fontWeight: '700' },
   suggestionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
   suggestionChip: {
     backgroundColor: Colors.accent + '14', borderRadius: 14,
@@ -706,10 +707,10 @@ const styles = StyleSheet.create({
     width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.separator,
     alignSelf: 'center', marginBottom: 8,
   },
-  sheetTitle: { fontSize: 21, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
+  sheetTitle: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
   sheetLabel: {
-    fontSize: 12, fontWeight: '600', color: Colors.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8,
+    fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary,
+    textTransform: 'uppercase', marginTop: 8,
   },
   editInput: {
     backgroundColor: Colors.card,
@@ -718,6 +719,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.separator,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontFamily: Typography.body,
     fontSize: 15,
     color: Colors.textPrimary,
   },
@@ -742,10 +744,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  editCheckboxMark: { color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
-  editCheckTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
-  editCheckSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  optional: { fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
+  editCheckboxMark: { fontFamily: Typography.title, color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
+  editCheckTitle: { fontFamily: Typography.title, fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
+  editCheckSubtitle: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  optional: { fontFamily: Typography.body, fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
   compactOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: -2 },
   compactChip: {
     paddingHorizontal: 12,
@@ -764,10 +766,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
     alignItems: 'center', justifyContent: 'center',
   },
-  qtyBtnText: { fontSize: 24, fontWeight: '600', color: Colors.textPrimary, lineHeight: 28 },
+  qtyBtnText: { fontFamily: Typography.title, fontSize: 24, fontWeight: '700', color: Colors.textPrimary, lineHeight: 28 },
   qtyInput: {
     flex: 1, backgroundColor: Colors.card, borderRadius: 12,
-    paddingVertical: 12, fontSize: 22, fontWeight: '700',
+    paddingVertical: 12, fontFamily: Typography.title, fontSize: 22, fontWeight: '800',
     color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.separator,
   },
   unitRow: { flexDirection: 'row', gap: 8 },
@@ -776,13 +778,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator,
   },
   unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  unitChipText: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  unitChipText: { fontFamily: Typography.rounded, fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerButton: { paddingHorizontal: 4 },
   headerMenuButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerEditText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
-  headerShareText: { color: Colors.accent, fontSize: 14, fontWeight: '500' },
+  headerEditText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 14, fontWeight: '700' },
+  headerShareText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 14, fontWeight: '700' },
   headerButtonText: { color: Colors.destructive, fontSize: 15, fontWeight: '500' },
   urgentChip: {
     paddingHorizontal: 14, paddingVertical: 6,
