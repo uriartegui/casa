@@ -38,6 +38,7 @@ import { DateField, DropdownField } from './components/TaskFields';
 import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { HeaderActionGroup, HeaderIconButton } from '../../components/HeaderActions';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
@@ -172,36 +173,13 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       title: initialCategory ?? 'Tarefas da casa',
       headerTitle: initialCategory ? () => <TaskHouseholdHeader category={initialCategory} householdName={householdName} /> : undefined,
       headerAlert: () => (
-        <TouchableOpacity
-          style={styles.headerIconButton}
-          onPress={alertsSheet.open}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Feather name="bell" size={23} color={Colors.textPrimary} />
-          {alertCount > 0 && (
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{alertCount > 99 ? '99+' : alertCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <HeaderIconButton icon="bell" badgeCount={alertCount} onPress={alertsSheet.open} />
       ),
       headerRight: () => (
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={helpSheet.open}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerIconButton}
-            onPress={() => navigation.getParent()?.navigate('Menu' as never)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="menu" size={30} color={Colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <HeaderActionGroup>
+          <HeaderIconButton icon="help-circle" onPress={helpSheet.open} />
+          <HeaderIconButton icon="menu" size={30} onPress={() => navigation.getParent()?.navigate('Menu' as never)} />
+        </HeaderActionGroup>
       ),
     });
   }, [alertCount, householdName, initialCategory, navigation, alertsSheet.open, helpSheet.open]);
@@ -600,22 +578,6 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  headerBadge: {
-    position: 'absolute',
-    top: 2,
-    right: -5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
-  headerMenuButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
   list: { padding: 16, gap: 10, paddingBottom: 104 },
   listEmpty: { flexGrow: 1 },
   summary: {

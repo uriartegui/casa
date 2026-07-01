@@ -5,7 +5,6 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Feather } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useSelectedHousehold } from '../../context/SelectedHouseholdContext';
 import { useHouseholds } from '../../hooks/useHouseholds';
@@ -23,6 +22,7 @@ import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useShoppingAlerts } from './hooks/useShoppingAlerts';
 import { SHOPPING_HELP_HIGHLIGHTS, SHOPPING_HELP_SECTIONS } from './helpContent';
 import { LoadErrorState } from '../../components/LoadErrorState';
+import { HeaderActionGroup, HeaderIconButton } from '../../components/HeaderActions';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
@@ -88,36 +88,13 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     (navigation as any).setOptions({
       title: household?.name ?? 'Listas de Compras',
       headerAlert: () => (
-        <TouchableOpacity
-          onPress={() => effectiveId && alertsSheet.open()}
-          style={styles.headerIconButton}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Feather name="bell" size={23} color={Colors.textPrimary} />
-          {alertCount > 0 && (
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{alertCount > 99 ? '99+' : alertCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <HeaderIconButton icon="bell" badgeCount={alertCount} onPress={() => effectiveId && alertsSheet.open()} />
       ),
       headerRight: () => (
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            onPress={helpSheet.open}
-            style={styles.headerIconButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="help-circle" size={23} color={Colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.getParent()?.navigate('Menu' as never)}
-            style={styles.headerMenuButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="menu" size={30} color={Colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
+        <HeaderActionGroup>
+          <HeaderIconButton icon="help-circle" onPress={helpSheet.open} />
+          <HeaderIconButton icon="menu" size={30} onPress={() => navigation.getParent()?.navigate('Menu' as never)} />
+        </HeaderActionGroup>
       ),
     });
   }, [alertCount, navigation, household, effectiveId, alertsSheet.open, helpSheet.open]);
@@ -415,24 +392,8 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, flexShrink: 1, maxWidth: '62%' },
   titleDot: { fontSize: 13, color: Colors.textSecondary, lineHeight: 17, marginTop: 1 },
   badgeText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerButton: { paddingHorizontal: 4 },
   headerActivityText: { color: Colors.accent, fontSize: 15, fontWeight: '500' },
-  headerIconButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  headerMenuButton: { width: 28, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerBadge: {
-    position: 'absolute',
-    top: 2,
-    right: -5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', lineHeight: 12 },
   cardMeta: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingRight: 4 },
   cardMetaLeft: { flex: 1, minWidth: 0, gap: 4 },
   cardChips: { width: 78, gap: 4 },
