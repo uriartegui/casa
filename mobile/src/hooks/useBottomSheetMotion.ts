@@ -24,6 +24,13 @@ export function useBottomSheetMotion({
   const translateY = React.useRef(new Animated.Value(collapsedHeight)).current;
   const heightRef = React.useRef(collapsedHeight);
   const dragStartHeight = React.useRef(collapsedHeight);
+  const onOpenRef = React.useRef(onOpen);
+  const onCloseRef = React.useRef(onClose);
+
+  React.useEffect(() => {
+    onOpenRef.current = onOpen;
+    onCloseRef.current = onClose;
+  }, [onClose, onOpen]);
 
   React.useEffect(() => {
     const listener = height.addListener(({ value }) => {
@@ -49,7 +56,7 @@ export function useBottomSheetMotion({
 
   const open = React.useCallback(() => {
     reset();
-    onOpen?.();
+    onOpenRef.current?.();
     requestAnimationFrame(() => {
       Animated.spring(translateY, {
         toValue: 0,
@@ -66,10 +73,10 @@ export function useBottomSheetMotion({
       duration: 190,
       useNativeDriver: false,
     }).start(() => {
-      onClose?.();
+      onCloseRef.current?.();
       reset();
     });
-  }, [collapsedHeight, onClose, reset, translateY]);
+  }, [collapsedHeight, reset, translateY]);
 
   const panResponder = React.useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,

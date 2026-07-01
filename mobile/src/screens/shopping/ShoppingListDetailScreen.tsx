@@ -216,18 +216,13 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     );
   }
 
-  async function handleShareList() {
-    const message = buildShoppingShareMessage({ listName: currentName, pending, bought });
-    await Share.share({ message });
-  }
-
-  function openEditModal() {
+  const openEditModal = useCallback(() => {
     setEditName(currentName);
     setEditPlace(currentPlace);
     setEditCategory(currentCategory);
     setEditUrgent(urgent);
     setEditModal(true);
-  }
+  }, [currentCategory, currentName, currentPlace, urgent]);
 
   async function handleSaveListEdit() {
     const trimmedName = editName.trim();
@@ -298,6 +293,10 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
 
   const pending = React.useMemo(() => items?.filter((i) => !i.checked) ?? [], [items]);
   const bought = React.useMemo(() => items?.filter((i) => i.checked) ?? [], [items]);
+  const handleShareList = useCallback(async () => {
+    const message = buildShoppingShareMessage({ listName: currentName, pending, bought });
+    await Share.share({ message });
+  }, [bought, currentName, pending]);
   const total = items?.length ?? 0;
   const storeBoughtButtonLabel =
     bought.length === 1
@@ -342,7 +341,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
       ),
     });
-  }, [currentName, handleShareList, pending, bought, openMenu]);
+  }, [currentName, handleShareList, openEditModal, openMenu, navigation]);
 
   function renderItem({ item }: { item: ShoppingItem }) {
     const isHighlighted = item.id === highlightItemId;
