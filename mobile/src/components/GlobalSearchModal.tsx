@@ -25,6 +25,7 @@ import { useShoppingLists } from '../hooks/useShoppingLists';
 import { useHouseTasks } from '../hooks/useHouseTasks';
 import { normalizeShoppingItemName } from '../utils/shoppingItemSimilarity';
 import { api } from '../services/api';
+import { Typography } from '../theme/typography';
 
 type Props = {
   navigation: any;
@@ -36,6 +37,11 @@ type Row =
   | { id: string; rowType: 'action'; icon: keyof typeof Feather.glyphMap; title: string; subtitle: string; route: string };
 
 type SearchTab = 'all' | 'stock' | 'lists' | 'tasks' | 'actions';
+type SearchContext =
+  | { area: 'stock'; storageId?: string | null }
+  | { area: 'shopping'; listId?: string | null }
+  | { area: 'tasks'; category?: string | null }
+  | { area: 'general' };
 
 const TYPE_LABELS: Record<GlobalSearchResultType, string> = {
   stock_item: 'Estoque',
@@ -66,6 +72,73 @@ const TABS: { label: string; value: SearchTab }[] = [
   { label: 'Ações', value: 'actions' },
 ];
 
+function activeRouteFromState(state: any): any {
+  if (!state?.routes?.length) return null;
+  const route = state.routes[state.index ?? 0];
+  return route?.state ? activeRouteFromState(route.state) : route;
+}
+
+function rootFlowFromState(state: any): any {
+  if (!state?.routes?.length) return null;
+  return state.routes[state.index ?? 0] ?? null;
+}
+
+function getSearchContext(navigation: any): SearchContext {
+  const state = navigation?.getState?.();
+  const rootFlow = rootFlowFromState(state);
+  const activeRoute = activeRouteFromState(state);
+  const flowName = rootFlow?.name;
+  const routeName = activeRoute?.name;
+  const params = activeRoute?.params ?? rootFlow?.params?.params ?? {};
+
+  if (flowName === 'StorageFlow') {
+    return { area: 'stock', storageId: params.storageId ?? null };
+  }
+
+  if (flowName === 'ShoppingFlow') {
+    return { area: 'shopping', listId: params.listId ?? null };
+  }
+
+  if (flowName === 'TasksFlow') {
+    return { area: 'tasks', category: params.category ?? null };
+  }
+
+  if (routeName === 'HomeShoppingListDetail') {
+    return { area: 'shopping', listId: params.listId ?? null };
+  }
+
+  return { area: 'general' };
+}
+
+function typeOrderForContext(context: SearchContext) {
+  if (context.area === 'stock') return ['stock_item', 'shopping_list', 'shopping_item', 'task'] as GlobalSearchResultType[];
+  if (context.area === 'shopping') return ['shopping_list', 'shopping_item', 'stock_item', 'task'] as GlobalSearchResultType[];
+  if (context.area === 'tasks') return ['task', 'stock_item', 'shopping_list', 'shopping_item'] as GlobalSearchResultType[];
+  return Object.keys(TYPE_LABELS) as GlobalSearchResultType[];
+}
+
+function priorityForContext(result: GlobalSearchResult, context: SearchContext) {
+  if (context.area === 'stock') {
+    if (result.type === 'stock_item' && context.storageId && result.target.storageId === context.storageId) return 0;
+    if (result.type === 'stock_item') return 1;
+    return 2;
+  }
+
+  if (context.area === 'shopping') {
+    if ((result.type === 'shopping_list' || result.type === 'shopping_item') && context.listId && result.target.listId === context.listId) return 0;
+    if (result.type === 'shopping_list' || result.type === 'shopping_item') return 1;
+    return 2;
+  }
+
+  if (context.area === 'tasks') {
+    if (result.type === 'task' && context.category && result.target.category === context.category) return 0;
+    if (result.type === 'task') return 1;
+    return 2;
+  }
+
+  return 1;
+}
+
 function matchesQuery(...values: Array<string | null | undefined>) {
   const normalizedValues = values.map((value) => normalizeShoppingItemName(value ?? ''));
   return (normalizedQuery: string) => normalizedValues.some((value) => value.includes(normalizedQuery));
@@ -80,6 +153,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
   const inputRef = useRef<TextInput>(null);
+  const searchContext = getSearchContext(navigation);
   const shouldFetchListItems = visible && !!effectiveId && debouncedQuery.trim().length >= 3 && (activeTab === 'all' || activeTab === 'lists');
   const { data: serverResults = [], isFetching: isServerFetching } = useGlobalSearch(effectiveId, debouncedQuery);
   const { data: fridgeItems = [], isFetching: isFridgeFetching } = useFridge(visible ? effectiveId : null);
@@ -131,7 +205,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
           item.storage ? `${item.storage.emoji} ${item.storage.name}` : 'Estoque',
           item.category,
           `${item.quantity} ${item.unit ?? 'un'}`,
-        ].filter(Boolean).join(' - '),
+        ].filter(Boolean).join(' · '),
         target: {
           householdId: effectiveId,
           itemId: item.id,
@@ -148,7 +222,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
         id: `list:${list.id}`,
         type: 'shopping_list',
         title: list.name,
-        subtitle: [list.urgent ? 'Urgente' : null, list.place, list.category, 'Lista de compras'].filter(Boolean).join(' - '),
+        subtitle: [list.urgent ? 'Urgente' : null, list.place, list.category, 'Lista de compras'].filter(Boolean).join(' · '),
         target: {
           householdId: effectiveId,
           listId: list.id,
@@ -172,7 +246,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
           list.name,
           item.category,
           `${item.quantity} ${item.unit ?? 'un'}`,
-        ].filter(Boolean).join(' - '),
+        ].filter(Boolean).join(' · '),
         target: {
           householdId: effectiveId,
           itemId: item.id,
@@ -196,7 +270,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
           task.category,
           task.assignedTo?.name ? `Responsável: ${task.assignedTo.name}` : null,
           task.shoppingList?.name ? `Lista: ${task.shoppingList.name}` : null,
-        ].filter(Boolean).join(' - '),
+        ].filter(Boolean).join(' · '),
         target: {
           householdId: effectiveId,
           taskId: task.id,
@@ -219,7 +293,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
       { id: 'action:storage', rowType: 'action' as const, icon: 'box' as const, title: 'Abrir estoques', subtitle: 'Geladeira, despensa e outros compartimentos', route: 'StorageFlow' },
       { id: 'action:shopping', rowType: 'action' as const, icon: 'shopping-cart' as const, title: 'Abrir listas de compras', subtitle: 'Listas, itens pendentes e comprados', route: 'ShoppingFlow' },
       { id: 'action:tasks', rowType: 'action' as const, icon: 'check-square' as const, title: 'Abrir tarefas', subtitle: 'Rotinas e checklist da casa', route: 'TasksFlow' },
-      { id: 'action:household', rowType: 'action' as const, icon: 'home' as const, title: 'Abrir casa', subtitle: 'Membros, convites e configuracoes', route: 'HouseholdFlow' },
+      { id: 'action:household', rowType: 'action' as const, icon: 'home' as const, title: 'Abrir casa', subtitle: 'Membros, convites e configurações', route: 'HouseholdFlow' },
     ];
     if (trimmed.length >= 2) return [];
     return actions;
@@ -238,13 +312,14 @@ export default function GlobalSearchModal({ navigation }: Props) {
       return actionRows.length ? [{ id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows] : [];
     }
 
-    const grouped = results.reduce<Record<GlobalSearchResultType, GlobalSearchResult[]>>((acc, item) => {
+    const prioritizedResults = [...results].sort((a, b) => priorityForContext(a, searchContext) - priorityForContext(b, searchContext));
+    const grouped = prioritizedResults.reduce<Record<GlobalSearchResultType, GlobalSearchResult[]>>((acc, item) => {
       if (!typeAllowed(item.type)) return acc;
       acc[item.type] = [...(acc[item.type] ?? []), item];
       return acc;
     }, {} as Record<GlobalSearchResultType, GlobalSearchResult[]>);
 
-    const resultRows = (Object.keys(TYPE_LABELS) as GlobalSearchResultType[]).flatMap((type) => {
+    const resultRows = typeOrderForContext(searchContext).flatMap((type) => {
       const items = grouped[type] ?? [];
       if (items.length === 0) return [];
       return [
@@ -255,7 +330,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
 
     if (activeTab !== 'all' || actionRows.length === 0) return resultRows;
     return [...resultRows, { id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows];
-  }, [activeTab, actionRows, results]);
+  }, [activeTab, actionRows, results, searchContext]);
 
   const isFetching = isServerFetching || isFridgeFetching || isListsFetching || isTasksFetching || listItemQueries.some((item) => item.isFetching);
 
@@ -436,7 +511,7 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     paddingHorizontal: 14,
-    paddingTop: 56,
+    paddingTop: 64,
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -445,9 +520,9 @@ const styles = StyleSheet.create({
   panel: {
     maxHeight: '86%',
     backgroundColor: Colors.card,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOpacity: 0.18,
@@ -456,10 +531,10 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   panelHeader: {
-    minHeight: 68,
+    minHeight: 62,
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 10,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -467,12 +542,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   panelTitle: {
-    fontSize: 20,
+    fontFamily: Typography.display,
+    fontSize: 21,
     lineHeight: 24,
-    fontWeight: '900',
+    fontWeight: '800',
     color: Colors.textPrimary,
   },
   panelSubtitle: {
+    fontFamily: Typography.body,
     marginTop: 3,
     fontSize: 12,
     lineHeight: 16,
@@ -486,6 +563,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   tabsScroller: {
     borderBottomWidth: 1,
@@ -493,20 +572,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.card,
   },
   tabsRow: {
-    minHeight: 48,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 7,
   },
   tab: {
-    minHeight: 32,
+    minHeight: 30,
     justifyContent: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 13,
+    borderRadius: 15,
+    paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
   tabActive: {
@@ -514,28 +593,30 @@ const styles = StyleSheet.create({
     borderColor: Colors.accent,
   },
   tabText: {
+    fontFamily: Typography.rounded,
     fontSize: 13,
     color: Colors.textSecondary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   tabTextActive: {
     color: '#fff',
     fontWeight: '800',
   },
   searchRow: {
-    minHeight: 54,
+    minHeight: 52,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginHorizontal: 12,
-    marginBottom: 8,
+    marginBottom: 10,
     paddingHorizontal: 13,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.separator,
+    borderColor: Colors.border,
     backgroundColor: Colors.background,
   },
   input: {
+    fontFamily: Typography.body,
     flex: 1,
     minHeight: 44,
     fontSize: 15,
@@ -547,37 +628,38 @@ const styles = StyleSheet.create({
     maxHeight: 560,
   },
   sectionTitle: {
+    fontFamily: Typography.title,
     fontSize: 11,
     fontWeight: '800',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 7,
+    paddingTop: 13,
+    paddingBottom: 8,
     backgroundColor: Colors.card,
   },
   resultRow: {
-    minHeight: 58,
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.separator,
   },
   resultIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.accent + '16',
   },
   actionIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.accent + '16',
@@ -588,17 +670,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   resultTitle: {
+    fontFamily: Typography.rounded,
     fontSize: 15,
     lineHeight: 19,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
   resultSubtitle: {
+    fontFamily: Typography.body,
     fontSize: 12,
     lineHeight: 16,
     color: Colors.textSecondary,
   },
   routeBadge: {
+    fontFamily: Typography.title,
     maxWidth: 70,
     overflow: 'hidden',
     borderRadius: 999,
@@ -618,11 +703,13 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   emptyTitle: {
+    fontFamily: Typography.title,
     fontSize: 16,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
   emptyText: {
+    fontFamily: Typography.body,
     fontSize: 13,
     lineHeight: 19,
     textAlign: 'center',
