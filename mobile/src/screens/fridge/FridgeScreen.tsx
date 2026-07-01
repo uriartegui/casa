@@ -218,13 +218,20 @@ export default function FridgeScreen({ navigation, route }: Props) {
 
   function renderItem({ item }: { item: FridgeItem }) {
     const exp = item.expirationDate ? expirationLabel(item.expirationDate) : null;
-    const borderColor = exp?.status === 'expired'
-      ? Colors.destructive
+    const statusBackground = exp?.status === 'expired'
+      ? Colors.destructive + '14'
       : exp?.status === 'warning'
-        ? '#F59E0B'
+        ? '#F59E0B14'
         : exp?.status === 'ok'
-          ? Colors.success
-          : 'transparent';
+          ? Colors.success + '14'
+          : Colors.card;
+    const statusBorder = exp?.status === 'expired'
+      ? Colors.destructive + '40'
+      : exp?.status === 'warning'
+        ? '#F59E0B40'
+        : exp?.status === 'ok'
+          ? Colors.success + '40'
+          : Colors.border;
     const badgeBg = exp?.status === 'expired'
       ? Colors.destructive + '18'
       : exp?.status === 'warning'
@@ -238,54 +245,60 @@ export default function FridgeScreen({ navigation, route }: Props) {
         ? '#F59E0B'
         : Colors.success;
     const isHighlighted = item.id === highlightItemId;
-    const highlightStyle = isHighlighted
+    const highlightFrameStyle = isHighlighted
+      ? {
+        borderColor: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [statusBorder, Colors.accent],
+        }),
+      }
+      : null;
+    const highlightContentStyle = isHighlighted
       ? {
         backgroundColor: highlightAnim.interpolate({
           inputRange: [0, 1],
-          outputRange: [Colors.card, Colors.accent + '24'],
-        }),
-        borderColor: highlightAnim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [Colors.separator, Colors.accent],
+          outputRange: [statusBackground, Colors.accent + '24'],
         }),
       }
       : null;
 
     return (
-        <AnimatedTouchableOpacity
-          style={[styles.itemRow, { borderLeftColor: borderColor, borderLeftWidth: 3 }, highlightStyle]}
-          onPress={() => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! })}
-          activeOpacity={0.7}
-        >
-          <View style={styles.itemInfo}>
-            <Text style={styles.itemName}>{item.name}</Text>
-            {item.expirationDate && (
-              <Text style={styles.itemDate}>Validade: {formatBrDate(item.expirationDate)}</Text>
-            )}
-            {!item.expirationDate && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
-          </View>
-          <View style={styles.itemRight}>
-            {exp && badgeBg && (
-              <View style={[styles.expBadge, { backgroundColor: badgeBg }]}>
-                <Text style={[styles.expBadgeText, { color: badgeText }]}>{exp.text}</Text>
-              </View>
-            )}
-            <View style={styles.quantityBadge}>
-              <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
+        <Animated.View style={[styles.itemRowFrame, { borderColor: statusBorder }, highlightFrameStyle]}>
+          <AnimatedTouchableOpacity
+            style={[styles.itemRow, { backgroundColor: statusBackground }, highlightContentStyle]}
+            onPress={() => navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId! })}
+            activeOpacity={0.7}
+          >
+            <View style={styles.itemInfo}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              {item.expirationDate && (
+                <Text style={styles.itemDate}>Validade: {formatBrDate(item.expirationDate)}</Text>
+              )}
+              {!item.expirationDate && item.createdBy && <Text style={styles.itemMeta}>por {item.createdBy.name}</Text>}
             </View>
-            <TouchableOpacity
-              style={styles.finishedButton}
-              onPress={(event) => {
-                event.stopPropagation();
-                confirmItemFinished(item);
-              }}
-              activeOpacity={0.7}
-              accessibilityLabel={`${item.name} acabou`}
-            >
-              <Text style={styles.finishedButtonText}>X</Text>
-            </TouchableOpacity>
-          </View>
-        </AnimatedTouchableOpacity>
+            <View style={styles.itemRight}>
+              {exp && badgeBg && (
+                <View style={[styles.expBadge, { backgroundColor: badgeBg }]}>
+                  <Text style={[styles.expBadgeText, { color: badgeText }]}>{exp.text}</Text>
+                </View>
+              )}
+              <View style={styles.quantityBadge}>
+                <Text style={styles.quantityText}>{item.quantity} {item.unit}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.finishedButton}
+                onPress={(event) => {
+                  event.stopPropagation();
+                  confirmItemFinished(item);
+                }}
+                activeOpacity={0.7}
+                accessibilityLabel={`${item.name} acabou`}
+              >
+                <Text style={styles.finishedButtonText}>X</Text>
+              </TouchableOpacity>
+            </View>
+          </AnimatedTouchableOpacity>
+        </Animated.View>
     );
   }
 
@@ -503,14 +516,19 @@ const styles = StyleSheet.create({
   },
   categorizeBadgeText: { fontFamily: Typography.title, color: '#fff', fontSize: 12, fontWeight: '800' },
   sectionGroupHeader: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 16, marginBottom: 4 },
-  itemRow: {
-    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: Colors.border, marginBottom: 8,
+  itemRowFrame: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 8,
   },
-  itemInfo: { flex: 1, gap: 2 },
+  itemRow: {
+    backgroundColor: Colors.card, borderRadius: 11, padding: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  itemInfo: { flex: 1, minWidth: 0, gap: 2 },
   itemName: { fontFamily: Typography.rounded, fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
-  itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  itemRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: 8 },
   finishedButton: {
     minWidth: 28,
     minHeight: 28,
