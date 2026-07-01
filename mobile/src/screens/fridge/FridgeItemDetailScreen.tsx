@@ -94,7 +94,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!item) {
-      Alert.alert('Erro', 'Item ainda nÃ£o carregado.');
+      Alert.alert('Erro', 'Item ainda não carregado.');
       return;
     }
 
@@ -104,7 +104,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     const qty = parseFloat(quantity);
     if (isNaN(qty) || qty <= 0) {
-      Alert.alert('Erro', 'Quantidade invÃ¡lida.');
+      Alert.alert('Erro', 'Quantidade inválida.');
       return;
     }
     try {
@@ -132,7 +132,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       await updateItem.mutateAsync(payload);
       navigation.goBack();
     } catch {
-      Alert.alert('Erro', 'NÃ£o foi possÃ­vel salvar as alteraÃ§Ãµes.');
+      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
     }
   }
 
@@ -142,7 +142,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     try {
       await removeItem.mutateAsync({ itemId: item.id, toShoppingListName: listName });
     } catch {
-      Alert.alert('Erro', 'NÃ£o foi possÃ­vel remover o item.');
+      Alert.alert('Erro', 'Não foi possível remover o item.');
       return;
     }
     try {
@@ -155,7 +155,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       queryClient.invalidateQueries({ queryKey: ['shopping-list-items', householdId, listId] });
       queryClient.invalidateQueries({ queryKey: ['shopping-lists', householdId] });
     } catch {
-      showToast('Item removido, mas erro ao adicionar Ã  lista', 'error');
+      showToast('Item removido, mas erro ao adicionar à lista', 'error');
     }
     navigation.goBack();
   }
@@ -168,7 +168,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     }
     Alert.alert(
       'Escolher lista',
-      'Adicionar Ã  qual lista?',
+      'Adicionar à qual lista?',
       [
         ...lists.map((l) => ({ text: l.name, onPress: () => doRemoveAndAdd(l.id, l.name) })),
         { text: 'Cancelar', style: 'cancel' as const },

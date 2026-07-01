@@ -424,7 +424,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
                 onSubmitEditing={handleCreate}
               />
 
-              <Text style={styles.sheetLabel}>Descricao (opcional)</Text>
+              <Text style={styles.sheetLabel}>Descrição (opcional)</Text>
               <TextInput
                 value={description}
                 onChangeText={setDescription}
