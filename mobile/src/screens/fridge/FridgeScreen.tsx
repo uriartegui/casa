@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '../../context/ToastContext';
 import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { Colors } from '../../constants/colors';
+import { Typography } from '../../theme/typography';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { FridgeItem } from '../../types';
 import { expirationLabel } from '../../utils/expiration';
@@ -466,7 +467,7 @@ const styles = StyleSheet.create({
   },
   storageChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   storageChipEmoji: { fontSize: 14 },
-  storageChipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  storageChipText: { fontFamily: Typography.rounded, fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   storageChipTextActive: { color: '#fff' },
 
   storageAddChip: {
@@ -474,10 +475,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
     justifyContent: 'center', alignItems: 'center',
   },
-  storageAddChipText: { fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
+  storageAddChipText: { fontFamily: Typography.rounded, fontSize: 18, color: Colors.textSecondary, lineHeight: 22 },
   list: { padding: 16, gap: 2, flexGrow: 1, paddingBottom: 24 },
   listHeader: { gap: 10, marginBottom: 10 },
-  sectionLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionLabel: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase' },
   categorizeButton: {
     minHeight: 42,
     borderRadius: 12,
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
   },
-  categorizeButtonText: { fontSize: 14, fontWeight: '800', color: Colors.accent },
+  categorizeButtonText: { fontFamily: Typography.title, fontSize: 14, fontWeight: '800', color: Colors.accent },
   categorizeBadge: {
     minWidth: 24,
     height: 24,
@@ -500,15 +501,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 7,
   },
-  categorizeBadgeText: { color: '#fff', fontSize: 12, fontWeight: '800' },
-  sectionGroupHeader: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 16, marginBottom: 4 },
+  categorizeBadgeText: { fontFamily: Typography.title, color: '#fff', fontSize: 12, fontWeight: '800' },
+  sectionGroupHeader: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 16, marginBottom: 4 },
   itemRow: {
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
+    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderWidth: 1, borderColor: Colors.separator, marginBottom: 8,
+    borderWidth: 1, borderColor: Colors.border, marginBottom: 8,
   },
   itemInfo: { flex: 1, gap: 2 },
-  itemName: { fontSize: 16, fontWeight: '500', color: Colors.textPrimary },
+  itemName: { fontFamily: Typography.rounded, fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
   itemRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   finishedButton: {
     minWidth: 28,
@@ -516,9 +517,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  finishedButtonText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600', lineHeight: 18 },
+  finishedButtonText: { fontFamily: Typography.title, fontSize: 13, color: Colors.textSecondary, fontWeight: '700', lineHeight: 18 },
   expBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  expBadgeText: { fontSize: 11, fontWeight: '700' },
+  expBadgeText: { fontFamily: Typography.title, fontSize: 11, fontWeight: '700' },
   categoryPickerWrapper: {
     height: 48,
     backgroundColor: Colors.card,
@@ -533,10 +534,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator,
   },
   categoryChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  categoryChipText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
+  categoryChipText: { fontFamily: Typography.rounded, fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   categoryChipTextActive: { color: '#fff' },
-  itemMeta: { fontSize: 12, color: Colors.textSecondary },
-  itemDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
+  itemMeta: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary },
+  itemDate: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   itemMetaExpired: { color: Colors.destructive, fontWeight: '700' },
   itemMetaWarning: { color: '#F59E0B', fontWeight: '600' },
   itemMetaOk: { color: '#34C759', fontWeight: '500' },
@@ -544,14 +545,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4,
     borderWidth: 1, borderColor: Colors.separator,
   },
-  quantityText: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  quantityText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
   emptyContainer: { paddingTop: 60, alignItems: 'center', gap: 8 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
+  emptyTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  emptySubtitle: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, textAlign: 'center', paddingHorizontal: 32 },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: {
     position: 'absolute',
@@ -579,8 +580,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 6,
   },
-  sheetTitle: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  sheetSubtitle: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  sheetTitle: { fontFamily: Typography.display, fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  sheetSubtitle: { fontFamily: Typography.body, fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
   categorizeList: { maxHeight: 440 },
   categorizeContent: { gap: 10, paddingBottom: 8 },
   categorizeItem: {
@@ -592,8 +593,8 @@ const styles = StyleSheet.create({
     gap: 9,
   },
   categorizeItemHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  categorizeItemName: { flex: 1, fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
-  categorizeItemQty: { fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
+  categorizeItemName: { fontFamily: Typography.title, flex: 1, fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
+  categorizeItemQty: { fontFamily: Typography.title, fontSize: 12, fontWeight: '700', color: Colors.textSecondary },
   categorizeEmpty: {
     minHeight: 120,
     alignItems: 'center',

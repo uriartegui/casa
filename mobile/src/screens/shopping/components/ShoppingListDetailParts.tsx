@@ -2,6 +2,7 @@ import React from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../../constants/colors';
 import { ShoppingItem } from '../../../types';
+import { Typography } from '../../../theme/typography';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -105,8 +106,8 @@ const styles = StyleSheet.create({
   },
   progressContainer: { marginBottom: 10 },
   progressTopRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6, marginBottom: 7 },
-  progressFraction: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
-  progressLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
+  progressFraction: { fontFamily: Typography.display, fontSize: 20, fontWeight: '800', color: Colors.textPrimary },
+  progressLabel: { fontFamily: Typography.title, fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
   progressBar: {
     height: 8,
     borderRadius: 4,
@@ -130,10 +131,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   urgentChipActive: {},
-  urgentChipText: { fontSize: 14, fontWeight: '800', color: Colors.destructive },
+  urgentChipText: { fontFamily: Typography.title, fontSize: 14, fontWeight: '800', color: Colors.destructive },
   urgentChipTextActive: { color: Colors.destructive },
   metaText: {
     color: Colors.textSecondary,
+    fontFamily: Typography.title,
     fontSize: 14,
     fontWeight: '800',
     lineHeight: 20,
@@ -167,9 +169,9 @@ const styles = StyleSheet.create({
   },
   checkmark: { color: '#fff', fontWeight: '800', fontSize: 15, lineHeight: 18 },
   itemInfo: { flex: 1, minWidth: 0 },
-  itemName: { fontSize: 16, color: Colors.textPrimary, fontWeight: '600' },
+  itemName: { fontFamily: Typography.rounded, fontSize: 16, color: Colors.textPrimary, fontWeight: '600' },
   itemNameChecked: { textDecorationLine: 'line-through', color: Colors.textSecondary, fontWeight: '500' },
-  itemQty: { fontSize: 13, color: Colors.textSecondary, marginLeft: 8 },
+  itemQty: { fontFamily: Typography.body, fontSize: 13, color: Colors.textSecondary, marginLeft: 8 },
   itemQtyChecked: { textDecorationLine: 'line-through' },
   removeButton: {
     width: 34,
@@ -180,6 +182,7 @@ const styles = StyleSheet.create({
   },
   removeButtonText: {
     color: Colors.destructive,
+    fontFamily: Typography.title,
     fontSize: 16,
     fontWeight: '800',
   },

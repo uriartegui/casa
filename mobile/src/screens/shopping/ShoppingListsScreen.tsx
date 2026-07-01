@@ -13,6 +13,7 @@ import { useRefreshOnFocus } from '../../hooks/useRefreshOnFocus';
 import { formatBrShortDate } from '../../utils/dateUtils';
 import { ShoppingListCardSkeleton } from '../../components/Skeleton';
 import { Colors } from '../../constants/colors';
+import { Typography } from '../../theme/typography';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { ShoppingList } from '../../types';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
@@ -378,28 +379,28 @@ const styles = StyleSheet.create({
   },
   pickerItem: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: Colors.background },
   pickerItemActive: { backgroundColor: Colors.accent },
-  pickerItemText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
+  pickerItemText: { fontFamily: Typography.rounded, fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   pickerItemTextActive: { color: '#fff' },
   list: { padding: 16, gap: 12 },
   listEmpty: { flex: 1, justifyContent: 'center' },
   card: {
     backgroundColor: Colors.card, borderRadius: 12, padding: 16,
-    borderWidth: 1, borderColor: Colors.separator, gap: 10,
+    borderWidth: 1, borderColor: Colors.border, gap: 10,
     paddingRight: 92,
     position: 'relative',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 4 },
-  cardName: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary, flexShrink: 1, maxWidth: '62%' },
-  titleDot: { fontSize: 13, color: Colors.textSecondary, lineHeight: 17, marginTop: 1 },
-  badgeText: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  cardName: { fontFamily: Typography.title, fontSize: 17, fontWeight: '800', color: Colors.textPrimary, flexShrink: 1, maxWidth: '62%' },
+  titleDot: { fontFamily: Typography.body, fontSize: 13, color: Colors.textSecondary, lineHeight: 17, marginTop: 1 },
+  badgeText: { fontFamily: Typography.rounded, fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   headerButton: { paddingHorizontal: 4 },
-  headerActivityText: { color: Colors.accent, fontSize: 15, fontWeight: '500' },
+  headerActivityText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 15, fontWeight: '700' },
   cardMeta: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingRight: 4 },
   cardMetaLeft: { flex: 1, minWidth: 0, gap: 4 },
   cardChips: { width: 78, gap: 4 },
-  cardDate: { flexShrink: 0, fontSize: 13, color: Colors.textSecondary },
-  metaChip: { fontSize: 13, color: Colors.textSecondary, maxWidth: 160 },
-  urgentText: { fontSize: 13, fontWeight: '700', color: '#F0A500' },
+  cardDate: { fontFamily: Typography.body, flexShrink: 0, fontSize: 13, color: Colors.textSecondary },
+  metaChip: { fontFamily: Typography.body, fontSize: 13, color: Colors.textSecondary, maxWidth: 160 },
+  urgentText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '800', color: '#F0A500' },
   deleteButton: {
     position: 'absolute',
     right: 12,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deleteButtonText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600', lineHeight: 18 },
+  deleteButtonText: { fontFamily: Typography.title, fontSize: 13, color: Colors.textSecondary, fontWeight: '700', lineHeight: 18 },
   editButton: {
     position: 'absolute',
     right: 34,
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  editButtonText: { fontSize: 13, color: Colors.accent, fontWeight: '700', lineHeight: 18 },
+  editButtonText: { fontFamily: Typography.title, fontSize: 13, color: Colors.accent, fontWeight: '800', lineHeight: 18 },
   sheetOverlay: { flex: 1, justifyContent: 'flex-end' },
   sheetBackdrop: {
     position: 'absolute',
@@ -445,10 +446,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: 8,
   },
-  sheetTitle: { fontSize: 21, fontWeight: '700', color: Colors.textPrimary, marginBottom: 4 },
+  sheetTitle: { fontFamily: Typography.display, fontSize: 21, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
   sheetLabel: {
+    fontFamily: Typography.title,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -486,13 +488,13 @@ const styles = StyleSheet.create({
   },
   editCheckboxChecked: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   editCheckboxMark: { color: '#fff', fontSize: 13, fontWeight: '800', lineHeight: 16 },
-  editCheckTitle: { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
-  editCheckSubtitle: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  editCheckTitle: { fontFamily: Typography.title, fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
+  editCheckSubtitle: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   emptyContainer: { alignItems: 'center', gap: 8, paddingTop: 40 },
-  emptyTitle: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+  emptyTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  emptySubtitle: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
 });
 
