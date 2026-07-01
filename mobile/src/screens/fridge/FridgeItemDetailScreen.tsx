@@ -21,6 +21,7 @@ import { showFinishedFridgeItemAlert } from '../../utils/fridgeFinishedFlow';
 import { Feather } from '@expo/vector-icons';
 import { LoadErrorState } from '../../components/LoadErrorState';
 import { Typography } from '../../theme/typography';
+import { dateKeyFromLocalDate, normalizeDateKey } from '../../utils/dateUtils';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'FridgeItemDetail'>;
@@ -108,7 +109,8 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : null;
+      const expStr = expirationDate ? dateKeyFromLocalDate(expirationDate) : null;
+      const currentExpirationKey = normalizeDateKey(item.expirationDate);
       const payload: {
         itemId: string;
         name?: string;
@@ -121,7 +123,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       if (name.trim() !== item.name) payload.name = name.trim();
       if (qty !== Number(item.quantity)) payload.quantity = qty;
       if (unit !== item.unit) payload.unit = unit;
-      if (expStr !== (item.expirationDate ?? null)) payload.expirationDate = expStr;
+      if (expStr !== currentExpirationKey) payload.expirationDate = expStr;
       if ((category ?? null) !== (item.category ?? null)) payload.category = category;
 
       if (Object.keys(payload).length === 1) {
@@ -131,8 +133,9 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
       await updateItem.mutateAsync(payload);
       navigation.goBack();
-    } catch {
-      Alert.alert('Erro', 'Não foi possível salvar as alterações.');
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      Alert.alert('Erro', Array.isArray(message) ? message[0] : message || 'Não foi possível salvar as alterações.');
     }
   }
 

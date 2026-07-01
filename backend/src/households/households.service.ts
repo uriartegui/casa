@@ -386,6 +386,7 @@ export class HouseholdsService {
     });
     if (!item) throw new NotFoundException('Item não encontrado');
     const changedFields = this.getFridgeChangedFields(item, dto);
+    const activityItemName = dto.name?.trim() || item.name;
 
     Object.assign(item, dto);
     const saved = await this.fridgeRepo.save(item);
@@ -396,19 +397,25 @@ export class HouseholdsService {
       const storage = saved.storageId
         ? await this.storageRepo.findOne({ where: { id: saved.storageId, householdId } })
         : null;
-      await this.fridgeActivityRepo.save({
-        householdId,
-        action: 'updated',
-        itemName: saved.name,
-        quantity: saved.quantity,
-        unit: saved.unit,
-        userId,
-        userName,
-        storageId: saved.storageId ?? null,
-        storageName: storage?.name ?? item.storage?.name ?? null,
-        storageEmoji: storage?.emoji ?? item.storage?.emoji ?? null,
-        details: changedFields.join(', '),
-      } as any);
+      try {
+        await this.fridgeActivityRepo.save({
+          householdId,
+          action: 'updated',
+          itemName: activityItemName,
+          quantity: saved.quantity ?? item.quantity,
+          unit: saved.unit ?? item.unit,
+          userId,
+          userName,
+          storageId: saved.storageId ?? item.storageId ?? null,
+          storageName: storage?.name ?? item.storage?.name ?? null,
+          storageEmoji: storage?.emoji ?? item.storage?.emoji ?? null,
+          details: changedFields.join(', '),
+        } as any);
+      } catch (error) {
+        this.logger.warn(
+          `Falha ao registrar atividade de estoque para item ${itemId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
     }
 
     this.eventsGateway.emitHouseholdUpdate(householdId);

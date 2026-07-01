@@ -14,6 +14,7 @@ import NativeSelect from '../../components/NativeSelect';
 import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { Feather } from '@expo/vector-icons';
+import { dateKeyFromLocalDate } from '../../utils/dateUtils';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'SendToFridge'>;
@@ -38,7 +39,7 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
       return;
     }
 
-    const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
+    const expStr = expirationDate ? dateKeyFromLocalDate(expirationDate) : undefined;
     try {
       await addToFridge.mutateAsync({
         name: prefillName,

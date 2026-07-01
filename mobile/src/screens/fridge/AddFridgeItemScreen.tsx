@@ -18,6 +18,7 @@ import { Unit } from '../../types';
 import { Feather } from '@expo/vector-icons';
 import { parseQuantityInput } from '../../utils/shoppingItemSimilarity';
 import { Typography } from '../../theme/typography';
+import { dateKeyFromLocalDate } from '../../utils/dateUtils';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'AddFridgeItem'>;
@@ -69,7 +70,7 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      const expStr = expirationDate ? expirationDate.toISOString().split('T')[0] : undefined;
+      const expStr = expirationDate ? dateKeyFromLocalDate(expirationDate) : undefined;
       await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
       navigation.goBack();
     } catch (err: any) {
