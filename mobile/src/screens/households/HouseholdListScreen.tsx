@@ -8,13 +8,14 @@ import { Colors } from '../../constants/colors';
 import { HouseholdStackParamList } from '../../navigation/AppTabs';
 import { Household } from '../../types';
 import { HouseholdCardSkeleton } from '../../components/Skeleton';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<HouseholdStackParamList, 'HouseholdList'>;
 };
 
 export default function HouseholdListScreen({ navigation }: Props) {
-  const { data: households, isLoading, refetch } = useHouseholds();
+  const { data: households, isLoading, isError, isFetching, refetch } = useHouseholds();
   const [manualRefreshing, setManualRefreshing] = useState(false);
   useRefreshOnFocus(refetch);
 
@@ -43,10 +44,21 @@ export default function HouseholdListScreen({ navigation }: Props) {
     return <View style={styles.loadingGrid}>{Array.from({ length: 4 }).map((_, index) => <HouseholdCardSkeleton key={index} />)}</View>;
   }
 
+  if (isError || !households) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar suas casas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={households ?? []}
+        data={households}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         numColumns={2}

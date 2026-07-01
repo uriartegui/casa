@@ -37,6 +37,7 @@ import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { DateField, DropdownField } from './components/TaskFields';
 import { HelpSheet } from '../../components/HelpSheet';
 import AlertsSheet from '../../components/AlertsSheet';
+import { LoadErrorState } from '../../components/LoadErrorState';
 import { useActivitySeen } from '../../hooks/useActivitySeen';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useTaskAlerts } from './hooks/useTaskAlerts';
@@ -104,7 +105,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const isCategoryPage = !!initialCategory;
   const { user } = useAuth();
   const { data: households } = useHouseholds();
-  const { data: tasks, isLoading, refetch } = useHouseTasks(householdId);
+  const { data: tasks, isLoading, isError: tasksError, isFetching: fetchingTasks, refetch } = useHouseTasks(householdId);
   const { data: taskActivity = [] } = useHouseTaskActivity(householdId);
   const { data: shoppingLists = [] } = useShoppingLists(householdId);
   const createTask = useCreateHouseTask(householdId);
@@ -321,6 +322,17 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       ))}
       {items.length === 0 && <Text style={styles.kanbanEmpty}>Nenhuma tarefa</Text>}
     </View>;
+  }
+
+  if (tasksError || (!isLoading && !tasks)) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar as tarefas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingTasks}
+        onRetry={() => refetch()}
+      />
+    );
   }
 
   return (

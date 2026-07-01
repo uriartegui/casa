@@ -22,6 +22,7 @@ import AlertsSheet from '../../components/AlertsSheet';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
 import { useShoppingAlerts } from './hooks/useShoppingAlerts';
 import { SHOPPING_HELP_HIGHLIGHTS, SHOPPING_HELP_SECTIONS } from './helpContent';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'ShoppingLists'>;
@@ -30,10 +31,10 @@ type Props = {
 export default function ShoppingListsScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
-  const { data: households, isLoading: loadingHouseholds } = useHouseholds();
+  const { data: households, isLoading: loadingHouseholds, isError: householdsError, isFetching: fetchingHouseholds, refetch: refetchHouseholds } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
 
-  const { data: lists, isLoading, refetch } = useShoppingLists(effectiveId);
+  const { data: lists, isLoading, isError: listsError, isFetching: fetchingLists, refetch } = useShoppingLists(effectiveId);
   const { data: shoppingActivity } = useShoppingActivity(effectiveId);
   const {
     lastSeenAt: shoppingActivitySeenAt,
@@ -178,12 +179,38 @@ export default function ShoppingListsScreen({ navigation }: Props) {
     );
   }
 
+  if (householdsError || !households) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar suas casas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingHouseholds}
+        onRetry={() => {
+          void refetchHouseholds();
+        }}
+      />
+    );
+  }
+
   if (!effectiveId) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Nenhuma casa selecionada</Text>
         <Text style={styles.emptySubtitle}>Crie ou entre em uma casa primeiro</Text>
       </View>
+    );
+  }
+
+  if (listsError || !lists) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar suas listas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingLists}
+        onRetry={() => {
+          void refetch();
+        }}
+      />
     );
   }
 
@@ -249,10 +276,10 @@ export default function ShoppingListsScreen({ navigation }: Props) {
         </View>
       ) : (
         <FlatList
-          data={lists ?? []}
+          data={lists}
           keyExtractor={(item) => item.id}
           renderItem={renderCard}
-          contentContainerStyle={[styles.list, (!lists || lists.length === 0) && styles.listEmpty]}
+          contentContainerStyle={[styles.list, lists.length === 0 && styles.listEmpty]}
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

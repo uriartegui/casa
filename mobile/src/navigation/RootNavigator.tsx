@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSelectedHouseholdSync } from '../context/SelectedHouseholdContext';
 import { useHouseholds } from '../hooks/useHouseholds';
@@ -10,6 +10,7 @@ import HouseholdSetupScreen from '../screens/households/HouseholdSetupScreen';
 import StorageCategoriesSetupScreen from '../screens/households/StorageCategoriesSetupScreen';
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import { Colors } from '../constants/colors';
+import { LoadErrorState } from '../components/LoadErrorState';
 
 function AppGate() {
   const { data: households, isLoading, isError, refetch, isFetching } = useHouseholds();
@@ -27,22 +28,12 @@ function AppGate() {
 
   if (isError || !households) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, padding: 24 }}>
-        <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
-          Não consegui carregar suas casas
-        </Text>
-        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
-          Confira sua conexão e tente novamente. Sua conta não foi alterada.
-        </Text>
-        <TouchableOpacity
-          style={{ minHeight: 48, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}
-          onPress={() => refetch()}
-          disabled={isFetching}
-          activeOpacity={0.8}
-        >
-          {isFetching ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Tentar novamente</Text>}
-        </TouchableOpacity>
-      </View>
+      <LoadErrorState
+        title="Não consegui carregar suas casas"
+        message="Confira sua conexão e tente novamente. Sua conta não foi alterada."
+        isRetrying={isFetching}
+        onRetry={() => refetch()}
+      />
     );
   }
 

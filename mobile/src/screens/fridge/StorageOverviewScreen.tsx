@@ -12,6 +12,7 @@ import { Colors } from '../../constants/colors';
 import { FridgeStackParamList } from '../../navigation/AppTabs';
 import { Storage } from '../../types';
 import { HouseholdCardSkeleton } from '../../components/Skeleton';
+import { LoadErrorState } from '../../components/LoadErrorState';
 
 type Props = {
   navigation: NativeStackNavigationProp<FridgeStackParamList, 'StorageOverview'>;
@@ -22,11 +23,11 @@ const DEFAULT_STORAGE_RANK = new Map(DEFAULT_STORAGE_ORDER.map((name, index) => 
 
 export default function StorageOverviewScreen({ navigation }: Props) {
   const { selectedHouseholdId, isSelectedHouseholdReady } = useSelectedHousehold();
-  const { data: households, isLoading: loadingHouseholds } = useHouseholds();
+  const { data: households, isLoading: loadingHouseholds, isError: householdsError, isFetching: fetchingHouseholds, refetch: refetchHouseholds } = useHouseholds();
   const effectiveId = selectedHouseholdId ?? (isSelectedHouseholdReady ? households?.[0]?.id : null) ?? null;
   const household = households?.find((h) => h.id === effectiveId);
-  const { data: storages, isLoading: loadingStorages, refetch: refetchStorages } = useStorages(effectiveId);
-  const { data: items, isLoading: loadingItems, refetch: refetchItems } = useFridge(effectiveId);
+  const { data: storages, isLoading: loadingStorages, isError: storagesError, isFetching: fetchingStorages, refetch: refetchStorages } = useStorages(effectiveId);
+  const { data: items, isLoading: loadingItems, isError: itemsError, isFetching: fetchingItems, refetch: refetchItems } = useFridge(effectiveId);
   const [refreshing, setRefreshing] = React.useState(false);
 
   useRefreshOnFocus(refetchStorages);
@@ -77,12 +78,39 @@ export default function StorageOverviewScreen({ navigation }: Props) {
     );
   }
 
+  if (householdsError || !households) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar suas casas"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingHouseholds}
+        onRetry={() => {
+          void refetchHouseholds();
+        }}
+      />
+    );
+  }
+
   if (!effectiveId) {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Nenhuma casa selecionada</Text>
         <Text style={styles.emptySubtitle}>Crie ou entre em uma casa primeiro</Text>
       </View>
+    );
+  }
+
+  if (storagesError || itemsError || !storages || !items) {
+    return (
+      <LoadErrorState
+        title="Não consegui carregar os estoques"
+        message="Confira sua conexão e tente novamente."
+        isRetrying={fetchingStorages || fetchingItems}
+        onRetry={() => {
+          void refetchStorages();
+          void refetchItems();
+        }}
+      />
     );
   }
 
