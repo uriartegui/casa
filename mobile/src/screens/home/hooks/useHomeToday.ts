@@ -55,7 +55,6 @@ export function useHomeToday({
     urgentLists,
     priorityTasks,
     expiringItems,
-    todayAttentionCount: expiringItems.length + priorityTasks.length + urgentLists.length,
     formatShortDate,
   };
 }

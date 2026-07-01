@@ -7,9 +7,7 @@ import { FridgeItem, HouseTask, ShoppingList } from '../../../types';
 type TodayIntroProps = {
   householdName?: string;
   householdCount: number;
-  attentionCount: number;
   onSelectHousehold: () => void;
-  onOpenAttention: () => void;
 };
 
 type QuickActionsProps = {
@@ -37,30 +35,18 @@ type ExpiringItemsProps = {
   onOpenItem: (item: FridgeItem) => void;
 };
 
-export function TodayIntro({ householdName, householdCount, attentionCount, onSelectHousehold, onOpenAttention }: TodayIntroProps) {
+export function TodayIntro({ householdName, householdCount, onSelectHousehold }: TodayIntroProps) {
   return (
     <View style={styles.todayIntro}>
-      <View>
-        <TouchableOpacity
-          style={styles.todayHousehold}
-          activeOpacity={householdCount > 1 ? 0.72 : 1}
-          onPress={onSelectHousehold}
-        >
-          <Text style={styles.todayEyebrow}>{householdName ?? 'Casa'}</Text>
-          {householdCount > 1 && <Feather name="chevron-down" size={14} color={Colors.accent} />}
-        </TouchableOpacity>
-        <Text style={styles.todayTitle}>Hoje</Text>
-      </View>
       <TouchableOpacity
-        style={[styles.todayBadge, attentionCount === 0 && styles.todayBadgeQuiet]}
-        activeOpacity={0.78}
-        onPress={onOpenAttention}
+        style={styles.todayHousehold}
+        activeOpacity={householdCount > 1 ? 0.72 : 1}
+        onPress={onSelectHousehold}
       >
-        <Text style={[styles.todayBadgeValue, attentionCount === 0 && styles.todayBadgeValueQuiet]}>{attentionCount}</Text>
-        <Text style={[styles.todayBadgeLabel, attentionCount === 0 && styles.todayBadgeLabelQuiet]}>
-          {attentionCount === 1 ? 'atenção' : 'atenções'}
-        </Text>
+        <Text style={styles.todayEyebrow}>{householdName ?? 'Casa'}</Text>
+        {householdCount > 1 && <Feather name="chevron-down" size={14} color={Colors.accent} />}
       </TouchableOpacity>
+      <Text style={styles.todayTitle}>Hoje</Text>
     </View>
   );
 }
@@ -190,10 +176,7 @@ const styles = StyleSheet.create({
   todayIntro: {
     marginTop: -4,
     marginBottom: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: 16,
+    alignItems: 'flex-start',
   },
   todayEyebrow: {
     fontSize: 13,
@@ -207,24 +190,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: Colors.textPrimary,
   },
-  todayBadge: {
-    minWidth: 70,
-    minHeight: 52,
-    borderRadius: 12,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  todayBadgeQuiet: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-  },
-  todayBadgeValue: { color: '#fff', fontSize: 19, fontWeight: '900', lineHeight: 22 },
-  todayBadgeValueQuiet: { color: Colors.textPrimary },
-  todayBadgeLabel: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  todayBadgeLabelQuiet: { color: Colors.textSecondary },
   quickActions: {
     flexDirection: 'row',
     gap: 10,

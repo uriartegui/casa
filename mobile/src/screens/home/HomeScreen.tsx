@@ -19,7 +19,6 @@ import { useGlobalSearchModal } from '../../context/GlobalSearchContext';
 import HomeHeader from './components/HomeHeader';
 import { ExpiringItemsCard, QuickActionsCard, TodayIntro, TodayTasksCard, UrgentListsCard } from './components/HomeCards';
 import { HelpSheet } from '../../components/HelpSheet';
-import { AttentionSummaryModal } from './components/HomeSheets';
 import { useHomeAlerts } from './hooks/useHomeAlerts';
 import { useHomeToday } from './hooks/useHomeToday';
 import { useBottomSheetMotion } from '../../hooks/useBottomSheetMotion';
@@ -47,7 +46,6 @@ export default function HomeScreen() {
 
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
-  const [attentionModalVisible, setAttentionModalVisible] = useState(false);
   const {
     firstName,
     todayLabel,
@@ -55,7 +53,6 @@ export default function HomeScreen() {
     urgentLists,
     priorityTasks,
     expiringItems,
-    todayAttentionCount,
     formatShortDate,
   } = useHomeToday({
     userName: user?.name,
@@ -207,9 +204,7 @@ export default function HomeScreen() {
       <TodayIntro
         householdName={household?.name}
         householdCount={households?.length ?? 0}
-        attentionCount={todayAttentionCount}
         onSelectHousehold={openHouseholdSelector}
-        onOpenAttention={() => setAttentionModalVisible(true)}
       />
 
       <QuickActionsCard
@@ -262,24 +257,6 @@ export default function HomeScreen() {
       subtitle={household?.name ? `Casa inteira · ${household.name}` : 'Casa inteira'}
       sections={alertSections}
       onClose={alertsSheet.close}
-    />
-
-    <AttentionSummaryModal
-      visible={attentionModalVisible}
-      expiringItems={expiringItems}
-      tasks={priorityTasks}
-      urgentLists={urgentLists}
-      formatDate={formatShortDate}
-      onClose={() => setAttentionModalVisible(false)}
-      onOpenItem={openExpiringItem}
-      onOpenTask={openTask}
-      onOpenList={(list) => navigation.navigate('HomeShoppingListDetail', {
-        householdId: list.householdId,
-        listId: list.id,
-        listName: list.name,
-        listUrgent: list.urgent,
-        highlightList: true,
-      })}
     />
 
     <GlobalSearchModal navigation={navigation.getParent?.() ?? navigation} />
