@@ -342,10 +342,16 @@ export default function GlobalSearchModal({ navigation }: Props) {
   function openResult(result: GlobalSearchResult) {
     const target = result.target;
 
-    if (result.type === 'stock_item' && target.itemId) {
+    if (result.type === 'stock_item' && target.itemId && target.storageId) {
       closeAndNavigate(() => navigation.navigate('StorageFlow', {
-        screen: 'FridgeItemDetail',
-        params: { householdId: target.householdId, itemId: target.itemId, highlight: true },
+        screen: 'Fridge',
+        params: {
+          householdId: target.householdId,
+          storageId: target.storageId,
+          storageName: target.storageName ?? 'Estoque',
+          storageEmoji: target.storageEmoji ?? '📦',
+          highlightItemId: target.itemId,
+        },
       }));
       return;
     }
