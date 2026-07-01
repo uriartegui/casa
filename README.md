@@ -6,6 +6,13 @@ tarefas, membros, alertas e notificacoes.
 Este repositorio e um monorepo com app mobile, API, deploy, documentacao e
 assets de publicacao.
 
+## Stack
+
+- Front: React Native com Expo e TypeScript.
+- Back: NestJS com TypeScript, PostgreSQL e TypeORM.
+- Infra: Docker Compose, Caddy, VPS Ubuntu e GitHub Actions.
+- Qualidade: ESLint, TypeScript e Vitest.
+
 ## Comece por aqui
 
 Para uma pessoa nova no projeto, a ordem recomendada de leitura e:
