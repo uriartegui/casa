@@ -12,7 +12,7 @@ export function useHouseholds() {
       return response.data;
     },
     staleTime: HOUSEHOLDS_STALE_TIME,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
   });
 }
 

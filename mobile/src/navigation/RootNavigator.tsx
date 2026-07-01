@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSelectedHouseholdSync } from '../context/SelectedHouseholdContext';
 import { useHouseholds } from '../hooks/useHouseholds';
@@ -12,12 +12,12 @@ import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import { Colors } from '../constants/colors';
 
 function AppGate() {
-  const { data: households, isLoading } = useHouseholds();
+  const { data: households, isLoading, isError, refetch, isFetching } = useHouseholds();
   const [setupHouseholdId, setSetupHouseholdId] = useState<string | null>(null);
   useHouseholdSync(households);
   useSelectedHouseholdSync(households);
 
-  if (isLoading) {
+  if (isLoading || (!households && isFetching)) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }}>
         <ActivityIndicator size="large" color={Colors.accent} />
@@ -25,7 +25,28 @@ function AppGate() {
     );
   }
 
-  if (!households || households.length === 0) {
+  if (isError || !households) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, padding: 24 }}>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 }}>
+          Não consegui carregar suas casas
+        </Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20, marginBottom: 20 }}>
+          Confira sua conexão e tente novamente. Sua conta não foi alterada.
+        </Text>
+        <TouchableOpacity
+          style={{ minHeight: 48, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 }}
+          onPress={() => refetch()}
+          disabled={isFetching}
+          activeOpacity={0.8}
+        >
+          {isFetching ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>Tentar novamente</Text>}
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (households.length === 0) {
     return <HouseholdSetupScreen onHouseholdCreated={(id) => setSetupHouseholdId(id)} />;
   }
 
