@@ -13,7 +13,7 @@ export const Typography = {
   }),
   body: Platform.select({
     ios: 'AvenirNext-Regular',
-    android: 'sans-serif',
+    android: 'sans-serif-rounded',
     default: undefined,
   }),
   rounded: Platform.select({

@@ -32,6 +32,9 @@ import { ToastProvider } from './src/context/ToastContext';
 import RootNavigator from './src/navigation/RootNavigator';
 import { queryClient } from './src/services/queryClient';
 import { api } from './src/services/api';
+import { applySystemTypography } from './src/theme/applyTypography';
+
+applySystemTypography();
 
 const navigationRef = createNavigationContainerRef<any>();
 
