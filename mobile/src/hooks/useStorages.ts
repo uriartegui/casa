@@ -15,7 +15,7 @@ export function useStorages(householdId: string | null, options?: { includeHidde
     },
     enabled: !!householdId,
     staleTime: STORAGE_STALE_TIME,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
   });
 }
 

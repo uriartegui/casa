@@ -17,7 +17,7 @@ export function useFridge(householdId: string | null, storageId?: string | null)
     },
     enabled: !!householdId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
     refetchInterval: 5 * 60 * 1000,
     refetchIntervalInBackground: false,
   });
@@ -34,7 +34,7 @@ export function useFridgeItem(householdId: string | null, itemId: string | null)
     },
     enabled: !!householdId && !!itemId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
   });
 }
 
@@ -136,7 +136,7 @@ export function useFridgeActivity(householdId: string | null) {
     },
     enabled: !!householdId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: false,
+    refetchOnMount: 'always',
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
   });
