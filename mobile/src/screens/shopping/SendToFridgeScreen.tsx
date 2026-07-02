@@ -15,6 +15,7 @@ import { Colors } from '../../constants/colors';
 import { ShoppingStackParamList } from '../../navigation/AppTabs';
 import { Feather } from '@expo/vector-icons';
 import { dateKeyFromLocalDate } from '../../utils/dateUtils';
+import { Typography } from '../../theme/typography';
 
 type Props = {
   navigation: NativeStackNavigationProp<ShoppingStackParamList, 'SendToFridge'>;
@@ -115,27 +116,27 @@ export default function SendToFridgeScreen({ navigation, route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 24, gap: 10, paddingBottom: 140 },
+  content: { paddingHorizontal: 26, paddingTop: 26, gap: 12, paddingBottom: 140 },
   itemPreview: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: Colors.card, borderRadius: 10, padding: 14,
-    borderWidth: 1, borderColor: Colors.separator, marginBottom: 8,
+    backgroundColor: Colors.card, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: Colors.separator, marginBottom: 10,
   },
-  itemName: { fontSize: 17, fontWeight: '600', color: Colors.textPrimary },
-  itemQty: { fontSize: 14, color: Colors.textSecondary },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 8 },
+  itemName: { fontFamily: Typography.rounded, fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  itemQty: { fontFamily: Typography.title, fontSize: 14, color: Colors.textSecondary, fontWeight: '700' },
+  label: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginTop: 10 },
   helperText: { fontSize: 13, color: Colors.textSecondary, marginTop: -2 },
   chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.separator },
   chipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
   chipText: { fontSize: 14, fontWeight: '500', color: Colors.textSecondary },
   chipTextActive: { color: '#fff' },
-  button: { backgroundColor: Colors.accent, borderRadius: 10, padding: 16, alignItems: 'center', marginTop: 16 },
+  button: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
   buttonDisabled: { opacity: 0.45 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  optional: { fontWeight: '400', textTransform: 'none', letterSpacing: 0 },
-  selectRow: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  selectRowText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
+  optional: { fontWeight: '400' },
+  selectRow: { minHeight: 56, borderRadius: 16, borderWidth: 1, borderColor: Colors.separator, backgroundColor: Colors.card, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  selectRowText: { fontFamily: Typography.body, flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
   selectField: { position: 'relative' },
   selectFieldOpen: { zIndex: 30, elevation: 30 },
