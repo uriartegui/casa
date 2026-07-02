@@ -287,6 +287,53 @@ export default function GlobalSearchModal({ navigation }: Props) {
     return [...map.values()];
   }, [localResults, serverResults]);
 
+  const resolvedResults = useMemo(() => {
+    return results.map((result) => {
+      if (result.type === 'stock_item' && result.target.itemId) {
+        const item = fridgeItems.find((candidate) => candidate.id === result.target.itemId);
+        if (!item) return result;
+        return {
+          ...result,
+          target: {
+            ...result.target,
+            storageId: result.target.storageId ?? item.storageId ?? item.storage?.id ?? null,
+            storageName: result.target.storageName ?? item.storage?.name ?? null,
+            storageEmoji: result.target.storageEmoji ?? item.storage?.emoji ?? null,
+          },
+        };
+      }
+
+      if ((result.type === 'shopping_list' || result.type === 'shopping_item') && result.target.listId) {
+        const list = shoppingLists.find((candidate) => candidate.id === result.target.listId);
+        if (!list) return result;
+        return {
+          ...result,
+          target: {
+            ...result.target,
+            listName: result.target.listName ?? list.name,
+            listUrgent: result.target.listUrgent ?? list.urgent,
+            listPlace: result.target.listPlace ?? list.place ?? null,
+            listCategory: result.target.listCategory ?? list.category ?? null,
+          },
+        };
+      }
+
+      if (result.type === 'task' && result.target.taskId) {
+        const task = tasks.find((candidate) => candidate.id === result.target.taskId);
+        if (!task) return result;
+        return {
+          ...result,
+          target: {
+            ...result.target,
+            category: result.target.category ?? task.category ?? null,
+          },
+        };
+      }
+
+      return result;
+    });
+  }, [fridgeItems, results, shoppingLists, tasks]);
+
   const actionRows = useMemo<Row[]>(() => {
     const trimmed = debouncedQuery.trim();
     const actions = [
@@ -312,7 +359,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
       return actionRows.length ? [{ id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows] : [];
     }
 
-    const prioritizedResults = [...results].sort((a, b) => priorityForContext(a, searchContext) - priorityForContext(b, searchContext));
+    const prioritizedResults = [...resolvedResults].sort((a, b) => priorityForContext(a, searchContext) - priorityForContext(b, searchContext));
     const grouped = prioritizedResults.reduce<Record<GlobalSearchResultType, GlobalSearchResult[]>>((acc, item) => {
       if (!typeAllowed(item.type)) return acc;
       acc[item.type] = [...(acc[item.type] ?? []), item];
@@ -330,7 +377,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
 
     if (activeTab !== 'all' || actionRows.length === 0) return resultRows;
     return [...resultRows, { id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows];
-  }, [activeTab, actionRows, results, searchContext]);
+  }, [activeTab, actionRows, resolvedResults, searchContext]);
 
   const isFetching = isServerFetching || isFridgeFetching || isListsFetching || isTasksFetching || listItemQueries.some((item) => item.isFetching);
 
@@ -356,6 +403,11 @@ export default function GlobalSearchModal({ navigation }: Props) {
       return;
     }
 
+    if (result.type === 'stock_item') {
+      closeAndNavigate(() => navigation.navigate('StorageFlow' as never));
+      return;
+    }
+
     if ((result.type === 'shopping_list' || result.type === 'shopping_item') && target.listId) {
       closeAndNavigate(() => navigation.navigate('ShoppingFlow', {
         screen: 'ShoppingListDetail',
@@ -377,6 +429,7 @@ export default function GlobalSearchModal({ navigation }: Props) {
       closeAndNavigate(() => navigation.navigate('TasksFlow', target.category
         ? { screen: 'TaskCategory', params: { category: target.category, highlightTaskId: target.taskId } }
         : { screen: 'TasksEntry', params: { highlightTaskId: target.taskId } }));
+      return;
     }
   }
 
