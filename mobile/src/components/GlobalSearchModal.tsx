@@ -33,10 +33,9 @@ type Props = {
 
 type Row =
   | { id: string; rowType: 'section'; title: string }
-  | { id: string; rowType: 'result'; result: GlobalSearchResult }
-  | { id: string; rowType: 'action'; icon: keyof typeof Feather.glyphMap; title: string; subtitle: string; route: string };
+  | { id: string; rowType: 'result'; result: GlobalSearchResult };
 
-type SearchTab = 'all' | 'stock' | 'lists' | 'tasks' | 'actions';
+type SearchTab = 'all' | 'stock' | 'lists' | 'tasks';
 type SearchContext =
   | { area: 'stock'; storageId?: string | null }
   | { area: 'shopping'; listId?: string | null }
@@ -69,7 +68,6 @@ const TABS: { label: string; value: SearchTab }[] = [
   { label: 'Estoque', value: 'stock' },
   { label: 'Listas', value: 'lists' },
   { label: 'Tarefas', value: 'tasks' },
-  { label: 'Ações', value: 'actions' },
 ];
 
 function activeRouteFromState(state: any): any {
@@ -334,18 +332,6 @@ export default function GlobalSearchModal({ navigation }: Props) {
     });
   }, [fridgeItems, results, shoppingLists, tasks]);
 
-  const actionRows = useMemo<Row[]>(() => {
-    const trimmed = debouncedQuery.trim();
-    const actions = [
-      { id: 'action:storage', rowType: 'action' as const, icon: 'box' as const, title: 'Abrir estoques', subtitle: 'Geladeira, despensa e outros compartimentos', route: 'StorageFlow' },
-      { id: 'action:shopping', rowType: 'action' as const, icon: 'shopping-cart' as const, title: 'Abrir listas de compras', subtitle: 'Listas, itens pendentes e comprados', route: 'ShoppingFlow' },
-      { id: 'action:tasks', rowType: 'action' as const, icon: 'check-square' as const, title: 'Abrir tarefas', subtitle: 'Rotinas e checklist da casa', route: 'TasksFlow' },
-      { id: 'action:household', rowType: 'action' as const, icon: 'home' as const, title: 'Abrir casa', subtitle: 'Membros, convites e configurações', route: 'HouseholdFlow' },
-    ];
-    if (trimmed.length >= 2) return [];
-    return actions;
-  }, [debouncedQuery]);
-
   const rows = useMemo<Row[]>(() => {
     const typeAllowed = (type: GlobalSearchResultType) => {
       if (activeTab === 'all') return true;
@@ -354,10 +340,6 @@ export default function GlobalSearchModal({ navigation }: Props) {
       if (activeTab === 'tasks') return type === 'task';
       return false;
     };
-
-    if (activeTab === 'actions') {
-      return actionRows.length ? [{ id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows] : [];
-    }
 
     const prioritizedResults = [...resolvedResults].sort((a, b) => priorityForContext(a, searchContext) - priorityForContext(b, searchContext));
     const grouped = prioritizedResults.reduce<Record<GlobalSearchResultType, GlobalSearchResult[]>>((acc, item) => {
@@ -375,9 +357,8 @@ export default function GlobalSearchModal({ navigation }: Props) {
       ];
     });
 
-    if (activeTab !== 'all' || actionRows.length === 0) return resultRows;
-    return [...resultRows, { id: 'section:actions', rowType: 'section', title: 'Ações' }, ...actionRows];
-  }, [activeTab, actionRows, resolvedResults, searchContext]);
+    return resultRows;
+  }, [activeTab, resolvedResults, searchContext]);
 
   const isFetching = isServerFetching || isFridgeFetching || isListsFetching || isTasksFetching || listItemQueries.some((item) => item.isFetching);
 
@@ -433,28 +414,9 @@ export default function GlobalSearchModal({ navigation }: Props) {
     }
   }
 
-  function openShortcut(route: string) {
-    closeAndNavigate(() => navigation.navigate(route as never));
-  }
-
   function renderRow({ item }: { item: Row }) {
     if (item.rowType === 'section') {
       return <Text style={styles.sectionTitle}>{item.title}</Text>;
-    }
-
-    if (item.rowType === 'action') {
-      return (
-        <TouchableOpacity style={styles.resultRow} onPress={() => openShortcut(item.route)} activeOpacity={0.74}>
-          <View style={styles.actionIcon}>
-            <Feather name={item.icon} size={17} color={Colors.accent} />
-          </View>
-          <View style={styles.resultTextBlock}>
-            <Text style={styles.resultTitle} numberOfLines={1}>{item.title}</Text>
-            <Text style={styles.resultSubtitle} numberOfLines={2}>{item.subtitle}</Text>
-          </View>
-          <Feather name="chevron-right" size={18} color={Colors.textSecondary} />
-        </TouchableOpacity>
-      );
     }
 
     const icon = TYPE_ICONS[item.result.type];
@@ -528,38 +490,38 @@ export default function GlobalSearchModal({ navigation }: Props) {
             ))}
           </ScrollView>
 
-          {query.trim().length < 2 ? (
-            <FlatList
-              data={[{ id: 'section:actions', rowType: 'section' as const, title: 'Ações rápidas' }, ...actionRows]}
-              keyExtractor={(item) => item.id}
-              renderItem={renderRow}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <View style={styles.resultsWrap}>
-              {isFetching && rows.length === 0 ? (
-                <View style={styles.centerState}>
-                  <ActivityIndicator color={Colors.accent} />
-                </View>
-              ) : null}
-              {showEmptySearch ? (
-                <View style={styles.centerState}>
-                  <Text style={styles.emptyTitle}>Nada encontrado</Text>
-                  <Text style={styles.emptyText}>Tente buscar por item, lista, estoque, categoria ou tarefa.</Text>
-                </View>
-              ) : null}
-              {rows.length > 0 ? (
-                <FlatList
-                  data={rows}
-                  keyExtractor={(item) => item.id}
-                  renderItem={renderRow}
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator={false}
-                />
-              ) : null}
-            </View>
-          )}
+          <View style={styles.body}>
+            {query.trim().length < 2 ? (
+              <View style={styles.centerState}>
+                <Text style={styles.emptyTitle}>Digite para buscar</Text>
+                <Text style={styles.emptyText}>Encontre itens, listas e tarefas da casa.</Text>
+              </View>
+            ) : (
+              <View style={styles.resultsWrap}>
+                {isFetching && rows.length === 0 ? (
+                  <View style={styles.centerState}>
+                    <ActivityIndicator color={Colors.accent} />
+                  </View>
+                ) : null}
+                {showEmptySearch ? (
+                  <View style={styles.centerState}>
+                    <Text style={styles.emptyTitle}>Nada encontrado</Text>
+                    <Text style={styles.emptyText}>Tente buscar por item, lista, estoque, categoria ou tarefa.</Text>
+                  </View>
+                ) : null}
+                {rows.length > 0 ? (
+                  <FlatList
+                    key="search-results"
+                    data={rows}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderRow}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                  />
+                ) : null}
+              </View>
+            )}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -574,7 +536,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(61,32,0,0.36)',
+    backgroundColor: 'rgba(0,0,0,0.07)',
   },
   panel: {
     maxHeight: '86%',
@@ -584,10 +546,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOpacity: 0.18,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 20,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 10,
   },
   panelHeader: {
     minHeight: 62,
@@ -682,9 +644,15 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '500',
   },
-  resultsWrap: {
-    minHeight: 180,
+  body: {
+    minHeight: 264,
     maxHeight: 560,
+    backgroundColor: Colors.card,
+  },
+  resultsWrap: {
+    flex: 1,
+    minHeight: 264,
+    backgroundColor: Colors.card,
   },
   sectionTitle: {
     fontFamily: Typography.title,
