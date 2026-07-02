@@ -7,10 +7,11 @@ import {
 import DatePickerModal from '../../components/DatePickerModal';
 import NativeSelect from '../../components/NativeSelect';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
+import { CommonActions, RouteProp } from '@react-navigation/native';
 import { useUpdateFridgeItem, useRemoveFridgeItem, useFridgeItem } from '../../hooks/useFridge';
 import { useShoppingLists } from '../../hooks/useShoppingLists';
 import { useCategories } from '../../hooks/useCategories';
+import { useStorages } from '../../hooks/useStorages';
 import { useToast } from '../../context/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../../services/api';
@@ -34,6 +35,7 @@ type DirtyFields = {
   name: boolean;
   quantity: boolean;
   unit: boolean;
+  storageId: boolean;
   expirationDate: boolean;
   category: boolean;
 };
@@ -42,6 +44,7 @@ const cleanDirtyFields: DirtyFields = {
   name: false,
   quantity: false,
   unit: false,
+  storageId: false,
   expirationDate: false,
   category: false,
 };
@@ -53,10 +56,12 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
   const [name, setName] = useState('');
   const [quantity, setQuantity] = useState('');
   const [unit, setUnit] = useState<Unit>('un');
+  const [storageId, setStorageId] = useState<string | null>(null);
   const [expirationDate, setExpirationDate] = useState<Date | null>(null);
   const [category, setCategory] = useState<string | null>(null);
   const [expirationPickerVisible, setExpirationPickerVisible] = useState(false);
-  const { data: categories } = useCategories(householdId, item?.storageId ?? item?.storage?.id ?? null);
+  const { data: storages } = useStorages(householdId);
+  const { data: categories } = useCategories(householdId, storageId);
   const updateItem = useUpdateFridgeItem(householdId);
   const removeItem = useRemoveFridgeItem(householdId);
   const { data: shoppingLists, isLoading: loadingShoppingLists } = useShoppingLists(householdId);
@@ -69,6 +74,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
     setName((current) => (dirtyFields.name ? current : item.name));
     setQuantity((current) => (dirtyFields.quantity ? current : String(item.quantity)));
     setUnit((current) => (dirtyFields.unit ? current : ((item.unit as Unit) ?? 'un')));
+    setStorageId((current) => (dirtyFields.storageId ? current : item.storageId ?? item.storage?.id ?? null));
     setExpirationDate((current) => (
       dirtyFields.expirationDate
         ? current
@@ -91,6 +97,41 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 
   function markEditing(field: keyof DirtyFields) {
     setDirtyFields((current) => ({ ...current, [field]: true }));
+  }
+
+  function handleQuantityChange(value: string) {
+    const normalized = value.replace(',', '.');
+    const numeric = normalized
+      .replace(/[^0-9.]/g, '')
+      .replace(/(\..*)\./g, '$1');
+
+    markEditing('quantity');
+    setQuantity(numeric);
+  }
+
+  function openHighlightedItem(targetItemId: string, targetStorageId?: string | null) {
+    const storage = (storages ?? []).find((candidate) => candidate.id === targetStorageId)
+      ?? item?.storage
+      ?? null;
+    if (!targetStorageId || !storage) {
+      navigation.goBack();
+      return;
+    }
+
+    const params = {
+      householdId,
+      storageId: targetStorageId,
+      storageName: storage.name,
+      storageEmoji: storage.emoji,
+      highlightItemId: targetItemId,
+    };
+
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Fridge', params }],
+      }),
+    );
   }
 
   async function handleSave() {
@@ -116,6 +157,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         name?: string;
         quantity?: number;
         unit?: string;
+        storageId?: string;
         expirationDate?: string | null;
         category?: string | null;
       } = { itemId: item.id };
@@ -123,16 +165,17 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
       if (name.trim() !== item.name) payload.name = name.trim();
       if (qty !== Number(item.quantity)) payload.quantity = qty;
       if (unit !== item.unit) payload.unit = unit;
+      if (storageId && storageId !== (item.storageId ?? item.storage?.id)) payload.storageId = storageId;
       if (expStr !== currentExpirationKey) payload.expirationDate = expStr;
       if ((category ?? null) !== (item.category ?? null)) payload.category = category;
 
       if (Object.keys(payload).length === 1) {
-        navigation.goBack();
+        openHighlightedItem(item.id, item.storageId);
         return;
       }
 
-      await updateItem.mutateAsync(payload);
-      navigation.goBack();
+      const saved = await updateItem.mutateAsync(payload);
+      openHighlightedItem(saved.id, saved.storageId ?? storageId ?? item.storageId);
     } catch (error: any) {
       const message = error?.response?.data?.message;
       Alert.alert('Erro', Array.isArray(message) ? message[0] : message || 'Não foi possível salvar as alterações.');
@@ -258,7 +301,7 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
         <TextInput
           style={styles.input}
           value={quantity}
-          onChangeText={(value) => { markEditing('quantity'); setQuantity(value); }}
+          onChangeText={handleQuantityChange}
           keyboardType="decimal-pad"
           returnKeyType="done"
           placeholderTextColor={Colors.textSecondary}
@@ -276,6 +319,19 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           ))}
         </View>
+
+        <Text style={styles.label}>Estoque</Text>
+        <NativeSelect
+          value={storageId ?? ''}
+          placeholder="Escolher estoque"
+          options={(storages ?? []).map((storage) => ({ label: storage.name, value: storage.id }))}
+          onChange={(nextStorageId) => {
+            markEditing('storageId');
+            markEditing('category');
+            setStorageId(nextStorageId || null);
+            setCategory(null);
+          }}
+        />
 
         <Text style={styles.label}>Categoria <Text style={styles.optional}>(opcional)</Text></Text>
         {/* Dropdown anterior mantido como referencia durante a troca para o seletor nativo.
@@ -331,13 +387,17 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
           }
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.secondaryButton} onPress={handlePickList}>
-          <Text style={styles.secondaryButtonText}>Mover para lista de compras</Text>
-        </TouchableOpacity>
+        <View style={styles.secondaryActions}>
+          <TouchableOpacity style={styles.secondaryButton} onPress={handlePickList}>
+            <Feather name="shopping-cart" size={16} color={Colors.accent} />
+            <Text style={styles.secondaryButtonText}>Mover para lista</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
-          <Text style={styles.removeButtonText}>Remover item</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
+            <Feather name="trash-2" size={16} color={Colors.destructive} />
+            <Text style={styles.removeButtonText}>Remover</Text>
+          </TouchableOpacity>
+        </View>
         </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -347,23 +407,50 @@ export default function FridgeItemDetailScreen({ navigation, route }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, gap: 10, padding: 24 },
-  content: { padding: 22, gap: 11, paddingBottom: 140 },
-  highlightWrap: { borderWidth: 1, borderRadius: 18, padding: 10, margin: -10, gap: 11 },
+  content: { paddingHorizontal: 20, paddingTop: 20, gap: 12, paddingBottom: 140 },
+  highlightWrap: { borderWidth: 1, borderRadius: 22, padding: 10, margin: -10, gap: 11 },
   emptyTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
   emptySubtitle: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   retryButton: { backgroundColor: Colors.accent, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, marginTop: 6 },
   retryButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 15, fontWeight: '700' },
-  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginTop: 8 },
+  label: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginTop: 8 },
   input: {
-    backgroundColor: Colors.card, borderRadius: 12, padding: 14,
-    fontFamily: Typography.body, fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border,
+    minHeight: 50,
+    backgroundColor: Colors.card,
+    borderRadius: 16,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontFamily: Typography.body,
+    fontSize: 16,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.separator + '99',
   },
-  unitRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  unitChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.border },
-  unitChipActive: { backgroundColor: Colors.accent, borderColor: Colors.accent },
-  unitChipText: { fontFamily: Typography.rounded, fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  unitRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+    backgroundColor: Colors.card,
+    borderRadius: 18,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: Colors.separator + '80',
+    alignSelf: 'flex-start',
+  },
+  unitChip: {
+    minWidth: 40,
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unitChipActive: { backgroundColor: Colors.accent },
+  unitChipText: { fontFamily: Typography.rounded, fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
   unitChipTextActive: { color: '#fff' },
-  selectRow: { minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.card, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  selectRow: { minHeight: 50, borderRadius: 16, borderWidth: 1, borderColor: Colors.separator + '99', backgroundColor: Colors.card, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   selectRowText: { fontFamily: Typography.rounded, flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   selectRowPlaceholder: { color: Colors.textSecondary, fontWeight: '500' },
   selectField: { position: 'relative' },
@@ -376,11 +463,12 @@ const styles = StyleSheet.create({
   selectOptionTextActive: { color: Colors.accent, fontWeight: '800' },
   clearDateButton: { alignSelf: 'flex-end', paddingVertical: 4, paddingHorizontal: 2 },
   clearDateText: { fontFamily: Typography.title, fontSize: 12, fontWeight: '700', color: Colors.accent },
-  button: { backgroundColor: Colors.accent, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 16 },
-  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondaryButton: { borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.accent },
-  secondaryButtonText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 16, fontWeight: '700' },
-  removeButton: { borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: Colors.destructive },
-  removeButtonText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 16, fontWeight: '700' },
+  button: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 54, alignItems: 'center', justifyContent: 'center', marginTop: 18 },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
+  secondaryActions: { flexDirection: 'row', gap: 10 },
+  secondaryButton: { flex: 1, minHeight: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7, borderWidth: 1, borderColor: Colors.accent + '55', backgroundColor: Colors.card },
+  secondaryButtonText: { fontFamily: Typography.title, color: Colors.accent, fontSize: 14, fontWeight: '800' },
+  removeButton: { flex: 1, minHeight: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 7, borderWidth: 1, borderColor: Colors.destructive + '45', backgroundColor: Colors.card },
+  removeButtonText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 14, fontWeight: '800' },
   optional: { fontFamily: Typography.body, fontSize: 11, color: Colors.textSecondary, fontWeight: '400', textTransform: 'none' },
 });

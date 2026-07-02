@@ -385,10 +385,19 @@ export class HouseholdsService {
       relations: ['storage'],
     });
     if (!item) throw new NotFoundException('Item não encontrado');
+    let nextStorage: Storage | null = null;
+    if (dto.storageId) {
+      nextStorage = await this.storageRepo.findOne({ where: { id: dto.storageId, householdId } });
+      if (!nextStorage) throw new NotFoundException('Estoque nao encontrado');
+    }
     const changedFields = this.getFridgeChangedFields(item, dto);
     const activityItemName = dto.name?.trim() || item.name;
 
     Object.assign(item, dto);
+    if (nextStorage) {
+      item.storageId = nextStorage.id;
+      item.storage = nextStorage;
+    }
     const saved = await this.fridgeRepo.save(item);
 
     if (changedFields.length > 0) {
@@ -557,6 +566,7 @@ export class HouseholdsService {
     if (dto.name !== undefined && dto.name !== item.name) changed.push('nome');
     if (dto.quantity !== undefined && Number(dto.quantity) !== Number(item.quantity)) changed.push('quantidade');
     if (dto.unit !== undefined && dto.unit !== item.unit) changed.push('unidade');
+    if (dto.storageId !== undefined && dto.storageId !== item.storageId) changed.push('estoque');
     if (dto.category !== undefined && (dto.category ?? null) !== (item.category ?? null)) changed.push('categoria');
 
     if (dto.expirationDate !== undefined) {

@@ -8,7 +8,7 @@ import { filterItems } from '../../constants/commonItems';
 import DatePickerModal from '../../components/DatePickerModal';
 import NativeSelect from '../../components/NativeSelect';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
+import { CommonActions, RouteProp } from '@react-navigation/native';
 import { useAddFridgeItem } from '../../hooks/useFridge';
 import { useStorages } from '../../hooks/useStorages';
 import { Colors } from '../../constants/colors';
@@ -55,6 +55,37 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
   const [newCatLabel, setNewCatLabel] = useState('');
   const [newCatEmoji, setNewCatEmoji] = useState('📦');
 
+  function openHighlightedItem(itemId: string, targetStorageId?: string | null) {
+    const storage = (storages ?? []).find((candidate) => candidate.id === targetStorageId);
+    if (!targetStorageId || !storage) {
+      navigation.goBack();
+      return;
+    }
+
+    const params = {
+      householdId,
+      storageId: targetStorageId,
+      storageName: storage.name,
+      storageEmoji: storage.emoji,
+      highlightItemId: itemId,
+    };
+
+    if (navigation.getState().routeNames.includes('Fridge')) {
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Fridge', params }],
+        }),
+      );
+      return;
+    }
+
+    (navigation.getParent() as any)?.navigate('StorageFlow', {
+      screen: 'Fridge',
+      params,
+    });
+  }
+
   async function handleAdd() {
     if (!name.trim()) {
       Alert.alert('Erro', 'Digite o nome do item.');
@@ -71,8 +102,8 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
     }
     try {
       const expStr = expirationDate ? dateKeyFromLocalDate(expirationDate) : undefined;
-      await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
-      navigation.goBack();
+      const saved = await addItem.mutateAsync({ name: name.trim(), quantity: qty, unit, storageId, expirationDate: expStr, category: category ?? undefined });
+      openHighlightedItem(saved.id, saved.storageId ?? storageId);
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? 'Erro desconhecido';
       Alert.alert('Erro', Array.isArray(msg) ? msg.join('\n') : String(msg));
@@ -211,7 +242,6 @@ export default function AddFridgeItemScreen({ navigation, route }: Props) {
               <NativeSelect
                 value={storageId ?? ''}
                 placeholder="Escolher compartimento"
-                disabled={!!routeStorageId}
                 options={(storages ?? []).map((storage) => ({ label: storage.name, value: storage.id }))}
                 onChange={(nextStorageId) => {
                   setPickedStorageId(nextStorageId || null);

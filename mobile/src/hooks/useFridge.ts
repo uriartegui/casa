@@ -73,6 +73,7 @@ interface UpdateFridgeItemPayload {
   name?: string;
   quantity?: number;
   unit?: string;
+  storageId?: string;
   category?: string | null;
   expirationDate?: string | null;
 }
