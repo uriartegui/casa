@@ -225,13 +225,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
         : exp?.status === 'ok'
           ? Colors.success + '14'
           : Colors.card;
-    const statusBorder = exp?.status === 'expired'
-      ? Colors.destructive + '40'
-      : exp?.status === 'warning'
-        ? '#F59E0B40'
-        : exp?.status === 'ok'
-          ? Colors.success + '40'
-          : Colors.border;
+    const statusBorder = Colors.border;
     const badgeBg = exp?.status === 'expired'
       ? Colors.destructive + '18'
       : exp?.status === 'warning'
