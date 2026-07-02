@@ -132,6 +132,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   const [refreshing, setRefreshing] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [alertsVisible, setAlertsVisible] = useState(false);
+  const taskListRef = React.useRef<FlatList<HouseTask>>(null);
   const highlightAnim = useTaskHighlight({ tasks, highlightTaskId });
   const { draggedTaskId, dragX, createMoveGesture } = useTaskKanbanDrag({
     onMove: (taskId, status) => updateStatus.mutate({ taskId, status }),
@@ -166,7 +167,15 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     category: initialCategory,
     userId: user?.id,
     lastSeenAt: taskActivitySeenAt,
-    onOpenTask: setSelectedTask,
+    onOpenTask: (task) => {
+      alertsSheet.close();
+      if (!initialCategory && task.category) {
+        setCategoryFilter(task.category);
+        setShowCategoryFilters(true);
+      }
+      setStatusFilter(task.done ? 'done' : 'open');
+      navigation.setParams({ highlightTaskId: task.id });
+    },
   });
 
   React.useEffect(() => {
@@ -204,7 +213,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     const trimmed = title.trim();
     if (!trimmed) return;
     try {
-      await createTask.mutateAsync({ title: trimmed, description: description.trim() || null, category: initialCategory ?? category, dueDate, assignmentType, assignedToId, recurrence, reminder });
+      const created = await createTask.mutateAsync({ title: trimmed, description: description.trim() || null, category: initialCategory ?? category, dueDate, assignmentType, assignedToId, recurrence, reminder });
       setTitle('');
       setDescription('');
       setDueDate(null);
@@ -214,6 +223,12 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
       setRecurrence('none');
       setReminder('none');
       setSheetVisible(false);
+      if (!initialCategory && created.category) {
+        setCategoryFilter(created.category);
+        setShowCategoryFilters(true);
+      }
+      setStatusFilter(created.done ? 'done' : 'open');
+      navigation.setParams({ highlightTaskId: created.id });
     } catch (error: any) {
       const message = error?.response?.data?.message;
       Alert.alert('Não foi possível criar a tarefa', Array.isArray(message) ? message[0] : message || 'Verifique sua conexão e tente novamente.');
@@ -277,6 +292,20 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     );
   }
 
+  React.useEffect(() => {
+    if (!highlightTaskId || visibleTasks.length === 0) return;
+    const index = visibleTasks.findIndex((task) => task.id === highlightTaskId);
+    if (index < 0) return;
+
+    requestAnimationFrame(() => {
+      taskListRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.35,
+      });
+    });
+  }, [highlightTaskId, visibleTasks]);
+
   function renderKanbanColumn(title: string, status: 'pending' | 'in_progress' | 'completed') {
     const items = kanbanTasks.filter((task) => (status === 'completed' ? task.done : task.status === status && !task.done));
     return <View key={status} style={styles.kanbanColumn}>
@@ -317,11 +346,25 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
   return (
     <View style={styles.container}>
       <FlatList
+        ref={taskListRef}
         data={visibleTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
         contentContainerStyle={[styles.list, visibleTasks.length === 0 && styles.listEmpty]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
+        onScrollToIndexFailed={(info) => {
+          taskListRef.current?.scrollToOffset({
+            offset: Math.max(0, info.averageItemLength * info.index),
+            animated: true,
+          });
+          setTimeout(() => {
+            taskListRef.current?.scrollToIndex({
+              index: info.index,
+              animated: true,
+              viewPosition: 0.35,
+            });
+          }, 250);
+        }}
         ListHeaderComponent={
           <View>
             {!isCategoryPage && <View style={styles.compactSummary}>

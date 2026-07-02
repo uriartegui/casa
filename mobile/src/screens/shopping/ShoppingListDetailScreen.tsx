@@ -62,6 +62,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const { data: items, isLoading, isError: itemsError, isFetching: fetchingItems, refetch } = useListItems(householdId, listId);
   useRefreshOnFocus(refetch);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const sectionListRef = useRef<SectionList<ShoppingItem>>(null);
 
   const toggleItem = useToggleListItem(householdId, listId);
   const removeItem = useRemoveListItem(householdId, listId);
@@ -176,14 +177,15 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     setAddModal(true);
   }
 
-  function addSeparateItem(name: string, qty: number) {
-    addItem.mutate({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
+  async function addSeparateItem(name: string, qty: number) {
+    const created = await addItem.mutateAsync({ name, quantity: qty, unit: addUnit, category: addCategory ?? undefined });
     setQuickName('');
     setAddModal(false);
+    navigation.setParams({ highlightItemId: created.id, highlightList: false });
   }
 
-  function mergeWithExistingItem(existingItem: ShoppingItem, qty: number) {
-    updateItem.mutate({
+  async function mergeWithExistingItem(existingItem: ShoppingItem, qty: number) {
+    const updated = await updateItem.mutateAsync({
       itemId: existingItem.id,
       quantity: mergedShoppingQuantity(existingItem, qty),
       unit: existingItem.unit ?? addUnit,
@@ -191,6 +193,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     });
     setQuickName('');
     setAddModal(false);
+    navigation.setParams({ highlightItemId: updated.id, highlightList: false });
   }
 
   function confirmAdd() {
@@ -203,7 +206,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     }
     const similarItem = findSimilarShoppingItem(items, name);
     if (!similarItem) {
-      addSeparateItem(name, qty);
+      void addSeparateItem(name, qty);
       return;
     }
 
@@ -211,8 +214,8 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
       'Item parecido encontrado',
       similarShoppingItemMessage(similarItem, qty, addUnit),
       [
-        { text: 'Adicionar separado', style: 'cancel', onPress: () => addSeparateItem(name, qty) },
-        { text: 'Juntar', onPress: () => mergeWithExistingItem(similarItem, qty) },
+        { text: 'Adicionar separado', style: 'cancel', onPress: () => { void addSeparateItem(name, qty); } },
+        { text: 'Juntar', onPress: () => { void mergeWithExistingItem(similarItem, qty); } },
       ],
     );
   }
@@ -373,6 +376,25 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     return buildShoppingListSections(pending, bought, categoryOrder);
   }, [bought, categoryOrder, pending]);
 
+  useEffect(() => {
+    if (!highlightItemId || sections.length === 0) return;
+
+    const sectionIndex = sections.findIndex((section) => section.data.some((item) => item.id === highlightItemId));
+    if (sectionIndex < 0) return;
+
+    const itemIndex = sections[sectionIndex].data.findIndex((item) => item.id === highlightItemId);
+    if (itemIndex < 0) return;
+
+    requestAnimationFrame(() => {
+      sectionListRef.current?.scrollToLocation({
+        sectionIndex,
+        itemIndex,
+        animated: true,
+        viewPosition: 0.35,
+      });
+    });
+  }, [highlightItemId, sections]);
+
   if (itemsError) {
     return (
       <LoadErrorState
@@ -418,6 +440,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <SectionList
+          ref={sectionListRef}
           sections={sections}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
@@ -435,6 +458,15 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
               )}
             </View>
           )}
+          onScrollToIndexFailed={() => {
+            setTimeout(() => {
+              const sectionIndex = sections.findIndex((section) => section.data.some((item) => item.id === highlightItemId));
+              if (sectionIndex < 0) return;
+              const itemIndex = sections[sectionIndex].data.findIndex((item) => item.id === highlightItemId);
+              if (itemIndex < 0) return;
+              sectionListRef.current?.scrollToLocation({ sectionIndex, itemIndex, animated: true, viewPosition: 0.35 });
+            }, 250);
+          }}
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         />
       )}

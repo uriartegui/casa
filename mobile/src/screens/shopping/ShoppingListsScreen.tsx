@@ -49,6 +49,7 @@ export default function ShoppingListsScreen({ navigation }: Props) {
       listUrgent: list.urgent,
       listPlace: list.place,
       listCategory: list.category,
+      highlightList: true,
     });
   }, [navigation]);
   const { alertSections, alertCount } = useShoppingAlerts({

@@ -79,8 +79,19 @@ export default function FridgeScreen({ navigation, route }: Props) {
 
   const openAlertItem = React.useCallback((item: FridgeItem) => {
     if (!effectiveId) return;
-    navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId });
-  }, [effectiveId, navigation]);
+    const targetStorageId = item.storageId ?? item.storage?.id;
+    if (!targetStorageId) {
+      navigation.navigate('FridgeItemDetail', { itemId: item.id, householdId: effectiveId });
+      return;
+    }
+    navigation.navigate('Fridge', {
+      householdId: effectiveId,
+      storageId: targetStorageId,
+      storageName: item.storage?.name ?? route.params.storageName,
+      storageEmoji: item.storage?.emoji ?? route.params.storageEmoji,
+      highlightItemId: item.id,
+    });
+  }, [effectiveId, navigation, route.params.storageEmoji, route.params.storageName]);
   const openAlertActivity = React.useCallback((event: { storageId?: string | null; storageName?: string | null; storageEmoji?: string | null }) => {
     if (!effectiveId || !event.storageId) return;
     navigation.navigate('Fridge', {
