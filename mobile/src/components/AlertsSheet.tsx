@@ -22,8 +22,14 @@ const toneColor: Record<AlertTone, string> = {
   success: Colors.success,
 };
 
-function AlertRow({ item }: { item: AlertCenterItem }) {
+function AlertRow({ item, onClose }: { item: AlertCenterItem; onClose: () => void }) {
   const color = toneColor[item.tone];
+  const handlePress = React.useCallback(() => {
+    onClose();
+    requestAnimationFrame(() => {
+      item.onPress?.();
+    });
+  }, [item, onClose]);
   const content = (
     <>
       <View style={[styles.alertIcon, { backgroundColor: `${color}16` }]}>
@@ -39,7 +45,7 @@ function AlertRow({ item }: { item: AlertCenterItem }) {
 
   if (item.onPress) {
     return (
-      <TouchableOpacity style={styles.alertRow} onPress={item.onPress} activeOpacity={0.74}>
+      <TouchableOpacity style={styles.alertRow} onPress={handlePress} activeOpacity={0.74}>
         {content}
       </TouchableOpacity>
     );
@@ -98,7 +104,7 @@ export default function AlertsSheet({
                 <View key={section.title} style={styles.section}>
                   <Text style={styles.sectionTitle}>{section.title}</Text>
                   {section.items.length > 0 ? (
-                    section.items.map((item) => <AlertRow key={item.id} item={item} />)
+                    section.items.map((item) => <AlertRow key={item.id} item={item} onClose={onClose} />)
                   ) : (
                     <View style={styles.emptyBox}>
                       <Text style={styles.emptyText}>{section.emptyText}</Text>

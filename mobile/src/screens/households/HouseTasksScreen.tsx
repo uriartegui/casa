@@ -168,7 +168,6 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     userId: user?.id,
     lastSeenAt: taskActivitySeenAt,
     onOpenTask: (task) => {
-      alertsSheet.close();
       if (!initialCategory && task.category) {
         setCategoryFilter(task.category);
         setShowCategoryFilters(true);

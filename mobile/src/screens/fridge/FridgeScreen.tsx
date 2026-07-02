@@ -263,11 +263,32 @@ export default function FridgeScreen({ navigation, route }: Props) {
         ? '#F59E0B'
         : Colors.success;
     const isHighlighted = item.id === highlightItemId;
+    const highlightColor = '#FF9800';
+    const highlightBackground = '#FFF0C2';
     const highlightFrameStyle = isHighlighted
       ? {
         borderColor: highlightAnim.interpolate({
           inputRange: [0, 1],
-          outputRange: [statusBorder, Colors.accent],
+          outputRange: [statusBorder, highlightColor],
+        }),
+        borderWidth: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [1, 2],
+        }),
+        transform: [{
+          scale: highlightAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.01],
+          }),
+        }],
+        shadowColor: highlightColor,
+        shadowOpacity: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 0.24],
+        }),
+        shadowRadius: highlightAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, 10],
         }),
       }
       : null;
@@ -275,7 +296,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
       ? {
         backgroundColor: highlightAnim.interpolate({
           inputRange: [0, 1],
-          outputRange: [statusBackground, Colors.accent + '24'],
+          outputRange: [statusBackground, highlightBackground],
         }),
       }
       : null;
