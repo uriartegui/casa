@@ -42,6 +42,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
     highlightItemId,
   } = route.params;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const listRef = React.useRef<FlatList<any>>(null);
   const highlightAnim = React.useRef(new Animated.Value(0)).current;
   const [categorizeVisible, setCategorizeVisible] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
@@ -120,16 +121,6 @@ export default function FridgeScreen({ navigation, route }: Props) {
     setManualRefreshing(false);
   }
 
-  React.useEffect(() => {
-    if (!highlightItemId || !items?.some((item) => item.id === highlightItemId)) return;
-    highlightAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
-      Animated.delay(650),
-      Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
-    ]).start();
-  }, [highlightAnim, highlightItemId, items]);
-
   const availableCategories = React.useMemo(() => {
     if (!items) return [];
     const cats = new Set(items.map((i) => i.category).filter(Boolean) as string[]);
@@ -174,6 +165,28 @@ export default function FridgeScreen({ navigation, route }: Props) {
     }
     return rows;
   }, [sections]);
+
+  React.useEffect(() => {
+    if (!highlightItemId) return;
+    const index = flatData.findIndex((row) => !('_header' in row) && row.id === highlightItemId);
+    if (index < 0) return;
+
+    requestAnimationFrame(() => {
+      listRef.current?.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.35,
+      });
+
+      highlightAnim.setValue(0);
+      Animated.sequence([
+        Animated.delay(180),
+        Animated.timing(highlightAnim, { toValue: 1, duration: 260, useNativeDriver: false }),
+        Animated.delay(650),
+        Animated.timing(highlightAnim, { toValue: 0, duration: 950, useNativeDriver: false }),
+      ]).start();
+    });
+  }, [flatData, highlightAnim, highlightItemId]);
   const categoryCount = availableCategories.length;
   const summaryText = `${filteredItems.length} ${filteredItems.length === 1 ? 'item cadastrado' : 'itens cadastrados'}${categoryCount > 0 ? ` em ${categoryCount} ${categoryCount === 1 ? 'categoria' : 'categorias'}` : ''}`;
   const uncategorizedItems = React.useMemo(
@@ -331,6 +344,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           style={{ flex: 1 }}
           data={flatData}
           keyExtractor={(item) => item.id}
@@ -360,6 +374,19 @@ export default function FridgeScreen({ navigation, route }: Props) {
               <Text style={styles.emptySubtitle}>Adicione itens tocando no botao abaixo</Text>
             </View>
           }
+          onScrollToIndexFailed={(info) => {
+            listRef.current?.scrollToOffset({
+              offset: Math.max(0, info.averageItemLength * info.index),
+              animated: true,
+            });
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({
+                index: info.index,
+                animated: true,
+                viewPosition: 0.35,
+              });
+            }, 250);
+          }}
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         />
       )}
