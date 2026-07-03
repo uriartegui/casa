@@ -445,6 +445,10 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
           renderSectionHeader={({ section }) => (
             <View style={styles.sectionHeader}>
               <View style={[styles.sectionDot, !section.isPending && { backgroundColor: Colors.success }]} />

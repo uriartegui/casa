@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   Animated, View, Text, FlatList, ScrollView, TouchableOpacity,
   StyleSheet, RefreshControl, Modal, ActivityIndicator, Alert,
+  Platform,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -341,6 +342,13 @@ export default function FridgeScreen({ navigation, route }: Props) {
     );
   }
 
+  const renderFlatItem = React.useCallback(({ item }: { item: FlatRow }) => {
+    if ('_header' in item && item._header) {
+      return <Text style={styles.sectionGroupHeader}>{item.category}</Text>;
+    }
+    return renderItem({ item: item as FridgeItem });
+  }, [highlightAnim, highlightItemId, navigation, effectiveId, shoppingLists, loadingShoppingLists, removeItem.mutateAsync, queryClient, showToast]);
+
   return (
     <View style={styles.container}>
       {availableCategories.length > 0 && (
@@ -380,13 +388,12 @@ export default function FridgeScreen({ navigation, route }: Props) {
           style={{ flex: 1 }}
           data={flatData}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
-            if ('_header' in item && item._header) {
-              return <Text style={styles.sectionGroupHeader}>{item.category}</Text>;
-            }
-            return renderItem({ item: item as FridgeItem });
-          }}
+          renderItem={renderFlatItem}
           contentContainerStyle={styles.list}
+          initialNumToRender={14}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <Text style={styles.sectionLabel}>{summaryText}</Text>
@@ -455,6 +462,10 @@ export default function FridgeScreen({ navigation, route }: Props) {
                 data={uncategorizedItems}
                 keyExtractor={(item) => item.id}
                 showsVerticalScrollIndicator={false}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={5}
+                removeClippedSubviews={Platform.OS === 'android'}
                 renderItem={({ item }) => (
                   <View style={styles.categorizeItem}>
                     <View style={styles.categorizeItemHeader}>

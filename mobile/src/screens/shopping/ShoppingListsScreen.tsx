@@ -259,6 +259,10 @@ export default function ShoppingListsScreen({ navigation }: Props) {
           keyExtractor={(item) => item.id}
           renderItem={renderCard}
           contentContainerStyle={[styles.list, lists.length === 0 && styles.listEmpty]}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS === 'android'}
           refreshControl={<RefreshControl refreshing={manualRefreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

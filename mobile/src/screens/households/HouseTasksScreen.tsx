@@ -350,6 +350,10 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
         contentContainerStyle={[styles.list, visibleTasks.length === 0 && styles.listEmpty]}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
+        removeClippedSubviews={Platform.OS === 'android'}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.accent} />}
         onScrollToIndexFailed={(info) => {
           taskListRef.current?.scrollToOffset({
