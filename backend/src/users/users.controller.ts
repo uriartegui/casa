@@ -9,19 +9,12 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import type { Request as ExpressRequest } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../common/authenticated-request';
 import { UsersService } from './users.service';
 import { RemovePushTokenDto, UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-
-type AuthenticatedRequest = ExpressRequest & {
-  user: {
-    id: string;
-    email: string;
-  };
-};
 
 @ApiTags('users')
 @ApiBearerAuth()

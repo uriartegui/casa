@@ -12,11 +12,11 @@ import {
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import type { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { HouseholdsService } from './households.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { AuthenticatedRequest } from '../common/authenticated-request';
 import { CreateHouseholdDto } from './dto/create-household.dto';
 import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
 
@@ -30,13 +30,6 @@ import { AddListItemDto } from './dto/add-list-item.dto';
 import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 import { CreateTaskCategoryDto } from './dto/create-task-category.dto';
 import { CreateTestAlertsDto } from './dto/create-test-alerts.dto';
-
-type AuthenticatedRequest = ExpressRequest & {
-  user: {
-    id: string;
-    email: string;
-  };
-};
 
 @ApiTags('households')
 @ApiBearerAuth()
