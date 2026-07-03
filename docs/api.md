@@ -169,7 +169,7 @@ SWAGGER_PASSWORD=uma_senha_forte
 ```
 
 Com isso, qualquer acesso ao `/docs` e ao `/docs-json` exige usuario e senha
-via Basic Auth. Depois de abrir o Swagger, use o botao `Authorize` com:
+via Basic Auth. Depois de abrir o Swagger, use o botão `Authorize` com:
 
 ```txt
 Bearer <accessToken>

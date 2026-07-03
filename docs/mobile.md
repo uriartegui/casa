@@ -4,7 +4,7 @@ App Expo React Native do Colmeia.
 
 ## Responsabilidades
 
-- Login, cadastro e sessao do usuario.
+- Login, cadastro e sessão do usuário.
 - Home com resumo da casa e alertas gerais.
 - Estoques por compartimento.
 - Listas de compras.
@@ -76,23 +76,27 @@ npm run quality
 
 Esse comando roda typecheck, lint e testes configurados no app.
 
-## Padrao visual e navegacao
+## Padrão visual e navegação
 
-Ordem padrao do cabecalho, da direita para esquerda:
+Detalhes completos do padrão atual ficam em:
+
+- [Padrões Mobile](padroes-mobile.md)
+
+Ordem padrão do cabeçalho, da direita para esquerda:
 
 ```txt
 Menu, Ajuda, Buscar, Alertas
 ```
 
-Visualmente, da esquerda para direita no grupo de acoes:
+Visualmente, da esquerda para direita no grupo de ações:
 
 ```txt
 Alertas, Buscar, Ajuda, Menu
 ```
 
-Paginas sem alerta nao exibem o sino.
+Páginas sem alerta não exibem o sino.
 
-## Direcao de refatoracao
+## Direção de refatoração
 
 Para telas grandes, prefira quebrar por responsabilidade:
 
@@ -104,7 +108,7 @@ screens/home/
   types.ts
 ```
 
-Quando uma area crescer muito, mova para `features/` em uma refatoracao
+Quando uma área crescer muito, mova para `features/` em uma refatoração
 separada:
 
 ```txt
@@ -116,7 +120,7 @@ features/
   alerts/
 ```
 
-Evite misturar redesign, refatoracao e mudanca de regra de negocio no mesmo PR.
+Evite misturar redesign, refatoração e mudança de regra de negócio no mesmo PR.
 
 ## Builds
 
@@ -125,7 +129,7 @@ Android:
 - gerar build via EAS;
 - enviar `.aab` para Google Play Console;
 - revisar em `Publishing overview`;
-- enviar para analise.
+- enviar para análise.
 
 iOS:
 
@@ -134,7 +138,7 @@ npx eas submit --platform ios --path "CAMINHO_DO_IPA"
 ```
 
 Depois aguarde processamento no App Store Connect, selecione o build e envie
-para revisao.
+para revisão.
 
 ## Firebase Android
 
@@ -144,9 +148,9 @@ O build Android usa:
 mobile/google-services.json
 ```
 
-Esse arquivo e referenciado em `mobile/app.json` por `googleServicesFile`.
+Esse arquivo é referenciado em `mobile/app.json` por `googleServicesFile`.
 Antes de remover ou trocar esse fluxo, valide um build Android.
 
-Detalhes e checklist de restricao da API key:
+Detalhes e checklist de restrição da API key:
 
 - [Firebase Android](firebase-android.md)

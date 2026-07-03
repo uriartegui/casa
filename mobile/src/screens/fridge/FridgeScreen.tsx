@@ -410,7 +410,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>Vazio</Text>
-              <Text style={styles.emptySubtitle}>Adicione itens tocando no botao abaixo</Text>
+              <Text style={styles.emptySubtitle}>Adicione itens tocando no botão abaixo</Text>
             </View>
           }
           onScrollToIndexFailed={(info) => {

@@ -13,14 +13,6 @@ type PushTokenResult =
   | { ok: true; token: string }
   | { ok: false; reason: 'not-device' | 'permission-denied' | 'token-error' | 'api-error'; detail?: string };
 
-function logPush(message: string, detail?: unknown) {
-  if (!__DEV__) return;
-  // eslint-disable-next-line no-console
-  if (detail === undefined) console.log(message);
-  // eslint-disable-next-line no-console
-  else console.log(message, detail);
-}
-
 function warnPush(message: string, detail?: unknown) {
   if (!__DEV__) return;
   if (detail === undefined) console.warn(message);
@@ -74,13 +66,11 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  logPush('[Push] Permissão atual:', existingStatus);
 
   let finalStatus = existingStatus;
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
-    logPush('[Push] Permissão após request:', finalStatus);
   }
 
   if (finalStatus !== 'granted') {
@@ -91,7 +81,6 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   let tokenData: Awaited<ReturnType<typeof Notifications.getExpoPushTokenAsync>>;
   try {
     tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
-    logPush('[Push] Token obtido');
   } catch (err: any) {
     errorPush('[Push] Erro ao obter token:', err?.message ?? err);
     return { ok: false, reason: 'token-error', detail: err?.message };
@@ -102,7 +91,6 @@ export async function registerPushToken(): Promise<PushTokenResult> {
       pushToken: tokenData.data,
       ...(await getPushDevicePayload()),
     });
-    logPush('[Push] Token salvo no backend com sucesso');
     return { ok: true, token: tokenData.data };
   } catch (err: any) {
     errorPush('[Push] Erro ao salvar token no backend:', err?.message ?? err);
@@ -118,11 +106,9 @@ export async function unregisterPushToken(): Promise<void> {
     await api.delete('/users/me/push-token', {
       data: { pushToken: tokenData.data, ...devicePayload },
     });
-    logPush('[Push] Token removido do backend com sucesso');
   } catch (err: any) {
     try {
       await api.delete('/users/me/push-token', { data: devicePayload });
-      logPush('[Push] Device removido do backend com sucesso');
     } catch (fallbackErr: any) {
       warnPush('[Push] Não foi possível remover token do backend:', fallbackErr?.message ?? err?.message ?? err);
     }

@@ -6,7 +6,7 @@ Colmeia e um app para organizar uma casa compartilhada. Ele conecta estoque, lis
 
 Ele serve tanto para familias e casais quanto para pessoas que moram sozinhas e querem centralizar a rotina da casa.
 
-## Como a navegacao funciona
+## Como a navegação funciona
 
 O app parte da Home e usa um menu principal para acessar as areas:
 
@@ -105,7 +105,7 @@ As listas sao compartilhadas entre os membros da casa e podem representar uma co
 - Categoria/objetivo opcional.
 - Marcacao de lista urgente.
 
-Uma lista urgente fica destacada na Home e na visao geral das listas. A urgencia pode ser criada ou alterada na edicao; ela nao e um botao de acao solto.
+Uma lista urgente fica destacada na Home e na visão geral das listas. A urgência pode ser criada ou alterada na edição; ela não é um botão de ação solto.
 
 ### Dentro de uma lista
 
