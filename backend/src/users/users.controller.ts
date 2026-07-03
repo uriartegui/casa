@@ -9,11 +9,19 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 import { RemovePushTokenDto, UpdatePushTokenDto } from './dto/update-push-token.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    id: string;
+    email: string;
+  };
+};
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -23,30 +31,30 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get('me')
-  async getMe(@Request() req: any) {
+  async getMe(@Request() req: AuthenticatedRequest) {
     return this.usersService.findById(req.user.id);
   }
 
   @Patch('me')
-  async updateProfile(@Request() req: any, @Body() dto: UpdateProfileDto) {
+  async updateProfile(@Request() req: AuthenticatedRequest, @Body() dto: UpdateProfileDto) {
     return this.usersService.updateProfile(req.user.id, dto);
   }
 
   @Patch('me/push-token')
-  async updatePushToken(@Request() req: any, @Body() dto: UpdatePushTokenDto) {
+  async updatePushToken(@Request() req: AuthenticatedRequest, @Body() dto: UpdatePushTokenDto) {
     await this.usersService.updatePushToken(req.user.id, dto);
     return { ok: true };
   }
 
   @Delete('me/push-token')
-  async removePushToken(@Request() req: any, @Body() dto: RemovePushTokenDto) {
+  async removePushToken(@Request() req: AuthenticatedRequest, @Body() dto: RemovePushTokenDto) {
     await this.usersService.removePushToken(req.user.id, dto);
     return { ok: true };
   }
 
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAccount(@Request() req: any) {
+  async deleteAccount(@Request() req: AuthenticatedRequest) {
     await this.usersService.deleteAccount(req.user.id);
   }
 }

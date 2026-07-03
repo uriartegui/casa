@@ -37,8 +37,8 @@ export class ExpirationService {
 
     const candidates = await this.fridgeRepo.find({
       where: {
-        expirationDate: LessThanOrEqual(in7Days) as any,
-        quantity: MoreThanOrEqual(0) as any,
+        expirationDate: LessThanOrEqual(in7Days),
+        quantity: MoreThanOrEqual(0),
       },
       take: 500,
     });

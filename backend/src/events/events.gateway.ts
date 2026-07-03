@@ -7,18 +7,35 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import type { IncomingMessage } from 'node:http';
 import { Server, WebSocket } from 'ws';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HouseholdMember } from '../households/household-member.entity';
 
+type AuthenticatedWebSocket = WebSocket & {
+  _req?: IncomingMessage;
+  _socket?: {
+    _httpMessage?: IncomingMessage;
+  };
+  data?: {
+    userId: string;
+  };
+  _rooms?: Set<string>;
+};
+
+type JwtPayload = {
+  sub: string;
+  email: string;
+};
+
 @WebSocketGateway({ path: '/ws' })
 export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  private rooms = new Map<string, Set<WebSocket>>();
+  private rooms = new Map<string, Set<AuthenticatedWebSocket>>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -26,20 +43,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly memberRepo: Repository<HouseholdMember>,
   ) {}
 
-  handleConnection(
-    client: WebSocket & { _rooms?: Set<string>; _request?: any; data?: any },
-    requestFromAdapter?: { url?: string; headers?: Record<string, string | string[] | undefined> },
-  ) {
-    // A requisição de upgrade fica em client._socket?.server mas com ws puro
-    // precisamos acessar via o request passado pelo adaptador.
-    // No NestJS com adaptador ws, o request HTTP fica em (client as any)._socket._httpMessage
-    // ou via handshake. Usamos a URL da conexão para extrair o token via query param.
-    const request: any = requestFromAdapter ?? (client as any)._req ?? (client as any)._socket?._httpMessage;
-    const rawUrl: string = request?.url ?? '';
+  handleConnection(client: AuthenticatedWebSocket, requestFromAdapter?: IncomingMessage) {
+    const request = requestFromAdapter ?? client._req ?? client._socket?._httpMessage;
+    const rawUrl = request?.url ?? '';
     const urlParams = new URLSearchParams(rawUrl.split('?')[1] ?? '');
-    const token =
-      urlParams.get('token') ??
-      (request?.headers?.authorization as string | undefined)?.replace('Bearer ', '');
+    const authorization = request?.headers?.authorization;
+    const bearerToken = Array.isArray(authorization) ? authorization[0] : authorization;
+    const token = urlParams.get('token') ?? bearerToken?.replace('Bearer ', '');
 
     if (!token) {
       client.send(JSON.stringify({ event: 'error', data: { message: 'Token não fornecido' } }));
@@ -50,19 +60,18 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const payload = this.jwtService.verify(token, {
         secret: process.env.JWT_SECRET,
-      }) as { sub: string; email: string };
+      }) as JwtPayload;
 
-      // Armazena userId e rooms no cliente
-      (client as any).data = { userId: payload.sub };
-      (client as any)._rooms = new Set<string>();
+      client.data = { userId: payload.sub };
+      client._rooms = new Set<string>();
     } catch {
       client.send(JSON.stringify({ event: 'error', data: { message: 'Token inválido' } }));
       client.close();
     }
   }
 
-  handleDisconnect(client: WebSocket) {
-    const clientRooms: Set<string> = (client as any)._rooms ?? new Set();
+  handleDisconnect(client: AuthenticatedWebSocket) {
+    const clientRooms = client._rooms ?? new Set<string>();
     clientRooms.forEach((room) => {
       this.rooms.get(room)?.delete(client);
     });
@@ -71,9 +80,9 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('join')
   async handleJoin(
     @MessageBody() householdId: string,
-    @ConnectedSocket() client: WebSocket,
+    @ConnectedSocket() client: AuthenticatedWebSocket,
   ) {
-    const userId: string | undefined = (client as any).data?.userId;
+    const userId = client.data?.userId;
 
     if (!userId) {
       return;
@@ -92,13 +101,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (!this.rooms.has(householdId)) this.rooms.set(householdId, new Set());
     this.rooms.get(householdId)!.add(client);
-    (client as any)._rooms.add(householdId);
+    client._rooms?.add(householdId);
   }
 
   @SubscribeMessage('leave')
-  handleLeave(@MessageBody() householdId: string, @ConnectedSocket() client: WebSocket) {
+  handleLeave(@MessageBody() householdId: string, @ConnectedSocket() client: AuthenticatedWebSocket) {
     this.rooms.get(householdId)?.delete(client);
-    (client as any)._rooms?.delete(householdId);
+    client._rooms?.delete(householdId);
   }
 
   emitHouseholdUpdate(householdId: string) {

@@ -86,13 +86,12 @@ export class AttentionService {
     today.setUTCHours(0, 0, 0, 0);
     const in3Days = new Date(today);
     in3Days.setUTCDate(in3Days.getUTCDate() + 3);
-    const in3DaysKey = in3Days.toISOString().slice(0, 10);
 
     const [expiringCount, urgentListCount, boughtWaitingCount] = await Promise.all([
       this.fridgeRepo.count({
         where: {
           householdId,
-          expirationDate: LessThanOrEqual(in3DaysKey) as any,
+          expirationDate: LessThanOrEqual(in3Days),
         },
       }),
       this.shoppingListsRepo.count({
