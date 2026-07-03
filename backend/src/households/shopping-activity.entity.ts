@@ -22,19 +22,19 @@ export class ShoppingActivity {
   @Column()
   itemName: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   listName: string | null;
 
   @Column({ type: 'decimal', nullable: true })
   quantity: number | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   unit: string | null;
 
   @Column()
   userId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   userName: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })

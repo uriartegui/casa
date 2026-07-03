@@ -27,7 +27,7 @@ export class FridgeItem {
   @Column({ type: 'decimal', default: 1 })
   quantity: number;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   unit: string;
 
   @Column({ type: 'varchar', nullable: true })
