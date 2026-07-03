@@ -12,6 +12,7 @@ import {
   Request,
   ParseUUIDPipe,
 } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { HouseholdsService } from './households.service';
@@ -30,6 +31,13 @@ import { CreateHouseTaskDto } from './dto/create-house-task.dto';
 import { CreateTaskCategoryDto } from './dto/create-task-category.dto';
 import { CreateTestAlertsDto } from './dto/create-test-alerts.dto';
 
+type AuthenticatedRequest = ExpressRequest & {
+  user: {
+    id: string;
+    email: string;
+  };
+};
+
 @ApiTags('households')
 @ApiBearerAuth()
 @Controller('households')
@@ -39,25 +47,25 @@ export class HouseholdsController {
 
   @Post()
   @ApiOperation({ summary: 'Criar uma casa' })
-  create(@Body() dto: CreateHouseholdDto, @Request() req) {
+  create(@Body() dto: CreateHouseholdDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.create(dto.name, req.user.id);
   }
 
   @Get()
   @ApiOperation({ summary: 'Listar minhas casas' })
-  findMine(@Request() req) {
+  findMine(@Request() req: AuthenticatedRequest) {
     return this.householdsService.findUserHouseholds(req.user.id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Excluir casa (admin only)' })
-  deleteHousehold(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  deleteHousehold(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.deleteHousehold(id, req.user.id);
   }
 
   @Delete(':id/members/me')
   @ApiOperation({ summary: 'Sair da casa' })
-  leaveHousehold(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  leaveHousehold(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.leaveHousehold(id, req.user.id);
   }
 
@@ -66,7 +74,7 @@ export class HouseholdsController {
   removeMember(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('memberId', ParseUUIDPipe) memberId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.removeMember(id, memberId, req.user.id);
   }
@@ -76,14 +84,14 @@ export class HouseholdsController {
   promoteToAdmin(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('memberId', ParseUUIDPipe) memberId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.promoteToAdmin(id, memberId, req.user.id);
   }
 
   @Get(':id/invite')
   @ApiOperation({ summary: 'Gerar código de convite' })
-  async getInvite(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  async getInvite(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     const inviteCode = await this.householdsService.getInviteCode(id, req.user.id);
     return { inviteCode };
   }
@@ -91,7 +99,7 @@ export class HouseholdsController {
   @Post('join/:code')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Entrar em uma casa por convite' })
-  join(@Param('code') code: string, @Request() req) {
+  join(@Param('code') code: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.joinByCode(code, req.user.id);
   }
 
@@ -102,7 +110,7 @@ export class HouseholdsController {
   getStorages(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('includeHidden') includeHidden: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.getStorages(id, req.user.id, includeHidden === 'true');
   }
@@ -112,7 +120,7 @@ export class HouseholdsController {
   createStorage(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateStorageDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.createStorage(id, req.user.id, dto);
   }
@@ -123,7 +131,7 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('storageId', ParseUUIDPipe) storageId: string,
     @Body() dto: UpdateStorageDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.updateStorage(id, storageId, req.user.id, dto);
   }
@@ -133,7 +141,7 @@ export class HouseholdsController {
   deleteStorage(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('storageId', ParseUUIDPipe) storageId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.deleteStorage(id, storageId, req.user.id);
   }
@@ -145,7 +153,7 @@ export class HouseholdsController {
   getCategories(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('storageId', ParseUUIDPipe) storageId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.getCategories(id, storageId, req.user.id);
   }
@@ -156,7 +164,7 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('storageId', ParseUUIDPipe) storageId: string,
     @Body() dto: CreateCategoryDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.createCategory(id, storageId, req.user.id, dto);
   }
@@ -166,7 +174,7 @@ export class HouseholdsController {
   deleteCategory(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('categoryId', ParseUUIDPipe) categoryId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.deleteCategory(id, categoryId, req.user.id);
   }
@@ -175,7 +183,7 @@ export class HouseholdsController {
 
   @Get(':id/fridge/categories')
   @ApiOperation({ summary: 'Categorias de itens do estoque' })
-  getFridgeCategories(@Param('id', ParseUUIDPipe) id: string, @Query('storageId') storageId: string | undefined, @Request() req) {
+  getFridgeCategories(@Param('id', ParseUUIDPipe) id: string, @Query('storageId') storageId: string | undefined, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getFridgeCategories(id, req.user.id, storageId);
   }
 
@@ -184,7 +192,7 @@ export class HouseholdsController {
   getFridge(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('storageId') storageId: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.getFridgeItems(id, req.user.id, storageId);
   }
@@ -194,7 +202,7 @@ export class HouseholdsController {
   getFridgeItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.getFridgeItem(id, itemId, req.user.id);
   }
@@ -204,7 +212,7 @@ export class HouseholdsController {
   addItem(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddFridgeItemDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.addFridgeItem(id, req.user.id, dto);
   }
@@ -215,7 +223,7 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Body() dto: UpdateFridgeItemDto,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.updateFridgeItem(id, itemId, req.user.id, dto);
   }
@@ -226,14 +234,14 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('itemId', ParseUUIDPipe) itemId: string,
     @Query('toList') toList: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.removeFridgeItem(id, itemId, req.user.id, toList);
   }
 
   @Get(':id/fridge-activity')
   @ApiOperation({ summary: 'Historico de atividade do estoque' })
-  getFridgeActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getFridgeActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getFridgeActivity(id, req.user.id);
   }
 
@@ -241,19 +249,19 @@ export class HouseholdsController {
 
   @Get(':id/shopping-activity')
   @ApiOperation({ summary: 'Atividade de compras da casa' })
-  getShoppingActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getShoppingActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getShoppingActivity(id, req.user.id);
   }
 
   @Get(':id/replenishment-suggestions')
   @ApiOperation({ summary: 'Sugestoes de reposicao da casa' })
-  getReplenishmentSuggestions(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getReplenishmentSuggestions(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getReplenishmentSuggestions(id, req.user.id);
   }
 
   @Get(':id/attention')
   @ApiOperation({ summary: 'Resumo de atencao da casa' })
-  getHouseholdAttention(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getHouseholdAttention(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getHouseholdAttention(id, req.user.id);
   }
 
@@ -263,7 +271,7 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateTestAlertsDto,
     @Headers('x-test-alert-token') token: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.createTestAlerts(id, req.user.id, dto, token);
   }
@@ -273,7 +281,7 @@ export class HouseholdsController {
   searchHousehold(
     @Param('id', ParseUUIDPipe) id: string,
     @Query('q') query: string | undefined,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.searchHousehold(id, req.user.id, query ?? '');
   }
@@ -281,29 +289,29 @@ export class HouseholdsController {
   // House Tasks
 
   @Get(':id/task-categories')
-  getTaskCategories(@Param('id', ParseUUIDPipe) id: string, @Request() req) { return this.householdsService.getTaskCategories(id, req.user.id); }
+  getTaskCategories(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) { return this.householdsService.getTaskCategories(id, req.user.id); }
 
   @Post(':id/task-categories')
-  createTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateTaskCategoryDto, @Request() req) { return this.householdsService.createTaskCategory(id, req.user.id, dto.name); }
+  createTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateTaskCategoryDto, @Request() req: AuthenticatedRequest) { return this.householdsService.createTaskCategory(id, req.user.id, dto.name); }
 
   @Delete(':id/task-categories/:categoryId')
-  deleteTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Param('categoryId', ParseUUIDPipe) categoryId: string, @Request() req) { return this.householdsService.deleteTaskCategory(id, categoryId, req.user.id); }
+  deleteTaskCategory(@Param('id', ParseUUIDPipe) id: string, @Param('categoryId', ParseUUIDPipe) categoryId: string, @Request() req: AuthenticatedRequest) { return this.householdsService.deleteTaskCategory(id, categoryId, req.user.id); }
 
   @Get(':id/tasks')
   @ApiOperation({ summary: 'Listar tarefas da casa' })
-  getHouseTasks(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getHouseTasks(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getHouseTasks(id, req.user.id);
   }
 
   @Get(':id/task-activity')
   @ApiOperation({ summary: 'Historico das tarefas da casa' })
-  getHouseTaskActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getHouseTaskActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getHouseTaskActivity(id, req.user.id);
   }
 
   @Post(':id/tasks')
   @ApiOperation({ summary: 'Criar tarefa da casa' })
-  createHouseTask(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateHouseTaskDto, @Request() req) {
+  createHouseTask(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateHouseTaskDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.createHouseTask(id, req.user.id, dto);
   }
 
@@ -313,7 +321,7 @@ export class HouseholdsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
     @Body() dto: CreateHouseTaskDto & { done?: boolean; status?: 'pending' | 'in_progress' | 'completed' | 'skipped' },
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.updateHouseTask(id, taskId, req.user.id, dto);
   }
@@ -323,32 +331,32 @@ export class HouseholdsController {
   deleteHouseTask(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('taskId', ParseUUIDPipe) taskId: string,
-    @Request() req,
+    @Request() req: AuthenticatedRequest,
   ) {
     return this.householdsService.deleteHouseTask(id, taskId, req.user.id);
   }
 
   @Get(':id/shopping-lists')
   @ApiOperation({ summary: 'Listar listas de compras' })
-  getShoppingLists(@Param('id', ParseUUIDPipe) id: string, @Request() req) {
+  getShoppingLists(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getShoppingLists(id, req.user.id);
   }
 
   @Post(':id/shopping-lists')
   @ApiOperation({ summary: 'Criar lista de compras' })
-  createShoppingList(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateShoppingListDto, @Request() req) {
+  createShoppingList(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CreateShoppingListDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.createShoppingList(id, req.user.id, dto);
   }
 
   @Patch(':id/shopping-lists/:listId')
   @ApiOperation({ summary: 'Editar lista de compras' })
-  updateShoppingList(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: CreateShoppingListDto, @Request() req) {
+  updateShoppingList(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: CreateShoppingListDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.updateShoppingList(id, listId, req.user.id, dto);
   }
 
   @Delete(':id/shopping-lists/:listId')
   @ApiOperation({ summary: 'Excluir lista de compras' })
-  deleteShoppingList(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req) {
+  deleteShoppingList(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.deleteShoppingList(id, listId, req.user.id);
   }
 
@@ -356,31 +364,31 @@ export class HouseholdsController {
 
   @Get(':id/shopping-lists/:listId/items')
   @ApiOperation({ summary: 'Listar itens da lista' })
-  getListItems(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req) {
+  getListItems(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getListItems(id, listId, req.user.id);
   }
 
   @Post(':id/shopping-lists/:listId/items')
   @ApiOperation({ summary: 'Adicionar item à lista' })
-  addListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: AddListItemDto, @Request() req) {
+  addListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Body() dto: AddListItemDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.addListItem(id, listId, req.user.id, dto);
   }
 
   @Patch(':id/shopping-lists/:listId/items/:itemId')
   @ApiOperation({ summary: 'Marcar/desmarcar item' })
-  toggleListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Body() dto: ToggleShoppingItemDto, @Request() req) {
+  toggleListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Body() dto: ToggleShoppingItemDto, @Request() req: AuthenticatedRequest) {
     return this.householdsService.toggleListItem(id, listId, itemId, req.user.id, dto);
   }
 
   @Delete(':id/shopping-lists/:listId/items/checked')
   @ApiOperation({ summary: 'Limpar itens comprados da lista' })
-  clearCheckedListItems(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req) {
+  clearCheckedListItems(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.clearCheckedListItems(id, listId, req.user.id);
   }
 
   @Delete(':id/shopping-lists/:listId/items/:itemId')
   @ApiOperation({ summary: 'Remover item da lista' })
-  removeListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Request() req, @Query('reason') reason?: string) {
+  removeListItem(@Param('id', ParseUUIDPipe) id: string, @Param('listId', ParseUUIDPipe) listId: string, @Param('itemId', ParseUUIDPipe) itemId: string, @Request() req: AuthenticatedRequest, @Query('reason') reason?: string) {
     return this.householdsService.removeListItem(id, listId, itemId, req.user.id, reason === 'sent_to_fridge' ? 'sent_to_fridge' : 'removed');
   }
 
