@@ -6,6 +6,7 @@ import socket from '../services/socket';
 import { queryClient } from '../services/queryClient';
 import { User, AuthResponse } from '../types';
 import { registerPushToken, unregisterPushToken } from '../utils/pushToken';
+import { devWarn } from '../utils/devLogger';
 
 const TOKEN_KEY = ACCESS_TOKEN_KEY;
 const USER_KEY = '@colmeia:user';
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await api.post<AuthResponse>('/auth/login', { phone, password });
     await persistSession(response.data);
     registerPushToken().then((result) => {
-      if (__DEV__ && !result.ok) console.warn('[Auth] Push token n√£o registrado:', result.reason, result.detail ?? '');
+      if (!result.ok) devWarn('[Auth] Push token n„o registrado:', result.reason, result.detail ?? '');
     });
   }
 
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const response = await api.post<AuthResponse>('/auth/register', { name, password, phone });
     await persistSession(response.data);
     registerPushToken().then((result) => {
-      if (__DEV__ && !result.ok) console.warn('[Auth] Push token n√£o registrado:', result.reason, result.detail ?? '');
+      if (!result.ok) devWarn('[Auth] Push token n„o registrado:', result.reason, result.detail ?? '');
     });
   }
 

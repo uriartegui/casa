@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../services/api';
+import { devError, devWarn } from './devLogger';
 
 const PROJECT_ID = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 const NOTIFICATION_SOUND = 'colmeia_chime.wav';
@@ -12,18 +13,6 @@ const DEVICE_ID_KEY = '@colmeia:push-device-id';
 type PushTokenResult =
   | { ok: true; token: string }
   | { ok: false; reason: 'not-device' | 'permission-denied' | 'token-error' | 'api-error'; detail?: string };
-
-function warnPush(message: string, detail?: unknown) {
-  if (!__DEV__) return;
-  if (detail === undefined) console.warn(message);
-  else console.warn(message, detail);
-}
-
-function errorPush(message: string, detail?: unknown) {
-  if (!__DEV__) return;
-  if (detail === undefined) console.error(message);
-  else console.error(message, detail);
-}
 
 function createLocalDeviceId() {
   const random = Math.random().toString(36).slice(2);
@@ -52,7 +41,7 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   if (!PROJECT_ID) {
-    errorPush('[Push] Project ID do EAS n√£o encontrado.');
+    devError('[Push] Project ID do EAS n„o encontrado.');
     return { ok: false, reason: 'token-error', detail: 'missing-project-id' };
   }
 
@@ -74,7 +63,7 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   }
 
   if (finalStatus !== 'granted') {
-    warnPush('[Push] Permiss√£o negada');
+    devWarn('[Push] Permiss„o negada');
     return { ok: false, reason: 'permission-denied' };
   }
 
@@ -82,7 +71,7 @@ export async function registerPushToken(): Promise<PushTokenResult> {
   try {
     tokenData = await Notifications.getExpoPushTokenAsync({ projectId: PROJECT_ID });
   } catch (err: any) {
-    errorPush('[Push] Erro ao obter token:', err?.message ?? err);
+    devError('[Push] Erro ao obter token:', err?.message ?? err);
     return { ok: false, reason: 'token-error', detail: err?.message };
   }
 
@@ -93,7 +82,7 @@ export async function registerPushToken(): Promise<PushTokenResult> {
     });
     return { ok: true, token: tokenData.data };
   } catch (err: any) {
-    errorPush('[Push] Erro ao salvar token no backend:', err?.message ?? err);
+    devError('[Push] Erro ao salvar token no backend:', err?.message ?? err);
     return { ok: false, reason: 'api-error', detail: err?.message };
   }
 }
@@ -110,7 +99,7 @@ export async function unregisterPushToken(): Promise<void> {
     try {
       await api.delete('/users/me/push-token', { data: devicePayload });
     } catch (fallbackErr: any) {
-      warnPush('[Push] N√£o foi poss√≠vel remover token do backend:', fallbackErr?.message ?? err?.message ?? err);
+      devWarn('[Push] N„o foi possÌvel remover token do backend:', fallbackErr?.message ?? err?.message ?? err);
     }
   }
 }
