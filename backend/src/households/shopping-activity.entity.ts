@@ -23,19 +23,19 @@ export class ShoppingActivity {
   itemName: string;
 
   @Column({ nullable: true })
-  listName: string;
+  listName: string | null;
 
   @Column({ type: 'decimal', nullable: true })
-  quantity: number;
+  quantity: number | null;
 
   @Column({ nullable: true })
-  unit: string;
+  unit: string | null;
 
   @Column()
   userId: string;
 
   @Column({ nullable: true })
-  userName: string;
+  userName: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

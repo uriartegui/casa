@@ -24,6 +24,7 @@ import { Storage } from './storage.entity';
 import { HouseholdCategory } from './household-category.entity';
 import { CreateStorageDto } from './dto/create-storage.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
+import { AddFridgeItemDto } from './dto/add-fridge-item.dto';
 import { UpdateStorageDto } from './dto/update-storage.dto';
 import { UpdateFridgeItemDto } from './dto/update-fridge-item.dto';
 import { CreateShoppingListDto } from './dto/create-shopping-list.dto';
@@ -312,7 +313,7 @@ export class HouseholdsService {
   async addFridgeItem(
     householdId: string,
     userId: string,
-    data: Partial<FridgeItem>,
+    data: AddFridgeItemDto,
   ): Promise<FridgeItem> {
     await this.assertMember(householdId, userId);
     const item = this.fridgeRepo.create({
@@ -331,23 +332,25 @@ export class HouseholdsService {
       ? await this.storageRepo.findOne({ where: { id: saved.storageId, householdId } })
       : null;
 
-    await this.fridgeActivityRepo.save({
-      householdId,
-      action: 'added',
-      itemName: saved.name,
-      quantity: saved.quantity,
-      unit: saved.unit,
-      userId,
-      userName,
-      storageId: saved.storageId ?? null,
-      storageName: storage?.name ?? null,
-      storageEmoji: storage?.emoji ?? null,
-      fromShoppingListName: (data as any).fromShoppingListName ?? null,
-    } as any);
+    await this.fridgeActivityRepo.save(
+      this.fridgeActivityRepo.create({
+        householdId,
+        action: 'added',
+        itemName: saved.name,
+        quantity: saved.quantity,
+        unit: saved.unit,
+        userId,
+        userName,
+        storageId: saved.storageId ?? null,
+        storageName: storage?.name ?? null,
+        storageEmoji: storage?.emoji ?? null,
+        fromShoppingListName: data.fromShoppingListName ?? null,
+      }),
+    );
 
     this.eventsGateway.emitHouseholdUpdate(householdId);
 
-    if ((data as any).fromShoppingListName) {
+    if (data.fromShoppingListName) {
       const storageName = storage?.name ?? 'estoque';
       this.notificationsService
         .notifyHouseholdMembers(
@@ -363,7 +366,7 @@ export class HouseholdsService {
               itemName: saved.name,
               storageId: saved.storageId,
               storageName,
-              listName: (data as any).fromShoppingListName,
+              listName: data.fromShoppingListName,
             },
           },
         )
@@ -407,19 +410,21 @@ export class HouseholdsService {
         ? await this.storageRepo.findOne({ where: { id: saved.storageId, householdId } })
         : null;
       try {
-        await this.fridgeActivityRepo.save({
-          householdId,
-          action: 'updated',
-          itemName: activityItemName,
-          quantity: saved.quantity ?? item.quantity,
-          unit: saved.unit ?? item.unit,
-          userId,
-          userName,
-          storageId: saved.storageId ?? item.storageId ?? null,
-          storageName: storage?.name ?? item.storage?.name ?? null,
-          storageEmoji: storage?.emoji ?? item.storage?.emoji ?? null,
-          details: changedFields.join(', '),
-        } as any);
+        await this.fridgeActivityRepo.save(
+          this.fridgeActivityRepo.create({
+            householdId,
+            action: 'updated',
+            itemName: activityItemName,
+            quantity: saved.quantity ?? item.quantity,
+            unit: saved.unit ?? item.unit,
+            userId,
+            userName,
+            storageId: saved.storageId ?? item.storageId ?? null,
+            storageName: storage?.name ?? item.storage?.name ?? null,
+            storageEmoji: storage?.emoji ?? item.storage?.emoji ?? null,
+            details: changedFields.join(', '),
+          }),
+        );
       } catch (error) {
         this.logger.warn(
           `Falha ao registrar atividade de estoque para item ${itemId}: ${error instanceof Error ? error.message : String(error)}`,
@@ -446,19 +451,21 @@ export class HouseholdsService {
     if (item) {
       const member = await this.membersRepo.findOne({ where: { userId, householdId }, relations: ['user'] });
       const userName = member?.user?.name ?? 'Alguém';
-      await this.fridgeActivityRepo.save({
-        householdId,
-        action: 'removed',
-        itemName: item.name,
-        quantity: item.quantity,
-        unit: item.unit,
-        userId,
-        userName,
-        storageId: item.storageId ?? null,
-        storageName: item.storage?.name ?? null,
-        storageEmoji: item.storage?.emoji ?? null,
-        toShoppingListName: toShoppingListName ?? undefined,
-      } as any);
+      await this.fridgeActivityRepo.save(
+        this.fridgeActivityRepo.create({
+          householdId,
+          action: 'removed',
+          itemName: item.name,
+          quantity: item.quantity,
+          unit: item.unit,
+          userId,
+          userName,
+          storageId: item.storageId ?? null,
+          storageName: item.storage?.name ?? null,
+          storageEmoji: item.storage?.emoji ?? null,
+          toShoppingListName: toShoppingListName ?? null,
+        }),
+      );
       if (toShoppingListName) {
         this.notificationsService
           .notifyHouseholdMembers(
@@ -1324,19 +1331,21 @@ export class HouseholdsService {
         where: { householdId, hidden: false },
         order: { createdAt: 'ASC' },
       });
-      await this.fridgeActivityRepo.save({
-        householdId,
-        action: 'updated',
-        itemName: 'Alerta de estoque',
-        quantity: 1,
-        unit: 'un',
-        userId,
-        userName,
-        storageId: storage?.id ?? null,
-        storageName: storage?.name ?? null,
-        storageEmoji: storage?.emoji ?? null,
-        details: `Teste gerado em ${nowLabel}`,
-      } as any);
+      await this.fridgeActivityRepo.save(
+        this.fridgeActivityRepo.create({
+          householdId,
+          action: 'updated',
+          itemName: 'Alerta de estoque',
+          quantity: 1,
+          unit: 'un',
+          userId,
+          userName,
+          storageId: storage?.id ?? null,
+          storageName: storage?.name ?? null,
+          storageEmoji: storage?.emoji ?? null,
+          details: `Teste gerado em ${nowLabel}`,
+        }),
+      );
       created.push('stock');
     }
 
@@ -1345,17 +1354,19 @@ export class HouseholdsService {
         where: { householdId },
         order: { createdAt: 'DESC' },
       });
-      await this.shoppingActivityRepo.save({
-        householdId,
-        shoppingListId: list?.id ?? null,
-        action: 'added',
-        itemName: 'Alerta de compras',
-        listName: list?.name ?? 'Lista de teste',
-        quantity: 1,
-        unit: 'un',
-        userId,
-        userName,
-      } as any);
+      await this.shoppingActivityRepo.save(
+        this.shoppingActivityRepo.create({
+          householdId,
+          shoppingListId: list?.id ?? null,
+          action: 'added',
+          itemName: 'Alerta de compras',
+          listName: list?.name ?? 'Lista de teste',
+          quantity: 1,
+          unit: 'un',
+          userId,
+          userName,
+        }),
+      );
       created.push('shopping');
     }
 

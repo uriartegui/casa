@@ -20,34 +20,34 @@ export class FridgeActivity {
   itemName: string;
 
   @Column({ type: 'decimal', nullable: true })
-  quantity: number;
+  quantity: number | null;
 
   @Column({ nullable: true })
-  unit: string;
+  unit: string | null;
 
   @Column()
   userId: string;
 
   @Column({ nullable: true })
-  userName: string;
+  userName: string | null;
 
   @Column({ nullable: true })
-  fromShoppingListName: string;
+  fromShoppingListName: string | null;
 
   @Column({ nullable: true })
-  toShoppingListName: string;
+  toShoppingListName: string | null;
 
   @Column({ nullable: true })
-  storageId: string;
+  storageId: string | null;
 
   @Column({ nullable: true })
-  storageName: string;
+  storageName: string | null;
 
   @Column({ nullable: true })
-  storageEmoji: string;
+  storageEmoji: string | null;
 
   @Column({ nullable: true, type: 'text' })
-  details: string;
+  details: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
