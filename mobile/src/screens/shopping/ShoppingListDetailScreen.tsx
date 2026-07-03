@@ -160,9 +160,9 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     setManualRefreshing(false);
   }
 
-  function handleToggle(item: ShoppingItem) {
+  const handleToggle = useCallback((item: ShoppingItem) => {
     toggleItem.mutate({ itemId: item.id, checked: !item.checked });
-  }
+  }, [toggleItem]);
 
   function openAddModal(name?: string) {
     const value = (name ?? quickName).trim();

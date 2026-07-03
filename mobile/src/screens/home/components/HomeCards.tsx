@@ -36,7 +36,7 @@ type ExpiringItemsProps = {
   onOpenItem: (item: FridgeItem) => void;
 };
 
-export function TodayIntro({ householdName, householdCount, onSelectHousehold }: TodayIntroProps) {
+function TodayIntroComponent({ householdName, householdCount, onSelectHousehold }: TodayIntroProps) {
   return (
     <View style={styles.todayIntro}>
       <TouchableOpacity
@@ -52,7 +52,7 @@ export function TodayIntro({ householdName, householdCount, onSelectHousehold }:
   );
 }
 
-export function QuickActionsCard({ disabled, onAddStockItem, onCreateShoppingList }: QuickActionsProps) {
+function QuickActionsCardComponent({ disabled, onAddStockItem, onCreateShoppingList }: QuickActionsProps) {
   return (
     <View style={styles.quickActions}>
       <TouchableOpacity
@@ -86,7 +86,7 @@ export function QuickActionsCard({ disabled, onAddStockItem, onCreateShoppingLis
   );
 }
 
-export function UrgentListsCard({ lists, onOpenShopping, onOpenList }: UrgentListsProps) {
+function UrgentListsCardComponent({ lists, onOpenShopping, onOpenList }: UrgentListsProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -121,7 +121,7 @@ export function UrgentListsCard({ lists, onOpenShopping, onOpenList }: UrgentLis
   );
 }
 
-export function TodayTasksCard({ tasks, todayKey, onOpenTasks, onOpenTask }: TodayTasksProps) {
+function TodayTasksCardComponent({ tasks, todayKey, onOpenTasks, onOpenTask }: TodayTasksProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -145,7 +145,7 @@ export function TodayTasksCard({ tasks, todayKey, onOpenTasks, onOpenTask }: Tod
   );
 }
 
-export function ExpiringItemsCard({ items, formatDate, onOpenItem }: ExpiringItemsProps) {
+function ExpiringItemsCardComponent({ items, formatDate, onOpenItem }: ExpiringItemsProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
@@ -172,6 +172,12 @@ export function ExpiringItemsCard({ items, formatDate, onOpenItem }: ExpiringIte
     </View>
   );
 }
+
+export const TodayIntro = React.memo(TodayIntroComponent);
+export const QuickActionsCard = React.memo(QuickActionsCardComponent);
+export const UrgentListsCard = React.memo(UrgentListsCardComponent);
+export const TodayTasksCard = React.memo(TodayTasksCardComponent);
+export const ExpiringItemsCard = React.memo(ExpiringItemsCardComponent);
 
 const styles = StyleSheet.create({
   todayIntro: {

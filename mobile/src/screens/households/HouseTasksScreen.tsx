@@ -234,7 +234,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
     }
   }
 
-  function handleDelete(task: HouseTask) {
+  const handleDelete = React.useCallback((task: HouseTask) => {
     Alert.alert('Excluir tarefa', `Excluir "${task.title}"?`, [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -243,7 +243,11 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         onPress: () => deleteTask.mutate(task.id),
       },
     ]);
-  }
+  }, [deleteTask]);
+
+  const handleToggleDone = React.useCallback((task: HouseTask) => {
+    updateStatus.mutate({ taskId: task.id, done: !task.done });
+  }, [updateStatus]);
 
   async function updateSelectedTask(data: {
     status?: HouseTask['status'];
@@ -285,7 +289,7 @@ export default function HouseTasksScreen({ navigation, route }: Props) {
         late={late}
         highlightStyle={highlightStyle}
         onOpen={setSelectedTask}
-        onToggleDone={(task) => updateStatus.mutate({ taskId: task.id, done: !task.done })}
+        onToggleDone={handleToggleDone}
         onDelete={handleDelete}
       />
     );

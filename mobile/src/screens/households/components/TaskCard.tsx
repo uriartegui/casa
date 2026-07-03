@@ -30,7 +30,7 @@ function recurrenceLabel(task: HouseTask) {
   return 'Recorrente';
 }
 
-export function TaskCard({ task, label, late, highlightStyle, onOpen, onToggleDone, onDelete }: TaskCardProps) {
+function TaskCardComponent({ task, label, late, highlightStyle, onOpen, onToggleDone, onDelete }: TaskCardProps) {
   const recurrence = recurrenceLabel(task);
 
   return (
@@ -73,6 +73,8 @@ export function TaskCard({ task, label, late, highlightStyle, onOpen, onToggleDo
     </AnimatedTouchableOpacity>
   );
 }
+
+export const TaskCard = React.memo(TaskCardComponent);
 
 const styles = StyleSheet.create({
   taskCard: {

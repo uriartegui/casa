@@ -26,7 +26,7 @@ type ShoppingItemRowProps = {
   onDelete: (itemId: string, itemName?: string) => void;
 };
 
-export function ListFocusSummary({
+function ListFocusSummaryComponent({
   total,
   boughtCount,
   urgent,
@@ -68,7 +68,7 @@ export function ListFocusSummary({
   );
 }
 
-export function ShoppingItemRow({ item, highlightStyle, onToggle, onDelete }: ShoppingItemRowProps) {
+function ShoppingItemRowComponent({ item, highlightStyle, onToggle, onDelete }: ShoppingItemRowProps) {
   return (
     <AnimatedTouchableOpacity style={[styles.itemRow, highlightStyle]} onPress={() => onToggle(item)} activeOpacity={0.7}>
       <View style={[styles.checkbox, item.checked && styles.checkboxChecked]}>
@@ -94,6 +94,9 @@ export function ShoppingItemRow({ item, highlightStyle, onToggle, onDelete }: Sh
     </AnimatedTouchableOpacity>
   );
 }
+
+export const ListFocusSummary = React.memo(ListFocusSummaryComponent);
+export const ShoppingItemRow = React.memo(ShoppingItemRowComponent);
 
 const styles = StyleSheet.create({
   listFocusBand: {
