@@ -36,7 +36,7 @@ export class AttentionService {
 
   @Cron('20 9 * * *', { timeZone: 'America/Sao_Paulo' })
   async sendDailyAttentionDigest(): Promise<void> {
-    this.logger.log('Verificando resumo diario de atencao da casa...');
+    this.logger.log('Verificando resumo diário de atenção da casa...');
 
     const households = await this.householdsRepo.find({ take: 500 });
     const dateKey = new Date().toISOString().slice(0, 10);

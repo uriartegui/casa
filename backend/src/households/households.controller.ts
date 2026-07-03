@@ -240,7 +240,7 @@ export class HouseholdsController {
   }
 
   @Get(':id/fridge-activity')
-  @ApiOperation({ summary: 'Historico de atividade do estoque' })
+  @ApiOperation({ summary: 'Histórico de atividade do estoque' })
   getFridgeActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getFridgeActivity(id, req.user.id);
   }
@@ -254,13 +254,13 @@ export class HouseholdsController {
   }
 
   @Get(':id/replenishment-suggestions')
-  @ApiOperation({ summary: 'Sugestoes de reposicao da casa' })
+  @ApiOperation({ summary: 'Sugestões de reposição da casa' })
   getReplenishmentSuggestions(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getReplenishmentSuggestions(id, req.user.id);
   }
 
   @Get(':id/attention')
-  @ApiOperation({ summary: 'Resumo de atencao da casa' })
+  @ApiOperation({ summary: 'Resumo de atenção da casa' })
   getHouseholdAttention(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getHouseholdAttention(id, req.user.id);
   }
@@ -304,7 +304,7 @@ export class HouseholdsController {
   }
 
   @Get(':id/task-activity')
-  @ApiOperation({ summary: 'Historico das tarefas da casa' })
+  @ApiOperation({ summary: 'Histórico das tarefas da casa' })
   getHouseTaskActivity(@Param('id', ParseUUIDPipe) id: string, @Request() req: AuthenticatedRequest) {
     return this.householdsService.getHouseTaskActivity(id, req.user.id);
   }

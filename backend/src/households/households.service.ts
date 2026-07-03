@@ -183,7 +183,7 @@ export class HouseholdsService {
     });
     if (!exists) {
       await this.membersRepo.save({ userId, householdId: invite.householdId, role: 'member' });
-      // O convite nao e deletado aqui: o mesmo codigo pode ser usado por
+      // O convite não é deletado aqui: o mesmo código pode ser usado por
       // várias pessoas até expirar (a tela promete "válido por 2 horas").
       this.eventsGateway.emitHouseholdUpdate(invite.householdId);
     }
@@ -238,7 +238,7 @@ export class HouseholdsService {
   ): Promise<Storage> {
     await this.assertMember(householdId, userId);
     const storage = await this.storageRepo.findOne({ where: { id: storageId, householdId } });
-    if (!storage) throw new NotFoundException('Compartimento nao encontrado');
+    if (!storage) throw new NotFoundException('Compartimento não encontrado');
     if (dto.name) storage.name = dto.name.trim();
     if (dto.emoji) storage.emoji = dto.emoji;
     if (dto.hidden !== undefined) storage.hidden = dto.hidden;
@@ -391,7 +391,7 @@ export class HouseholdsService {
     let nextStorage: Storage | null = null;
     if (dto.storageId) {
       nextStorage = await this.storageRepo.findOne({ where: { id: dto.storageId, householdId } });
-      if (!nextStorage) throw new NotFoundException('Estoque nao encontrado');
+      if (!nextStorage) throw new NotFoundException('Estoque não encontrado');
     }
     const changedFields = this.getFridgeChangedFields(item, dto);
     const activityItemName = dto.name?.trim() || item.name;
@@ -616,7 +616,7 @@ export class HouseholdsService {
   async deleteTaskCategory(householdId: string, categoryId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
     const category = await this.taskCategoriesRepo.findOne({ where: { id: categoryId, householdId } });
-    if (!category) throw new NotFoundException('Categoria nao encontrada');
+    if (!category) throw new NotFoundException('Categoria não encontrada');
     await this.houseTasksRepo.update({ householdId, category: category.name }, { category: null });
     await this.taskCategoriesRepo.delete(categoryId);
     this.eventsGateway.emitHouseholdUpdate(householdId);
@@ -641,14 +641,14 @@ export class HouseholdsService {
     if (assignmentType !== 'user') return null;
     if (!assignedToId) throw new BadRequestException('Escolha o responsavel da tarefa');
     const member = await this.membersRepo.findOne({ where: { householdId, userId: assignedToId } });
-    if (!member) throw new BadRequestException('Responsavel nao pertence a esta casa');
+    if (!member) throw new BadRequestException('Responsável não pertence a esta casa');
     return assignedToId;
   }
 
   private async assertTaskShoppingList(householdId: string, shoppingListId?: string | null) {
     if (!shoppingListId) return null;
     const list = await this.shoppingListsRepo.findOne({ where: { id: shoppingListId, householdId } });
-    if (!list) throw new BadRequestException('Lista de compras nao pertence a esta casa');
+    if (!list) throw new BadRequestException('Lista de compras não pertence a esta casa');
     return list.id;
   }
 
@@ -718,7 +718,7 @@ export class HouseholdsService {
   ): Promise<HouseTask> {
     await this.assertMember(householdId, userId);
     const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
-    if (!task) throw new NotFoundException('Tarefa nao encontrada');
+    if (!task) throw new NotFoundException('Tarefa não encontrada');
 
     const oldStatus = task.status;
     const nextStatus = dto.status ?? (dto.done === undefined ? task.status : (dto.done ? 'completed' : 'pending'));
@@ -775,7 +775,7 @@ export class HouseholdsService {
   async deleteHouseTask(householdId: string, taskId: string, userId: string): Promise<void> {
     await this.assertMember(householdId, userId);
     const task = await this.houseTasksRepo.findOne({ where: { id: taskId, householdId } });
-    if (!task) throw new NotFoundException('Tarefa nao encontrada');
+    if (!task) throw new NotFoundException('Tarefa não encontrada');
     const userName = await this.getHouseholdUserName(householdId, userId);
     await this.houseTasksRepo.delete({ id: taskId, householdId });
     await this.logHouseTaskActivity({ householdId, taskId: task.id, action: 'deleted', taskTitle: task.title, userId, userName, details: null });
@@ -1281,7 +1281,7 @@ export class HouseholdsService {
         subtitle: [
           task.done ? 'Concluida' : task.status === 'in_progress' ? 'Em andamento' : 'Pendente',
           task.category,
-          task.assignedTo?.name ? `Responsavel: ${task.assignedTo.name}` : null,
+          task.assignedTo?.name ? `Responsável: ${task.assignedTo.name}` : null,
           task.shoppingList?.name ? `Lista: ${task.shoppingList.name}` : null,
         ].filter(Boolean).join(' - '),
         target: {
