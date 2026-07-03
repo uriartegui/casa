@@ -158,11 +158,11 @@ export default function MemberDetailScreen({ navigation, route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 18, gap: 14 },
+  container: { flex: 1, backgroundColor: Colors.background, padding: 20, gap: 14 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   errorText: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 16 },
   card: {
-    backgroundColor: Colors.card, borderRadius: 16, padding: 24,
+    backgroundColor: Colors.card, borderRadius: 18, padding: 24,
     alignItems: 'center', gap: 8, borderWidth: 1, borderColor: Colors.separator,
   },
   avatar: {
@@ -178,15 +178,15 @@ const styles = StyleSheet.create({
   roleText: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
   roleAdmin: { color: Colors.accent },
   infoCard: {
-    backgroundColor: Colors.card, borderRadius: 16, borderWidth: 1, borderColor: Colors.separator,
+    backgroundColor: Colors.card, borderRadius: 18, borderWidth: 1, borderColor: Colors.separator,
     overflow: 'hidden',
   },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, gap: 14 },
   infoLabel: { fontFamily: Typography.body, fontSize: 15, color: Colors.textSecondary },
   infoValue: { fontFamily: Typography.rounded, flexShrink: 1, textAlign: 'right', fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
   separator: { height: 1, backgroundColor: Colors.separator, marginHorizontal: 14 },
-  promoteButton: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
-  promoteButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
-  removeButton: { borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.destructive },
-  removeButtonText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 16, fontWeight: '700' },
+  promoteButton: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  promoteButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
+  removeButton: { borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.destructive },
+  removeButtonText: { fontFamily: Typography.title, color: Colors.destructive, fontSize: 16, fontWeight: '800' },
 });

@@ -86,24 +86,24 @@ export default function InviteScreen({ route }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background, padding: 20, gap: 18 },
+  container: { flex: 1, backgroundColor: Colors.background, padding: 22, gap: 18 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   errorText: { fontFamily: Typography.body, color: Colors.textSecondary, fontSize: 16, marginBottom: 16 },
   retryBtn: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 46, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
   retryText: { fontFamily: Typography.title, color: '#fff', fontSize: 15, fontWeight: '700' },
   card: {
-    backgroundColor: Colors.card, borderRadius: 16, padding: 24,
+    backgroundColor: Colors.card, borderRadius: 18, padding: 24,
     alignItems: 'center', borderWidth: 1, borderColor: Colors.separator,
   },
-  label: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.textSecondary, textTransform: 'uppercase', marginBottom: 8 },
+  label: { fontFamily: Typography.title, fontSize: 13, fontWeight: '700', color: Colors.textSecondary, marginBottom: 8 },
   code: {
     fontFamily: Typography.title, fontSize: 42, fontWeight: '800', color: Colors.textPrimary,
   },
   expiry: { fontFamily: Typography.body, fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
-  qrContainer: { alignItems: 'center', backgroundColor: Colors.card, borderRadius: 16, padding: 24, borderWidth: 1, borderColor: Colors.separator },
-  actions: { gap: 10 },
-  button: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  qrContainer: { alignItems: 'center', backgroundColor: Colors.card, borderRadius: 18, padding: 24, borderWidth: 1, borderColor: Colors.separator },
+  actions: { gap: 10, marginTop: 2 },
+  button: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   buttonSecondary: { backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.accent },
-  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
   buttonTextSecondary: { color: Colors.accent },
 });

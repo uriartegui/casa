@@ -141,7 +141,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24 },
+  content: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 26 },
   eyebrow: { fontFamily: Typography.title, fontSize: 12, fontWeight: '800', color: Colors.accent, textTransform: 'uppercase', marginBottom: 6 },
   title: { fontFamily: Typography.title, fontSize: 27, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
   subtitle: { fontFamily: Typography.body, fontSize: 15, color: Colors.textSecondary, lineHeight: 22, marginBottom: 18 },
@@ -151,10 +151,10 @@ const styles = StyleSheet.create({
   progressText: { fontFamily: Typography.title, fontSize: 12, color: Colors.textSecondary, fontWeight: '700' },
   card: {
     backgroundColor: Colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: Colors.separator,
-    padding: 16,
+    padding: 17,
     marginBottom: 12,
     gap: 12,
   },
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   storageText: { fontFamily: Typography.rounded, fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
   storageTextActive: { color: '#fff' },
   inviteBox: {
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.separator,
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   secondaryButton: {
     flex: 1,
     minHeight: 44,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.accent,
     backgroundColor: Colors.card,
@@ -199,6 +199,6 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { fontFamily: Typography.title, fontSize: 14, color: Colors.accent, fontWeight: '700' },
   footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
-  doneButton: { backgroundColor: Colors.accent, borderRadius: 14, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
-  doneButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '700' },
+  doneButton: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  doneButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
 });

@@ -141,14 +141,14 @@ export default function ManageCategoriesScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 18, paddingBottom: 48 },
+  content: { padding: 20, paddingBottom: 52 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   hint: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, marginBottom: 20, lineHeight: 20 },
 
   section: {
-    backgroundColor: Colors.card, borderRadius: 14,
+    backgroundColor: Colors.card, borderRadius: 16,
     borderWidth: 1, borderColor: Colors.separator,
-    padding: 16, marginBottom: 14,
+    padding: 17, marginBottom: 14,
   },
   sectionTitle: { fontFamily: Typography.title, fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -169,25 +169,25 @@ const styles = StyleSheet.create({
   addChipText: { fontFamily: Typography.title, fontSize: 13, color: Colors.accent, fontWeight: '700' },
 
   modalKeyboard: { flex: 1 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.32)', justifyContent: 'center', alignItems: 'center' },
   modalBox: {
-    backgroundColor: Colors.card, borderRadius: 16, width: '90%', maxHeight: '82%',
-    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 12, elevation: 10,
+    backgroundColor: Colors.card, borderRadius: 22, width: '90%', maxHeight: '82%',
+    shadowColor: '#000', shadowOpacity: 0.14, shadowRadius: 14, elevation: 10,
   },
-  modalContent: { padding: 20 },
-  modalTitle: { fontFamily: Typography.title, fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 12 },
+  modalContent: { padding: 22 },
+  modalTitle: { fontFamily: Typography.display, fontSize: 21, fontWeight: '800', color: Colors.textPrimary, marginBottom: 14 },
   modalInput: {
-    borderWidth: 1, borderColor: Colors.separator, borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10, fontFamily: Typography.body, fontSize: 16,
-    color: Colors.textPrimary, backgroundColor: Colors.background, marginBottom: 12,
+    borderWidth: 1, borderColor: Colors.separator, borderRadius: 16,
+    paddingHorizontal: 16, paddingVertical: 13, fontFamily: Typography.body, fontSize: 16,
+    color: Colors.textPrimary, backgroundColor: Colors.background, marginBottom: 14,
   },
   modalActions: { flexDirection: 'row', gap: 10 },
   cancelBtn: {
-    flex: 1, minHeight: 44, borderRadius: 12,
+    flex: 1, minHeight: 46, borderRadius: 14,
     backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.separator, alignItems: 'center',
     justifyContent: 'center',
   },
   cancelText: { fontFamily: Typography.title, fontSize: 14, color: Colors.textSecondary, fontWeight: '700' },
-  saveBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
+  saveBtn: { flex: 1, minHeight: 46, borderRadius: 14, backgroundColor: Colors.accent, alignItems: 'center', justifyContent: 'center' },
   saveText: { fontFamily: Typography.title, fontSize: 14, color: '#fff', fontWeight: '700' },
 });
