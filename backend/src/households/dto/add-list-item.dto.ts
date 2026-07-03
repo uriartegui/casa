@@ -16,7 +16,7 @@ export class AddListItemDto {
   @IsString()
   unit?: string;
 
-  @ApiPropertyOptional({ example: 'HortifrÃºti' })
+  @ApiPropertyOptional({ example: 'Hortifrúti' })
   @IsOptional()
   @IsString()
   category?: string;

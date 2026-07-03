@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsDateString, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateHouseTaskDto {
@@ -6,7 +6,7 @@ export class CreateHouseTaskDto {
   @IsString()
   title: string;
 
-  @ApiPropertyOptional({ example: 'Manutencao' })
+  @ApiPropertyOptional({ example: 'Manutenção' })
   @IsOptional()
   @IsString()
   category?: string;
@@ -18,7 +18,7 @@ export class CreateHouseTaskDto {
 
   @ApiPropertyOptional({ example: '2026-06-30' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dueDate?: string;
 
   @ApiPropertyOptional({ enum: ['unassigned', 'all', 'user'] })

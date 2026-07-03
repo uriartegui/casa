@@ -19,14 +19,14 @@ export class AddFridgeItemDto {
   @ApiPropertyOptional({ example: '2026-04-25' })
   @IsOptional()
   @IsDateString()
-  expirationDate?: Date;
+  expirationDate?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   storageId?: string;
 
-  @ApiPropertyOptional({ example: 'LaticÃ­nios' })
+  @ApiPropertyOptional({ example: 'Laticínios' })
   @IsOptional()
   @IsString()
   category?: string;

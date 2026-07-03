@@ -22,7 +22,7 @@ export class UpdateFridgeItemDto {
   @IsDateString()
   expirationDate?: string | null;
 
-  @ApiPropertyOptional({ example: 'LaticÃ­nios' })
+  @ApiPropertyOptional({ example: 'Laticínios' })
   @IsOptional()
   @IsString()
   category?: string | null;
