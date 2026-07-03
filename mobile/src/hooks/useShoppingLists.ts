@@ -14,7 +14,7 @@ export function useShoppingLists(householdId: string | null) {
     },
     enabled: !!householdId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
   });
@@ -75,7 +75,7 @@ export function useListItems(householdId: string | null, listId: string | null) 
     ),
     enabled: !!householdId && !!listId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
   });
@@ -277,7 +277,7 @@ export function useShoppingActivity(householdId: string | null) {
     },
     enabled: !!householdId,
     staleTime: LIVE_STALE_TIME,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     refetchInterval: BACKGROUND_REFETCH_INTERVAL,
     refetchIntervalInBackground: false,
   });
@@ -292,7 +292,7 @@ export function useReplenishmentSuggestions(householdId: string | null) {
     },
     enabled: !!householdId,
     staleTime: 5 * 60 * 1000,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
     refetchInterval: 5 * 60 * 1000,
     refetchIntervalInBackground: false,
   });

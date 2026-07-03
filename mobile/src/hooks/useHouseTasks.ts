@@ -26,7 +26,7 @@ export function useHouseTasks(householdId: string | null) {
     },
     enabled: !!householdId,
     staleTime: TASKS_STALE_TIME,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
   });
 }
 
@@ -36,7 +36,7 @@ export function useHouseTaskActivity(householdId: string | null) {
     queryFn: async () => (await api.get<HouseTaskActivityEvent[]>(`/households/${householdId}/task-activity`)).data,
     enabled: !!householdId,
     staleTime: TASKS_STALE_TIME,
-    refetchOnMount: 'always',
+    refetchOnMount: true,
   });
 }
 
