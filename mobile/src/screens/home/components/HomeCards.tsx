@@ -58,28 +58,28 @@ function QuickActionsCardComponent({ disabled, onAddStockItem, onCreateShoppingL
       <TouchableOpacity
         style={[styles.primaryAction, disabled && styles.actionDisabled]}
         activeOpacity={0.82}
-        onPress={onAddStockItem}
+        onPress={onCreateShoppingList}
         disabled={disabled}
       >
         <View style={styles.primaryActionIcon}>
-          <Feather name="plus" size={22} color="#fff" />
+          <Feather name="list" size={22} color="#fff" />
         </View>
         <View style={styles.actionTextBlock}>
-          <Text style={styles.primaryActionTitle}>Adicionar item</Text>
-          <Text style={styles.primaryActionSubtitle}>Estoque da casa</Text>
+          <Text style={styles.primaryActionTitle}>Nova lista</Text>
+          <Text style={styles.primaryActionSubtitle}>Compras da casa</Text>
         </View>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={[styles.secondaryAction, disabled && styles.actionDisabled]}
         activeOpacity={0.82}
-        onPress={onCreateShoppingList}
+        onPress={onAddStockItem}
         disabled={disabled}
       >
-        <Feather name="list" size={21} color={Colors.accent} />
+        <Feather name="plus" size={21} color={Colors.accent} />
         <View style={styles.actionTextBlock}>
-          <Text style={styles.secondaryActionTitle}>Nova lista</Text>
-          <Text style={styles.secondaryActionSubtitle}>Compras</Text>
+          <Text style={styles.secondaryActionTitle}>Adicionar item</Text>
+          <Text style={styles.secondaryActionSubtitle}>Estoque</Text>
         </View>
       </TouchableOpacity>
     </View>

@@ -1,11 +1,12 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Share, Alert, ScrollView,
+  ActivityIndicator, Share, Alert, ScrollView, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useInviteCode } from '../../hooks/useHouseholds';
+import { useCreateShoppingList } from '../../hooks/useShoppingLists';
 import { useStorages, useUpdateStorage } from '../../hooks/useStorages';
 import { Colors } from '../../constants/colors';
 import { API_URL } from '../../config';
@@ -22,9 +23,12 @@ const ORDER_RANK = new Map(DEFAULT_ORDER.map((name, index) => [name.toLowerCase(
 export default function StorageCategoriesSetupScreen({ householdId, onDone }: Props) {
   const { data: storages, isLoading } = useStorages(householdId, { includeHidden: true });
   const updateStorage = useUpdateStorage(householdId);
+  const createShoppingList = useCreateShoppingList(householdId);
   const { data: inviteData } = useInviteCode(householdId);
   const inviteCode = inviteData?.inviteCode ?? '';
   const inviteLink = inviteCode ? `${API_URL}/invite/${inviteCode}` : '';
+  const [firstListName, setFirstListName] = React.useState('Compras da casa');
+  const [firstListPlace, setFirstListPlace] = React.useState('');
 
   const orderedStorages = React.useMemo(() => {
     return [...(storages ?? [])].sort((a, b) => {
@@ -36,7 +40,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
   }, [storages]);
 
   const visibleCount = orderedStorages.filter((storage) => !storage.hidden).length;
-  const completedSteps = 1 + (visibleCount > 0 ? 1 : 0);
+  const completedSteps = visibleCount > 0 ? 1 : 0;
 
   async function toggleStorage(storageId: string, hidden: boolean) {
     if (!hidden && visibleCount <= 1) {
@@ -60,27 +64,75 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
     Alert.alert('Copiado', 'Link de convite copiado.');
   }
 
+  async function createFirstList() {
+    const name = firstListName.trim();
+    if (!name) {
+      Alert.alert('Nome da lista', 'Digite um nome para a primeira lista.');
+      return;
+    }
+
+    try {
+      await createShoppingList.mutateAsync({
+        name,
+        place: firstListPlace.trim() || undefined,
+      });
+      onDone();
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel criar a primeira lista.');
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.eyebrow}>Primeiros passos</Text>
-        <Text style={styles.title}>Deixe sua casa pronta</Text>
+        <Text style={styles.eyebrow}>Primeiro ganho</Text>
+        <Text style={styles.title}>Comece pela lista</Text>
         <Text style={styles.subtitle}>
-          Configure o básico agora. O resto você pode ajustar depois pela aba Casa.
+          Crie uma lista compartilhada agora. Estoque, validade e tarefas entram depois, quando fizer sentido.
         </Text>
 
         <View style={styles.progressWrap}>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${(completedSteps / 4) * 100}%` }]} />
+            <View style={[styles.progressFill, { width: `${(completedSteps / 3) * 100}%` }]} />
           </View>
-          <Text style={styles.progressText}>{completedSteps}/4 passos iniciados</Text>
+          <Text style={styles.progressText}>{completedSteps}/3 passos iniciados</Text>
+        </View>
+
+        <View style={[styles.card, styles.primaryCard]}>
+          <Text style={styles.cardTitle}>1. Crie a primeira lista</Text>
+          <Text style={styles.cardText}>Use como usaria no WhatsApp, mas com marcar comprado, compartilhar e guardar depois.</Text>
+
+          <TextInput
+            style={styles.input}
+            value={firstListName}
+            onChangeText={setFirstListName}
+            placeholder="Ex: Mercado da semana"
+            placeholderTextColor={Colors.textSecondary}
+            returnKeyType="next"
+          />
+          <TextInput
+            style={styles.input}
+            value={firstListPlace}
+            onChangeText={setFirstListPlace}
+            placeholder="Lugar opcional: mercado, farmacia..."
+            placeholderTextColor={Colors.textSecondary}
+            returnKeyType="done"
+            onSubmitEditing={createFirstList}
+          />
+
+          <TouchableOpacity style={styles.doneButton} onPress={createFirstList} disabled={createShoppingList.isPending}>
+            {createShoppingList.isPending
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.doneButtonText}>Criar lista e entrar</Text>
+            }
+          </TouchableOpacity>
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <View>
-              <Text style={styles.cardTitle}>1. Escolha os estoques</Text>
-              <Text style={styles.cardText}>Deixe visível só o que sua casa usa.</Text>
+              <Text style={styles.cardTitle}>2. Ajuste os estoques</Text>
+              <Text style={styles.cardText}>Deixe visivel so o que sua casa usa. Voce pode mudar depois.</Text>
             </View>
             {isLoading && <ActivityIndicator size="small" color={Colors.accent} />}
           </View>
@@ -103,7 +155,7 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>2. Convide quem mora junto</Text>
+          <Text style={styles.cardTitle}>3. Convide quem mora junto</Text>
           <Text style={styles.cardText}>A casa funciona melhor quando todo mundo consegue atualizar estoque e lista.</Text>
           <View style={styles.inviteBox}>
             <Text style={styles.inviteLabel}>Código</Text>
@@ -119,22 +171,10 @@ export default function StorageCategoriesSetupScreen({ householdId, onDone }: Pr
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>3. Adicione seus primeiros itens</Text>
-          <Text style={styles.cardText}>Comece com 3 itens que você sempre quer lembrar: leite, sabão, papel, shampoo...</Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>4. Crie sua primeira lista</Text>
-          <Text style={styles.cardText}>Quando algo acabar no estoque, mande para a lista e a casa inteira acompanha.</Text>
-        </View>
-      </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.doneButton} onPress={onDone}>
-          <Text style={styles.doneButtonText}>Entrar na casa</Text>
+        <TouchableOpacity style={styles.skipButton} onPress={onDone}>
+          <Text style={styles.skipButtonText}>Entrar sem criar lista agora</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -158,9 +198,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 12,
   },
+  primaryCard: { borderColor: Colors.accent },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   cardTitle: { fontFamily: Typography.title, fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
   cardText: { fontFamily: Typography.body, fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  input: {
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.separator,
+    backgroundColor: Colors.background,
+    paddingHorizontal: 14,
+    fontFamily: Typography.body,
+    fontSize: 15,
+    color: Colors.textPrimary,
+  },
   storageGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   storageChip: {
     flexDirection: 'row',
@@ -198,7 +250,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   secondaryButtonText: { fontFamily: Typography.title, fontSize: 14, color: Colors.accent, fontWeight: '700' },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.separator, backgroundColor: Colors.background },
   doneButton: { backgroundColor: Colors.accent, borderRadius: 16, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
   doneButtonText: { fontFamily: Typography.title, color: '#fff', fontSize: 16, fontWeight: '800' },
+  skipButton: { alignItems: 'center', paddingVertical: 12, marginBottom: 8 },
+  skipButtonText: { fontFamily: Typography.title, color: Colors.textSecondary, fontSize: 14, fontWeight: '700' },
 });

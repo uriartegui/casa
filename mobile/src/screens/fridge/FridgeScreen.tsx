@@ -334,7 +334,7 @@ export default function FridgeScreen({ navigation, route }: Props) {
                 activeOpacity={0.7}
                 accessibilityLabel={`${item.name} acabou`}
               >
-                <Text style={styles.finishedButtonText}>X</Text>
+                <Text style={styles.finishedButtonText}>Acabou</Text>
               </TouchableOpacity>
             </View>
           </AnimatedTouchableOpacity>
@@ -594,12 +594,17 @@ const styles = StyleSheet.create({
   itemName: { fontFamily: Typography.rounded, fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
   itemRight: { flexDirection: 'row', alignItems: 'center', flexShrink: 0, gap: 8 },
   finishedButton: {
-    minWidth: 28,
+    minWidth: 64,
     minHeight: 28,
+    paddingHorizontal: 9,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.accent + '44',
+    backgroundColor: Colors.accent + '10',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  finishedButtonText: { fontFamily: Typography.title, fontSize: 13, color: Colors.textSecondary, fontWeight: '700', lineHeight: 18 },
+  finishedButtonText: { fontFamily: Typography.title, fontSize: 12, color: Colors.accent, fontWeight: '800', lineHeight: 16 },
   expBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
   expBadgeText: { fontFamily: Typography.title, fontSize: 11, fontWeight: '700' },
   categoryPickerWrapper: {
