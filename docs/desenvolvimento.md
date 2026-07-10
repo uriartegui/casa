@@ -36,6 +36,15 @@ cd mobile
 npm install
 ```
 
+Banco local com Docker:
+
+```bash
+docker compose up -d
+```
+
+O Compose da raiz expoe o Postgres em `localhost:5433`; use esse valor em
+`backend/.env` ao partir de `backend/.env.example`.
+
 ## Rodar
 
 Backend:
