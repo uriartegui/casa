@@ -12,14 +12,14 @@
   },
   "featureGraphic": {
     "title": "Colmeia",
-    "tagline": "A casa compartilhada, organizada",
-    "features": "Geladeira  ·  Compras  ·  Validades"
+    "tagline": "A lista de compras da casa",
+    "features": "Compras  ·  Estoque  ·  Validades"
   },
   "captions": [
-    { "file": "01-home", "title": "Toda a casa em um só lugar", "subtitle": "Geladeira, compras e quem mora com você" },
+    { "file": "01-home", "title": "Comece pela lista da casa", "subtitle": "Compras compartilhadas em tempo real" },
     { "file": "02-fridge", "title": "Saiba o que tem na geladeira", "subtitle": "Quantidades e validades sempre atualizadas" },
     { "file": "03-expiry", "title": "Nada vence sem avisar", "subtitle": "Notificações antes da validade" },
-    { "file": "04-shopping", "title": "Lista de compras em tempo real", "subtitle": "Todo mundo vê e marca junto" },
+    { "file": "04-shopping", "title": "Lista em tempo real", "subtitle": "Todo mundo adiciona e marca junto" },
     { "file": "05-send-to-fridge", "title": "Da lista direto para a geladeira", "subtitle": "Comprou? Vira estoque em um toque" },
     { "file": "06-household", "title": "Convide quem mora com você", "subtitle": "Uma colmeia para a sua casa" }
   ],

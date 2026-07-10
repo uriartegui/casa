@@ -60,7 +60,7 @@ export default function LoginScreen({ navigation }: Props) {
             />
           </View>
           <Text style={styles.title}>Colmeia</Text>
-          <Text style={styles.subtitle}>Organize sua casa com sua família</Text>
+          <Text style={styles.subtitle}>A lista de compras compartilhada da casa</Text>
         </View>
 
         <View style={styles.form}>

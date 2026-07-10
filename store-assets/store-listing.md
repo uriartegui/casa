@@ -9,34 +9,37 @@ Colmeia — Casa Compartilhada
 
 **Descrição curta** (máx. 80 chars — 73 ✓)
 ```
-Geladeira, listas de compras e validades. A casa toda em um só lugar.
+Lista de compras compartilhada para a casa toda, em tempo real.
 ```
 
 **Descrição completa** (máx. 4000 chars)
 ```
-Morar junto fica mais fácil quando todo mundo sabe o que tem em casa.
+Morar junto fica mais fácil quando todo mundo sabe o que precisa comprar.
 
-O Colmeia organiza a vida da casa compartilhada — família, casal ou república — em um app só: o que tem na geladeira, o que precisa comprar e o que está perto de vencer.
+O Colmeia começa pelo jeito mais simples de organizar a rotina: uma lista de compras compartilhada para família, casal, república ou qualquer casa dividida.
 
-🍯 GELADEIRA E DESPENSA SEMPRE ATUALIZADAS
-Cadastre o que tem na geladeira, no freezer e na despensa, com quantidade e validade. Qualquer pessoa da casa vê tudo em tempo real — acabou a cena de comprar o que já tinha ou descobrir tarde demais que o leite acabou.
+🛒 LISTA DE COMPRAS EM TEMPO REAL
+Crie listas compartilhadas para mercado, farmácia, limpeza ou qualquer necessidade da casa. Um adiciona, outro marca no mercado — todo mundo vê na hora.
 
-⏰ NADA VENCE SEM AVISAR
-O Colmeia te avisa antes dos alimentos vencerem. Menos desperdício, menos dinheiro no lixo.
+✅ MENOS CONFUSÃO QUE MENSAGEM SOLTA
+Chega de procurar item perdido em conversa. No Colmeia, a lista fica organizada, os comprados são marcados com um toque e itens urgentes aparecem em destaque.
 
-🛒 LISTAS DE COMPRAS EM TEMPO REAL
-Crie listas de compras compartilhadas. Um adiciona, outro marca no mercado — todo mundo vê na hora. Dá até para marcar itens urgentes.
+📦 DO MERCADO PARA O ESTOQUE
+Terminou a compra? Mande os itens comprados para geladeira, despensa, limpeza ou outro compartimento da casa, já com quantidade e validade quando fizer sentido.
 
-📦 DO MERCADO DIRETO PARA A GELADEIRA
-Terminou a compra? Mande os itens da lista direto para a geladeira ou despensa em um toque, já com quantidade.
+⏰ VALIDADE SEM SUSTO
+Ao usar o estoque, o Colmeia ajuda a lembrar o que está perto de vencer. Menos desperdício, menos dinheiro no lixo.
 
-🏠 UMA COLMEIA PARA CADA CASA
+🏠 UMA CASA COMPARTILHADA
 Crie sua casa e convide quem mora com você por código ou QR code. Cada um vê as mesmas informações, na hora.
 
-✨ POR QUE COLMEIA?
-Porque casa boa funciona como colmeia: cada um faz a sua parte e tudo flui. O app cuida da organização para sobrar tempo para o que importa.
+🧹 TAREFAS E ROTINA
+Além das compras, você também pode organizar tarefas da casa, responsáveis, lembretes e combinados do dia a dia.
 
-Baixe grátis e organize sua casa hoje.
+✨ POR QUE COLMEIA?
+Porque casa boa funciona melhor quando todo mundo consegue ajudar sem atrito. O app começa pela lista e cresce com a rotina da casa.
+
+Baixe grátis e crie a primeira lista da casa hoje.
 ```
 
 **Categoria**: Casa e decoração (alternativa: Produtividade)
@@ -53,7 +56,7 @@ Colmeia — Casa Compartilhada
 
 **Subtítulo** (máx. 30 chars — 30 ✓)
 ```
-Geladeira, compras e validade
+Lista de compras da casa
 ```
 
 **Palavras-chave** (máx. 100 chars — 97 ✓)
@@ -63,7 +66,7 @@ casa,compartilhada,geladeira,despensa,lista,compras,validade,mercado,republica,f
 
 **Texto promocional** (máx. 170 chars, editável sem nova versão)
 ```
-Saiba o que tem na geladeira, receba aviso antes da validade e faça listas de compras em tempo real com quem mora com você.
+Crie uma lista de compras compartilhada, marque itens no mercado e leve comprados para o estoque quando quiser.
 ```
 
 **Descrição** (máx. 4000 chars — mesma da Play, sem emojis se preferir tom mais sóbrio)

@@ -12,19 +12,19 @@ const slides = [
     key: '1',
     emoji: '🏠',
     title: 'Bem-vindo ao Colmeia',
-    subtitle: 'Organize a sua casa com todo mundo que mora com você — em tempo real.',
+    subtitle: 'A lista de compras da casa, compartilhada com todo mundo em tempo real.',
   },
   {
     key: '2',
     emoji: '🧊',
-    title: 'Casa organizada',
-    subtitle: 'Controle comida, limpeza, banheiro e outros itens da casa em um so lugar.',
+    title: 'Compra sem confusao',
+    subtitle: 'Um adiciona, outro marca no mercado, e ninguem precisa cacar mensagem no WhatsApp.',
   },
   {
     key: '3',
     emoji: '🛒',
-    title: 'Listas de compras',
-    subtitle: 'Crie listas, marque itens no mercado e divida tarefas com quem mora com você.',
+    title: 'Depois, organize o resto',
+    subtitle: 'Quando quiser, leve comprados para o estoque, acompanhe validade e cuide das tarefas da casa.',
   },
 ];
 

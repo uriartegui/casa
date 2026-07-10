@@ -23,7 +23,7 @@ export const STOCK_HELP_SECTIONS = [
   },
   {
     title: 'Item acabou',
-    body: 'Toque no X do item para remover do estoque ou mandar direto para uma lista de compras.',
+    body: 'Toque em Acabou para remover do estoque ou mandar direto para uma lista de compras.',
   },
   {
     title: 'Atualizar dados',

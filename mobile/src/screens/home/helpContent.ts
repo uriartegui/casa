@@ -1,7 +1,11 @@
 export const HOME_HELP_SECTIONS = [
   {
     title: 'Home',
-    body: 'Veja o que precisa de atenção hoje, crie itens ou listas rapidamente e acompanhe as últimas movimentações da casa.',
+    body: 'Comece pelo mais comum: criar uma lista de compras. A Home tambem mostra o que precisa de atencao hoje e as ultimas movimentacoes da casa.',
+  },
+  {
+    title: 'Lista primeiro',
+    body: 'Use a lista como um combinado rapido da casa: alguem adiciona, alguem compra, todo mundo acompanha em tempo real.',
   },
   {
     title: 'Estoques',
@@ -13,7 +17,7 @@ export const HOME_HELP_SECTIONS = [
   },
   {
     title: 'Item acabou',
-    body: 'No card do item, toque no X. Você pode somente remover ou remover e mandar para uma lista de compras.',
+    body: 'No card do item, toque em Acabou. Voce pode somente remover ou remover e mandar para uma lista de compras.',
   },
   {
     title: 'Lista de compras',
