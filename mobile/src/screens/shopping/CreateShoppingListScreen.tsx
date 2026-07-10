@@ -29,13 +29,28 @@ export default function CreateShoppingListScreen({ navigation, route }: Props) {
       return;
     }
     try {
-      await createList.mutateAsync({
+      const created = await createList.mutateAsync({
         name: name.trim(),
         place: place.trim() || undefined,
         category: category.trim() || undefined,
         urgent,
       });
-      navigation.goBack();
+      const params = {
+        householdId,
+        listId: created.id,
+        listName: created.name,
+        listUrgent: created.urgent,
+        listPlace: created.place,
+        listCategory: created.category,
+        highlightList: true,
+        focusAddItem: true,
+      };
+      const routeNames = navigation.getState()?.routeNames ?? [];
+      if (routeNames.includes('ShoppingListDetail')) {
+        navigation.replace('ShoppingListDetail', params);
+        return;
+      }
+      (navigation as any).replace('HomeShoppingListDetail', params);
     } catch {
       Alert.alert('Erro', 'Não foi possível criar a lista.');
     }

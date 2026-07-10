@@ -52,7 +52,7 @@ function KeepAwakeWhileFocused() {
 const UNITS: Unit[] = ['un', 'kg', 'g', 'L', 'ml'];
 
 export default function ShoppingListDetailScreen({ navigation, route }: Props) {
-  const { householdId, listId, listName, listUrgent, listPlace, listCategory, highlightItemId, highlightList } = route.params;
+  const { householdId, listId, listName, listUrgent, listPlace, listCategory, highlightItemId, highlightList, focusAddItem } = route.params;
   const [currentName, setCurrentName] = useState(listName);
   const [currentPlace, setCurrentPlace] = useState(listPlace ?? '');
   const [currentCategory, setCurrentCategory] = useState(listCategory ?? '');
@@ -73,6 +73,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
   const [sendQueue, setSendQueue] = useState<ShoppingItem[]>([]);
   const addItem = useAddListItem(householdId, listId);
   const [quickName, setQuickName] = useState('');
+  const quickInputRef = useRef<TextInput>(null);
   const [addModal, setAddModal] = useState(false);
   const [addQty, setAddQty] = useState('1');
   const [addUnit, setAddUnit] = useState<Unit>('un');
@@ -149,6 +150,12 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
     setSendQueue((q) => q.slice(1));
     openSendToFridge(next);
   }, [isFocused, sendQueue, currentName]);
+
+  useEffect(() => {
+    if (!isFocused || !focusAddItem) return;
+    const timeout = setTimeout(() => quickInputRef.current?.focus(), 350);
+    return () => clearTimeout(timeout);
+  }, [focusAddItem, isFocused]);
 
   function handleSendAllToFridge() {
     setSendQueue(bought);
@@ -557,6 +564,7 @@ export default function ShoppingListDetailScreen({ navigation, route }: Props) {
           )}
           <View style={styles.quickAddRow}>
             <TextInput
+              ref={quickInputRef}
               style={styles.quickAddInput}
               placeholder="Adicionar item..."
               placeholderTextColor={Colors.textSecondary}

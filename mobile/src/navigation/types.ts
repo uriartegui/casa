@@ -43,6 +43,7 @@ export type ShoppingStackParamList = {
     listCategory?: string | null;
     highlightItemId?: string;
     highlightList?: boolean;
+    focusAddItem?: boolean;
   };
   CreateShoppingList: { householdId: string };
   AddShoppingItem: {
@@ -67,7 +68,7 @@ export type ShoppingStackParamList = {
 export type HomeStackParamList = {
   Home: undefined;
   AddFridgeItem: { householdId: string };
-  HomeShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; highlightList?: boolean };
+  HomeShoppingListDetail: { householdId: string; listId: string; listName: string; listUrgent: boolean; highlightList?: boolean; focusAddItem?: boolean };
   HomeCreateShoppingList: { householdId: string };
   AddShoppingItem: {
     householdId: string;
